@@ -1,0 +1,19 @@
+# Local research notes and scratch artifacts
+.tmp/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Editor state
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating-system metadata
+.DS_Store
+Desktop.ini
+Thumbs.db
