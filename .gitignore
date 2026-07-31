@@ -1,6 +1,9 @@
 # Local research notes and scratch artifacts
 .tmp/
 
+# Local Codex configuration and project skills
+.codex/
+
 # Environment files
 .env
 .env.*
