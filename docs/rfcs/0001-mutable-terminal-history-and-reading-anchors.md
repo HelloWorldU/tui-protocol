@@ -41,3 +41,40 @@ these properties together:
 2. Update or reflow dynamic content after it has left the active screen.
 3. Keep the user's reading position anchored to logical content when output
    continues or content above it changes.
+
+## Responsibility Boundaries
+
+The protocol separates three responsibilities:
+
+1. **Content (TUI-owned)**: The TUI identifies logical blocks, controls their
+   lifecycle, and decides when their content changes.
+2. **Execution (terminal-owned)**: The terminal stores and lays out history,
+   realizes content changes, and preserves terminal-native capabilities and
+   the user's reading position.
+3. **Info (shared)**: The protocol carries semantic changes between the TUI
+   and terminal and specifies their observable effects without exposing
+   cursor movement, physical rows, or redraw algorithms to the TUI.
+
+A block's lifecycle is independent of its physical location. A block may
+remain mutable after its rendered rows have entered scrollback, and entering
+scrollback does not implicitly finalize it.
+
+## Minimal Protocol Model
+
+The initial model has two core primitives:
+
+1. **Block**: an identified logical unit of content whose lifecycle is
+   controlled by the TUI and whose presentation is controlled by the
+   terminal.
+2. **Operation**: a semantic change to one or more blocks. The TUI expresses
+   the intended change; the terminal decides how to apply and render it.
+
+Operations describe changes to blocks, not terminal rendering instructions.
+For example, a user action inside a TUI may result in a block operation, while
+terminal-native scrolling, selection, and copying remain entirely within the
+terminal.
+
+The terminal may use block identity to preserve a reading anchor across an
+operation, but an anchor is not exposed as a separate primitive in this
+initial model. The exact operation set, block representation, and wire
+encoding remain open.

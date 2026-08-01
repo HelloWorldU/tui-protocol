@@ -12,9 +12,10 @@ here.
 | [Prior art and project evidence](prior-art.md) | Research note | Living document |
 | [RFC process](rfcs/README.md) | Project policy | Active |
 
-RFC 0001 is the current center of the project. It currently defines only the
-problem background and the three project goals. Further sections will be
-added as their concepts are understood and agreed.
+RFC 0001 is the current center of the project. It defines the problem,
+project goals, initial responsibility boundaries, and the minimal Block and
+Operation model. Further sections will be added as their concepts are
+understood and agreed.
 
 ## Repository layout
 
