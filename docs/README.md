@@ -10,6 +10,7 @@ here.
 |---|---|---|
 | [RFC 0001: Mutable Terminal History and Reading Anchors](rfcs/0001-mutable-terminal-history-and-reading-anchors.md) | Requirements RFC | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
+| [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [Prior art and project evidence](prior-art.md) | Research note | Living document |
 | [RFC process](rfcs/README.md) | Project policy | Active |
 
@@ -29,13 +30,13 @@ docs/
   rfcs/           Numbered design proposals and decisions
 
 spec/             Future normative protocol specification
-prototypes/       Future terminal-side and producer-side experiments
+prototypes/       Executable semantic and implementation experiments
 tests/            Future black-box scenarios and conformance fixtures
 ```
 
-The last three directories do not exist yet. They should be added only when
-the project has a specification, executable prototype, or reusable test
-assets to place in them.
+`prototypes/` now contains the first executable Block-model experiment. The
+`spec/` and `tests/` directories should be added only when the project has a
+normative specification or reusable conformance fixtures to place in them.
 
 ## Document authority
 

@@ -4,6 +4,10 @@
 # Local Codex configuration and project skills
 .codex/
 
+# JavaScript dependencies and generated test output
+node_modules/
+coverage/
+
 # Environment files
 .env
 .env.*

@@ -23,6 +23,11 @@ The first prototype follows one dynamic block through its complete lifecycle:
 
 Entering scrollback is a presentation event, not a block lifecycle event.
 
+The first prototype guarantees reading-anchor stability when Operations change
+a different Block, including a mutable Block above the user's reading
+position. Mapping an anchor through replacement of its own Block is explicitly
+undefined at this stage.
+
 ## Working Model
 
 ### Block
@@ -99,6 +104,7 @@ internally to preserve a reading anchor.
 - Content representation and which terminal-native capabilities it may carry.
 - Error reporting for invalid Operations.
 - Capability negotiation and fallback for terminals without protocol support.
+- How to map a reading anchor when its own Block is replaced.
 - Whether measured streaming costs justify splitting Update into Extend and
   Replace.
 - Whether removal or any operation beyond Append, Update, and Seal is needed.
