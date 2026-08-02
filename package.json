@@ -9,11 +9,14 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "test": "node --test prototypes/block-model/model.test.ts",
+    "test": "node --test prototypes/block-model/model.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@xterm/headless": "6.0.0"
   }
 }

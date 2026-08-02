@@ -11,6 +11,7 @@ here.
 | [RFC 0001: Mutable Terminal History and Reading Anchors](rfcs/0001-mutable-terminal-history-and-reading-anchors.md) | Requirements RFC | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
+| [xterm-headless OSC spike](../prototypes/xterm-headless/README.md) | Integration prototype | Experimental |
 | [Prior art and project evidence](prior-art.md) | Research note | Living document |
 | [RFC process](rfcs/README.md) | Project policy | Active |
 
