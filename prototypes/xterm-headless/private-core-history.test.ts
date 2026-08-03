@@ -74,6 +74,57 @@ test("a private core Update replaces history and preserves a later reading posit
   xterm.dispose();
 });
 
+test("Block ranges survive xterm reflow before a historical Update", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 100,
+  });
+  const history = new PrivateCoreBlockHistory(xterm);
+
+  await history.apply(append("thinking", "old", "mutable"));
+  await history.apply(append("context", "context", "sealed"));
+  await history.apply(
+    append("reader", "reader-1\nreader-2\nreader-3", "sealed"),
+  );
+
+  xterm.resize(6, 3);
+  assert.deepEqual(history.range("context"), { start: 1, lineCount: 2 });
+  assert.deepEqual(history.range("reader"), { start: 3, lineCount: 6 });
+
+  const readerStartAfterResize = requiredRange(history, "reader").start;
+  xterm.scrollToLine(readerStartAfterResize);
+  assert.equal(viewportTopText(xterm), "reader");
+
+  await history.apply({
+    type: "update",
+    id: "thinking",
+    content: "new-a\nnew-b",
+  });
+
+  const readerStartAfterUpdate = requiredRange(history, "reader").start;
+  assert.equal(readerStartAfterUpdate, readerStartAfterResize + 1);
+  assert.equal(xterm.buffer.active.viewportY, readerStartAfterUpdate);
+  assert.equal(viewportTopText(xterm), "reader");
+  assert.deepEqual(bufferRows(xterm), [
+    "new-a",
+    "new-b",
+    "contex",
+    "t",
+    "reader",
+    "-1",
+    "reader",
+    "-2",
+    "reader",
+    "-3",
+    "",
+  ]);
+
+  history.dispose();
+  xterm.dispose();
+});
+
 function append(
   id: string,
   content: string,

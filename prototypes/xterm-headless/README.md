@@ -21,6 +21,8 @@ and encoding are temporary test fixtures, not protocol proposals.
   xterm.js `BufferLine` range.
 - When an earlier Block grows or shrinks, a later reading position and marker
   can remain attached to the same content without duplicating history.
+- Marker-backed Block boundaries survive terminal resize reflow and still
+  identify the correct history range for a later Update.
 
 ## Public API Boundary
 
@@ -30,7 +32,8 @@ It therefore does not render Block content into the xterm buffer.
 
 `private-core-history.ts` separately reaches through xterm.js private fields to
 test the missing mutation. This is intentional prototype scaffolding, not an
-API recommendation. It is not yet connected to the OSC addon.
+API recommendation. It uses xterm.js markers as a resize-aware Block range
+index and is not yet connected to the OSC addon.
 
 The parser hook is also gated by `allowProposedApi` in xterm.js 6.0.0, so the
 integration is suitable for a spike but not yet a stable compatibility layer.
@@ -72,8 +75,7 @@ can be designed.
 - Plain text only; terminal control sequences are not part of the experiment.
 - A dedicated terminal owns all writes while Block ranges are tracked.
 - Updating the Block containing the viewport anchor remains undefined.
-- Resize reflow and scrollback-capacity trimming are not yet supported by the
-  private range index.
+- Scrollback-capacity trimming is not yet supported by the private range index.
 - Browser rendering and selection behavior are not exercised by headless
   tests.
 

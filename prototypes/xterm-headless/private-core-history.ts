@@ -15,6 +15,16 @@ interface BlockRange {
   lineCount: number;
 }
 
+interface PrivateMarker extends IDisposable {
+  readonly isDisposed: boolean;
+  line: number;
+}
+
+interface BlockEntry {
+  readonly id: BlockId;
+  marker: PrivateMarker;
+}
+
 interface PrivateBufferLine {
   readonly isWrapped: boolean;
   copyFrom(line: PrivateBufferLine): void;
@@ -37,6 +47,7 @@ interface PrivateBuffer {
   ybase: number;
   ydisp: number;
   readonly y: number;
+  addMarker(line: number): PrivateMarker;
   getBlankLine(): PrivateBufferLine;
 }
 
@@ -57,7 +68,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #terminal: Terminal;
   readonly #bufferService: PrivateBufferService;
   readonly #model: TerminalPrototype;
-  readonly #ranges = new Map<BlockId, BlockRange>();
+  readonly #entries: BlockEntry[] = [];
+  readonly #entryIndexes = new Map<BlockId, number>();
+  readonly #registrations: IDisposable[] = [];
 
   constructor(terminal: Terminal) {
     this.#terminal = terminal;
@@ -68,6 +81,11 @@ export class PrivateCoreBlockHistory implements IDisposable {
       width: terminal.cols,
       height: terminal.rows,
     });
+    this.#registrations.push(
+      terminal.onResize(({ cols, rows }) => {
+        this.#model.resize({ width: cols, height: rows });
+      }),
+    );
   }
 
   async apply(operation: Operation): Promise<void> {
@@ -91,12 +109,22 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   range(id: BlockId): Readonly<BlockRange> | undefined {
-    const range = this.#ranges.get(id);
-    return range === undefined ? undefined : { ...range };
+    const index = this.#entryIndexes.get(id);
+    if (index === undefined) {
+      return undefined;
+    }
+    return { ...this.#rangeAt(index) };
   }
 
   dispose(): void {
-    this.#ranges.clear();
+    for (const registration of this.#registrations.splice(0)) {
+      registration.dispose();
+    }
+    for (const entry of this.#entries) {
+      entry.marker.dispose();
+    }
+    this.#entries.length = 0;
+    this.#entryIndexes.clear();
   }
 
   async #append(block: Block): Promise<void> {
@@ -110,15 +138,19 @@ export class PrivateCoreBlockHistory implements IDisposable {
     if (start < 0) {
       throw new Error("The appended Block was trimmed before it could be indexed.");
     }
-    this.#ranges.set(block.id, { start, lineCount: lines.length });
+    const marker = buffer.addMarker(start);
+    this.#entryIndexes.set(block.id, this.#entries.length);
+    this.#entries.push({ id: block.id, marker });
   }
 
   async #update(id: BlockId, content: string): Promise<void> {
     const replacement = await this.#materialize(content);
-    const range = this.#ranges.get(id);
-    if (range === undefined) {
+    const entryIndex = this.#entryIndexes.get(id);
+    if (entryIndex === undefined) {
       throw new Error(`Block ${JSON.stringify(id)} has no xterm.js line range.`);
     }
+    const entry = this.#entries[entryIndex];
+    const range = this.#rangeAt(entryIndex);
 
     const buffer = this.#bufferService.buffer;
     const oldEnd = range.start + range.lineCount;
@@ -145,14 +177,23 @@ export class PrivateCoreBlockHistory implements IDisposable {
       buffer.ydisp = Math.max(0, oldYdisp + delta);
     }
 
-    range.lineCount = replacement.length;
-    for (const [otherId, otherRange] of this.#ranges) {
-      if (otherId !== id && otherRange.start >= oldEnd) {
-        otherRange.start += delta;
-      }
-    }
+    entry.marker = buffer.addMarker(range.start);
 
     this.#bufferService._onScroll.fire(buffer.ydisp);
+  }
+
+  #rangeAt(index: number): BlockRange {
+    const entry = this.#entries[index];
+    if (entry.marker.isDisposed) {
+      throw new Error(`Block ${JSON.stringify(entry.id)} was trimmed from xterm.js.`);
+    }
+    const start = entry.marker.line;
+    const nextEntry = this.#entries[index + 1];
+    const end =
+      nextEntry === undefined
+        ? this.#bufferService.buffer.ybase + this.#bufferService.buffer.y
+        : nextEntry.marker.line;
+    return { start, lineCount: end - start };
   }
 
   async #materialize(content: string): Promise<PrivateBufferLine[]> {
