@@ -23,6 +23,8 @@ and encoding are temporary test fixtures, not protocol proposals.
   can remain attached to the same content without duplicating history.
 - Marker-backed Block boundaries survive terminal resize reflow and still
   identify the correct history range for a later Update.
+- The experimental OSC transport and private-core mutation path work together:
+  an in-band Update can replace real xterm.js history end to end.
 
 ## Public API Boundary
 
@@ -33,7 +35,8 @@ It therefore does not render Block content into the xterm buffer.
 `private-core-history.ts` separately reaches through xterm.js private fields to
 test the missing mutation. This is intentional prototype scaffolding, not an
 API recommendation. It uses xterm.js markers as a resize-aware Block range
-index and is not yet connected to the OSC addon.
+index. `private-core-osc-addon.ts` connects it to the temporary OSC transport
+through a deferred Operation queue.
 
 The parser hook is also gated by `allowProposedApi` in xterm.js 6.0.0, so the
 integration is suitable for a spike but not yet a stable compatibility layer.
