@@ -76,5 +76,17 @@ terminal.
 
 The terminal may use block identity to preserve a reading anchor across an
 operation, but an anchor is not exposed as a separate primitive in this
-initial model. The exact operation set, block representation, and wire
+initial model. The complete operation set, block representation, and wire
 encoding remain open.
+
+## Protocol Semantics
+
+Detailed observable semantics are consolidated in the living
+[Operation Semantics](../protocol/operations.md) document:
+
+- [Append](../protocol/operations.md#append) introduces a Block; its detailed
+  semantics remain pending.
+- [Update](../protocol/operations.md#update) replaces the content of an
+  existing mutable Block; its initial semantics are defined.
+- [Seal](../protocol/operations.md#seal) finalizes a Block; its detailed
+  semantics remain pending.
