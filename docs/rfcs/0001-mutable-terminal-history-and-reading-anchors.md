@@ -84,8 +84,8 @@ encoding remain open.
 Detailed observable semantics are consolidated in the living
 [Operation Semantics](../protocol/operations.md) document:
 
-- [Append](../protocol/operations.md#append) introduces a Block; its detailed
-  semantics remain pending.
+- [Append](../protocol/operations.md#append) introduces a Block; its initial
+  semantics are defined.
 - [Update](../protocol/operations.md#update) replaces the content of an
   existing mutable Block; its initial semantics are defined.
 - [Seal](../protocol/operations.md#seal) finalizes a Block; its detailed
