@@ -88,5 +88,5 @@ Detailed observable semantics are consolidated in the living
   semantics are defined.
 - [Update](../protocol/operations.md#update) replaces the content of an
   existing mutable Block; its initial semantics are defined.
-- [Seal](../protocol/operations.md#seal) finalizes a Block; its detailed
-  semantics remain pending.
+- [Seal](../protocol/operations.md#seal) finalizes a Block; its initial
+  semantics are defined.

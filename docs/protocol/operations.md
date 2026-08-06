@@ -15,7 +15,7 @@ development and does not define a wire encoding.
 |---|---|
 | [Append](#append) | Initial semantics defined |
 | [Update](#update) | Initial semantics defined |
-| [Seal](#seal) | Pending detailed semantics |
+| [Seal](#seal) | Initial semantics defined |
 
 ## Shared Semantics
 
@@ -118,4 +118,38 @@ reporting and recovery on the application side remain wire-level questions.
 
 ## Seal
 
-Detailed semantics have not yet been agreed.
+### 1. Lifecycle Transition
+
+`Seal` targets a Block by ID and permanently changes its lifecycle from mutable
+to sealed. The Block retains its ID, content, and position in append order.
+Subsequent Updates targeting it are invalid.
+
+Sealing expresses that the TUI has relinquished the right to modify the Block.
+It is independent of whether the Block's rendered rows are in the viewport or
+scrollback.
+
+### 2. Target Validity and Repeated Seal
+
+Seal is valid only when the target Block exists and remains mutable. A Seal
+targeting an unknown or already sealed Block is invalid. Seal is therefore not
+idempotent in the initial semantics.
+
+Idempotency may be reconsidered if later wire-level delivery and retry
+requirements justify it.
+
+### 3. Content Invariance
+
+Seal carries no content and does not modify the Block's current content. If the
+TUI needs to make a final content change, it sends Update before Seal.
+
+The terminal may still reflow sealed content in response to terminal-native
+events such as resize, but reflow does not change logical content. A future
+wire encoding may combine a final Update and Seal as shorthand only if its
+observable semantics remain equivalent to the two Operations in that order.
+
+### 4. Failure Isolation
+
+An invalid or malformed Seal leaves terminal state unchanged and does not
+prevent the terminal from processing subsequent input. This includes a Seal
+with an unknown or already sealed target, or one missing a required Block ID.
+Error reporting and application-side recovery remain wire-level questions.
