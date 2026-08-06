@@ -90,3 +90,8 @@ Detailed observable semantics are consolidated in the living
   existing mutable Block; its initial semantics are defined.
 - [Seal](../protocol/operations.md#seal) finalizes a Block; its initial
   semantics are defined.
+
+Protocol activation is governed by the living
+[Capability Negotiation](../protocol/capabilities.md) document. A TUI enables
+Block Operations only after the current terminal connection positively
+confirms complete support for a mutually understood protocol version.
