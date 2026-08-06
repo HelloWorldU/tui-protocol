@@ -95,3 +95,9 @@ Protocol activation is governed by the living
 [Capability Negotiation](../protocol/capabilities.md) document. A TUI enables
 Block Operations only after the current terminal connection positively
 confirms complete support for a mutually understood protocol version.
+
+Any concrete encoding must satisfy the living
+[Wire Format Requirements](../protocol/wire-requirements.md), including
+explicit framing, safe coexistence with ordinary terminal traffic, ordered
+application, payload integrity, failure recovery, and bidirectional
+capability negotiation.

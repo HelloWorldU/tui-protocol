@@ -68,6 +68,9 @@ correlation mechanism, and timeout policy remain wire-level questions.
 
 ## Open Wire Questions
 
+These questions are constrained by the shared
+[Wire Format Requirements](wire-requirements.md):
+
 - The carrier and framing for queries and responses.
 - The capability identifier and version representation.
 - The correlation token and response-matching rules.
