@@ -12,9 +12,9 @@ defined Block content representation.
 
 ## 1. Explicit Message Boundaries
 
-Each frame represents exactly one complete protocol message. A terminal
-applies a Query, Response, or Operation only after receiving and validating
-the complete frame.
+Each frame represents exactly one complete protocol message. The receiving
+endpoint processes a Query, Response, or Operation only after receiving and
+validating the complete frame.
 
 Framing is independent of application write calls and terminal read chunks. A
 frame may arrive across multiple reads, and multiple frames may arrive in one

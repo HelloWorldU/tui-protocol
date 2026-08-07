@@ -45,7 +45,7 @@ regardless of whether its rendered rows are visible or in scrollback.
 
 ### Operations
 
-The prototype begins with three candidate Operations.
+The prototype implements the three initial Operations.
 
 #### Append
 

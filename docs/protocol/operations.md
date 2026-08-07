@@ -25,8 +25,9 @@ history structure, and reading-anchor state required by that Operation. On
 failure, none of those changes take effect.
 
 Logical atomicity does not yet require intermediate rendering frames to be
-visually atomic. Wire framing, Operation ordering, and concurrency semantics
-also remain separate questions for later design.
+visually atomic. Wire framing and byte-stream ordering are defined separately
+by the [Wire Format Requirements](wire-requirements.md); concurrency across
+independent streams remains open.
 
 ## Append
 
