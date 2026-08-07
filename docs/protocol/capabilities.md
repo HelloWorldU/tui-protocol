@@ -4,6 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
+| Related drafts | [Content representation](content-representation.md), [Wire requirements](wire-requirements.md) |
 
 This document defines the observable semantics for discovering support for the
 Block Operations protocol. It does not define the query or response wire
@@ -36,32 +37,60 @@ the queried version. For the initial version, that baseline includes:
 Recognizing or parsing an Operation without implementing all baseline
 semantics is not sufficient for a positive response.
 
-## 3. Version Binding
+Support for the initial version implies support for `text/plain` even when the
+baseline type is not separately advertised. A response may confirm the
+protocol version without advertising any optional content type.
 
-A capability query and its result are bound to a specific protocol version.
-The terminal confirms a version only when it completely supports that version.
-Support for another version does not imply compatibility.
+## 3. Optional Content Type Advertisement
+
+Alongside protocol-version confirmation, the terminal advertises the set of
+optional content types it supports on the current connection. The terminal
+declares this set, and the TUI selects one confirmed type for each Block
+snapshot.
+
+An optional type is supported only when it is explicitly listed. The TUI does
+not infer support from the terminal's identity, protocol version, related
+types, or payload inspection. The initial model does not define wildcard type
+declarations.
+
+## 4. Complete Type Support
+
+The terminal advertises an optional content type only when it completely
+implements that type's defined semantics. This includes validating its data,
+laying it out and reflowing it, providing its selection, copy, and search
+projection, and preserving Block Operation semantics when it is used.
+
+Recognizing a type identifier or partially rendering its data is not
+sufficient to advertise support.
+
+## 5. Version Binding
+
+A capability query and its result, including any advertised content types,
+are bound to a specific protocol version. The terminal confirms a version only
+when it completely supports that version. Support for another version does
+not imply compatibility.
 
 If both sides support multiple versions, the TUI may select a mutually
 supported version. The representation and selection of versions remain
 wire-level questions.
 
-## 4. Connection Scope
+## 6. Connection Scope
 
-A negotiation result applies only to the current end-to-end terminal byte
-stream. It is not a machine-wide or global capability.
+A negotiation result and its advertised content types apply only to the
+current end-to-end terminal byte stream. They are not machine-wide or global
+capabilities.
 
 An SDK may cache the result for that connection. A new terminal, reconnection,
 or change to the transport path requires new confirmation because
 intermediaries such as multiplexers or remote connections may alter protocol
 support.
 
-## 5. Correlation and Side-Effect Freedom
+## 7. Correlation and Side-Effect Freedom
 
-A positive response is accepted only when it can be matched to the current
-query. A stale, malformed, unrelated, or unmatched response does not establish
-support. Lack of a valid response within the caller's negotiation window is
-treated as unsupported.
+A positive response and its advertised content types are accepted only when
+the response can be matched to the current query. A stale, malformed,
+unrelated, or unmatched response does not establish support. Lack of a valid
+response within the caller's negotiation window is treated as unsupported.
 
 Negotiation creates no Block, changes no protocol lifecycle state, and does
 not affect terminal history or the viewport. The query identifier,
@@ -74,6 +103,7 @@ These questions are constrained by the shared
 
 - The carrier and framing for queries and responses.
 - The capability identifier and version representation.
+- The encoding of the optional content-type set.
 - The correlation token and response-matching rules.
 - Timing, timeout, and repeated-query behavior.
 - Forwarding behavior across multiplexers and remote terminal paths.
