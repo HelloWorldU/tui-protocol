@@ -101,11 +101,14 @@ internally to preserve a reading anchor.
 ## Open Questions
 
 - Block ID format, scope, and reuse rules.
-- Content representation and which terminal-native capabilities it may carry.
+- Concrete optional content types and their terminal-native projections; the
+  shared requirements are now defined in
+  [Content Representation](../protocol/content-representation.md).
 - Error reporting for invalid Operations.
-- Capability negotiation and fallback for terminals without protocol support.
+- The wire encoding for capability negotiation; unsupported-terminal fallback
+  is application-owned.
 - How to map a reading anchor when its own Block is replaced.
 - Whether measured streaming costs justify splitting Update into Extend and
   Replace.
-- Whether removal or any operation beyond Append, Update, and Seal is needed.
+- Whether removal or an Operation beyond Append, Update, and Seal is needed.
 - The wire encoding and whether common Operation sequences should be combined.

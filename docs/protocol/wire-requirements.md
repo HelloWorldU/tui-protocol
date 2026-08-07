@@ -4,11 +4,11 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Content representation](content-representation.md) |
 
 This document defines the requirements that a future wire format must satisfy.
-It does not yet select a carrier, byte encoding, or Block content
-representation.
+It does not yet select a carrier, byte encoding, or serialization for the
+defined Block content representation.
 
 ## 1. Explicit Message Boundaries
 
@@ -54,8 +54,8 @@ terminator. The decoder does not silently truncate, normalize, or partially
 interpret invalid data. Escaping, length prefixes, binary-to-text encoding,
 and allowed character sets remain encoding choices.
 
-The Block content representation is a separate design decision. The wire
-format must carry the selected representation without changing its meaning.
+The Block content representation is defined separately. The wire format must
+carry the selected representation without changing its meaning.
 
 ## 5. Failure Containment and Resynchronization
 
@@ -84,6 +84,6 @@ acknowledgment or response for every Block Operation.
 - Frame delimiters, length representation, and chunking.
 - Envelope fields for message kind, version, and correlation.
 - Payload serialization, escaping, and optional compression.
-- The Block content representation and supported content types.
+- The serialization of content representations and optional content types.
 - Concrete size limits, timeout behavior, and error responses.
 - Authentication, provenance, and authority to mutate existing Blocks.

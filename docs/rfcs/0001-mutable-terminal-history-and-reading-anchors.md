@@ -76,8 +76,9 @@ terminal.
 
 The terminal may use block identity to preserve a reading anchor across an
 operation, but an anchor is not exposed as a separate primitive in this
-initial model. The complete operation set, block representation, and wire
-encoding remain open.
+initial model. Detailed Operation semantics and content-representation
+requirements are maintained in the living protocol drafts below; their wire
+encoding remains open.
 
 ## Protocol Semantics
 
@@ -101,3 +102,9 @@ Any concrete encoding must satisfy the living
 explicit framing, safe coexistence with ordinary terminal traffic, ordered
 application, payload integrity, failure recovery, and bidirectional
 capability negotiation.
+
+Block snapshots follow the living
+[Content Representation](../protocol/content-representation.md) requirements:
+content is self-contained and declarative, uses one explicitly typed and
+negotiated representation, and defines how terminal-native capabilities apply
+to its logical content.

@@ -28,6 +28,7 @@ the queried version. For the initial version, that baseline includes:
 
 - Append, Update, and Seal;
 - the defined Block lifecycle rules;
+- the baseline `text/plain` content representation;
 - logical state atomicity;
 - history integrity and reading-anchor guarantees in their defined scope;
 - failure isolation for invalid Operations.
