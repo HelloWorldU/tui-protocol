@@ -4,6 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md) |
 
 This document consolidates the observable semantics currently agreed for
 protocol Operations. It remains non-normative while the protocol is under
@@ -29,6 +30,10 @@ visually atomic. Wire framing and byte-stream ordering are defined separately
 by the [Wire Format Requirements](wire-requirements.md); concurrency across
 independent streams remains open.
 
+Each Operation explicitly carries the Context ID returned for one open
+[Protocol Context](contexts.md). Its Block ID is interpreted only within that
+Context.
+
 ## Append
 
 ### 1. Creation and Append Order
@@ -39,12 +44,13 @@ movement, and removal are outside the initial Operation set.
 
 ### 2. Block ID Uniqueness
 
-The new Block's ID must not identify an existing Block. A duplicate Append is
-invalid and is not interpreted as an Update or overwrite.
+The new Block's ID must not identify an existing Block in the same Protocol
+Context. A duplicate Append is invalid and is not interpreted as an Update or
+overwrite.
 
 Because the initial model has no removal Operation, a Block ID cannot be reused
-within the current protocol context. The boundary and lifetime of that context
-remain to be defined with session and capability semantics.
+within its Protocol Context. The Context defines the Block ID namespace,
+lifecycle boundary, and non-reuse rules.
 
 ### 3. Initial Content and Lifecycle
 

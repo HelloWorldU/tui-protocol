@@ -100,7 +100,9 @@ internally to preserve a reading anchor.
 
 ## Open Questions
 
-- Block ID format, scope, and reuse rules.
+- Concrete wire representations for Context and Block IDs; Context scope and
+  reuse semantics are now defined in
+  [Protocol Context Semantics](../protocol/contexts.md).
 - Concrete optional content types and their terminal-native projections; the
   shared requirements are now defined in
   [Content Representation](../protocol/content-representation.md).

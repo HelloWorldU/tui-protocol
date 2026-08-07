@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Content representation](content-representation.md), [Wire requirements](wire-requirements.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md) |
 
 This document defines the observable semantics for discovering support for the
 Block Operations protocol. It does not define the query or response wire
@@ -29,6 +29,7 @@ the queried version. For the initial version, that baseline includes:
 
 - Append, Update, and Seal;
 - the defined Block lifecycle rules;
+- Protocol Context establishment, addressing, and closure;
 - the baseline `text/plain` content representation;
 - logical state atomicity;
 - history integrity and reading-anchor guarantees in their defined scope;
@@ -95,6 +96,8 @@ response within the caller's negotiation window is treated as unsupported.
 Negotiation creates no Block, changes no protocol lifecycle state, and does
 not affect terminal history or the viewport. The query identifier,
 correlation mechanism, and timeout policy remain wire-level questions.
+After positive confirmation, the TUI establishes a Protocol Context through a
+separate correlated exchange before sending Block Operations.
 
 ## Open Wire Questions
 

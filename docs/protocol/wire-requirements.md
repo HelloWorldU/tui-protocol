@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Content representation](content-representation.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
 
 This document defines the requirements that a future wire format must satisfy.
 It does not yet select a carrier, byte encoding, or serialization for the
@@ -13,8 +13,8 @@ defined Block content representation.
 ## 1. Explicit Message Boundaries
 
 Each frame represents exactly one complete protocol message. The receiving
-endpoint processes a Query, Response, or Operation only after receiving and
-validating the complete frame.
+endpoint processes that message only after receiving and validating the
+complete frame.
 
 Framing is independent of application write calls and terminal read chunks. A
 frame may arrive across multiple reads, and multiple frames may arrive in one
@@ -36,8 +36,9 @@ fallback behavior.
 
 ## 3. Ordered Application
 
-Valid frames are applied in their byte-stream order. A later Operation cannot
-overtake an earlier Operation because parsing or execution completes sooner.
+Valid frames are applied in their byte-stream order. A later protocol message
+cannot overtake an earlier message because parsing or execution completes
+sooner.
 
 A malformed frame may fail, but it does not reorder other frames. The initial
 wire model defines ordering within one terminal byte stream and does not yet
@@ -45,9 +46,9 @@ define concurrency across independent streams.
 
 ## 4. Unambiguous Fields and Payload Integrity
 
-The wire format distinguishes the message type, Block ID, lifecycle, content,
-version, and other envelope fields without ambiguity. Encoding and then
-decoding a valid message restores the same logical data.
+The wire format distinguishes the message type, Context ID, Block ID,
+lifecycle, content, version, and other envelope fields without ambiguity.
+Encoding and then decoding a valid message restores the same logical data.
 
 Valid payload data cannot be mistaken for a field separator or frame
 terminator. The decoder does not silently truncate, normalize, or partially
@@ -67,12 +68,13 @@ The format requires bounded frame and payload sizes so an incomplete message
 cannot consume resources indefinitely. Concrete limits, discard behavior, and
 error reporting remain to be defined with the encoding.
 
-## 6. Bidirectional Negotiation
+## 6. Bidirectional Protocol Control
 
-The wire design carries Capability Queries and Block Operations from the TUI
-to the terminal, and Capability Responses from the terminal to the TUI.
-Responses are distinguishable from ordinary user input and can be correlated
-with their Queries.
+The wire design carries Capability Queries, Context control requests, and
+Block Operations from the TUI to the terminal. It carries Capability and
+Context control responses from the terminal to the TUI. Responses are
+distinguishable from ordinary user input and can be correlated with their
+requests.
 
 The two directions may use different carriers, but they use a mutually
 understood protocol version. The initial wire requirements do not require an
@@ -83,6 +85,7 @@ acknowledgment or response for every Block Operation.
 - The carrier, including whether to use OSC, DCS, APC, or another mechanism.
 - Frame delimiters, length representation, and chunking.
 - Envelope fields for message kind, version, and correlation.
+- Context control request and response encoding.
 - Payload serialization, escaping, and optional compression.
 - The serialization of content representations and optional content types.
 - Concrete size limits, timeout behavior, and error responses.

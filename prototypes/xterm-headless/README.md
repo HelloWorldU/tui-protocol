@@ -75,6 +75,8 @@ can be designed.
 
 ## Current Private-Core Limits
 
+- The spike models one implicit Protocol Context and does not implement its
+  control exchanges or Context IDs on Operations.
 - Plain text only; terminal control sequences are not part of the experiment.
 - A dedicated terminal owns all writes while Block ranges are tracked.
 - Updating the Block containing the viewport anchor remains undefined.

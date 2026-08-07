@@ -26,6 +26,8 @@ pnpm typecheck
 
 ## Current Limits
 
+- The prototype models one implicit Protocol Context and does not implement
+  Context establishment, closure, or Context IDs on Operations.
 - Content is plain text laid out by Unicode code point count, not terminal
   display width.
 - The model does not parse escape sequences, render images, or drive a real

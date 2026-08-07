@@ -97,6 +97,11 @@ Protocol activation is governed by the living
 Block Operations only after the current terminal connection positively
 confirms complete support for a mutually understood protocol version.
 
+Block identity and mutation authority are scoped by the living
+[Protocol Context Semantics](../protocol/contexts.md) document. Each Block is
+addressed by its Context ID and Block ID; establishing and closing a Context
+are protocol control exchanges rather than Block Operations.
+
 Any concrete encoding must satisfy the living
 [Wire Format Requirements](../protocol/wire-requirements.md), including
 explicit framing, safe coexistence with ordinary terminal traffic, ordered
