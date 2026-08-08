@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md) |
 
 This document defines the lifecycle and addressing scope for a TUI's Block
 state. A Protocol Context is not a third content primitive and its control
@@ -40,6 +40,12 @@ The TUI sends Block Operations only after receiving the positive response.
 Context establishment requires confirmation because allocation, validation,
 or resource limits may cause it to fail; this does not require an
 acknowledgment for every Block Operation.
+
+Within the current connection, retransmitting the same establishment request
+with the same request correlation ID returns its original outcome without
+allocating another Context. A new logical establishment uses a new correlation
+ID, and reusing an ID with different request content is invalid. This makes a
+lost or delayed establishment response safely recoverable.
 
 ## 4. Terminal-Assigned Context ID
 
@@ -127,7 +133,6 @@ streams remains undefined.
 
 - The establishment and closure message encoding.
 - Context and correlation ID wire representations.
-- Retry behavior when an establishment response is lost.
 - Recovery and resource policy for abandoned Contexts.
 - Authentication, provenance, and authority within a shared byte stream.
 - Context behavior across terminal reset mechanisms.

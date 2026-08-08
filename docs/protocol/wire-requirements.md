@@ -46,9 +46,10 @@ define concurrency across independent streams.
 
 ## 4. Unambiguous Fields and Payload Integrity
 
-The wire format distinguishes the message type, Context ID, Block ID,
-lifecycle, content, version, and other envelope fields without ambiguity.
-Encoding and then decoding a valid message restores the same logical data.
+The wire format distinguishes the message type, request or Operation
+correlation ID, Context ID, Block ID, lifecycle, content, version, and other
+envelope fields without ambiguity. Encoding and then decoding a valid message
+restores the same logical data.
 
 Valid payload data cannot be mistaken for a field separator or frame
 terminator. The decoder does not silently truncate, normalize, or partially
@@ -65,8 +66,9 @@ can recover a valid message boundary and continue processing later ordinary
 output and protocol frames.
 
 The format requires bounded frame and payload sizes so an incomplete message
-cannot consume resources indefinitely. Concrete limits, discard behavior, and
-error reporting remain to be defined with the encoding.
+cannot consume resources indefinitely. Concrete limits and discard behavior
+remain to be defined with the encoding. Logical error and recovery behavior is
+defined by the [Logical Wire Message Model](wire-format.md).
 
 ## 6. Bidirectional Protocol Control
 
@@ -77,8 +79,9 @@ distinguishable from ordinary user input and can be correlated with their
 requests.
 
 The two directions may use different carriers, but they use a mutually
-understood protocol version. The initial wire requirements do not require an
-acknowledgment or response for every Block Operation.
+understood protocol version. Successful Block Operations do not require an
+acknowledgment; rejected, reliably identified Operations produce a correlated
+protocol error.
 
 The common envelope, finite message kinds, request correlation, and explicit
 Context scope are consolidated in the
@@ -92,5 +95,5 @@ Context scope are consolidated in the
 - Context control request and response encoding.
 - Payload serialization, escaping, and optional compression.
 - The serialization of content representations and optional content types.
-- Concrete size limits, timeout behavior, and error responses.
+- Concrete size limits, timeout behavior, and error-code encoding.
 - Authentication, provenance, and authority to mutate existing Blocks.

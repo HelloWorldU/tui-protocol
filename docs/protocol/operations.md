@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md) |
 
 This document consolidates the observable semantics currently agreed for
 protocol Operations. It remains non-normative while the protocol is under
@@ -33,6 +33,11 @@ independent streams remains open.
 Each Operation explicitly carries the Context ID returned for one open
 [Protocol Context](contexts.md). Its Block ID is interpreted only within that
 Context.
+
+The [Logical Wire Message Model](wire-format.md) assigns every Block Operation
+a correlation ID, reports rejected Operations without acknowledging successful
+ones, and leaves later messages eligible for ordered processing. Block
+Operation retransmission is not supported in the initial model.
 
 ## Append
 
@@ -76,8 +81,8 @@ presentation event does not change any Block's lifecycle.
 A duplicate Append, or one missing a required ID, content snapshot, or
 lifecycle, is invalid and leaves terminal state unchanged. A malformed
 Operation likewise creates no partial Block and does not prevent the terminal
-from processing subsequent input. Error reporting and application-side
-recovery remain wire-level questions.
+from processing subsequent input. The rejection is reported by the logical
+wire error mechanism; application-side recovery remains TUI-owned.
 
 ## Update
 
@@ -120,8 +125,9 @@ undefined.
 
 An Update targeting an unknown or sealed Block is invalid and leaves terminal
 state unchanged. A malformed Operation likewise causes no partial mutation and
-does not prevent the terminal from processing subsequent input. Error
-reporting and recovery on the application side remain wire-level questions.
+does not prevent the terminal from processing subsequent input. The rejection
+is reported by the logical wire error mechanism; application-side recovery
+remains TUI-owned.
 
 ## Seal
 
@@ -141,8 +147,8 @@ Seal is valid only when the target Block exists and remains mutable. A Seal
 targeting an unknown or already sealed Block is invalid. Seal is therefore not
 idempotent in the initial semantics.
 
-Idempotency may be reconsidered if later wire-level delivery and retry
-requirements justify it.
+The Operation ID defined by the logical wire model is only an error-correlation
+value. It does not make Seal idempotent or permit its retransmission.
 
 ### 3. Content Invariance
 
@@ -159,4 +165,5 @@ observable semantics remain equivalent to the two Operations in that order.
 An invalid or malformed Seal leaves terminal state unchanged and does not
 prevent the terminal from processing subsequent input. This includes a Seal
 with an unknown or already sealed target, or one missing a required Block ID.
-Error reporting and application-side recovery remain wire-level questions.
+The rejection is reported by the logical wire error mechanism;
+application-side recovery remains TUI-owned.
