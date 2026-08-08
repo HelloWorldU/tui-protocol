@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
+| Related drafts | [Logical wire message model](wire-format.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
 
 This document defines the requirements that a future wire format must satisfy.
 It does not yet select a carrier, byte encoding, or serialization for the
@@ -80,11 +80,15 @@ The two directions may use different carriers, but they use a mutually
 understood protocol version. The initial wire requirements do not require an
 acknowledgment or response for every Block Operation.
 
+The common envelope, finite message kinds, request correlation, and explicit
+Context scope are consolidated in the
+[Logical Wire Message Model](wire-format.md).
+
 ## Open Design Choices
 
 - The carrier, including whether to use OSC, DCS, APC, or another mechanism.
 - Frame delimiters, length representation, and chunking.
-- Envelope fields for message kind, version, and correlation.
+- Concrete encoding of the defined logical envelope fields.
 - Context control request and response encoding.
 - Payload serialization, escaping, and optional compression.
 - The serialization of content representations and optional content types.

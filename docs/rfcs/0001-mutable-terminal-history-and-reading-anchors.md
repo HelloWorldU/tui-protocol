@@ -108,6 +108,10 @@ explicit framing, safe coexistence with ordinary terminal traffic, ordered
 application, payload integrity, failure recovery, and bidirectional
 capability negotiation.
 
+The living [Logical Wire Message Model](../protocol/wire-format.md) maps those
+semantics onto a common envelope and finite Capability, Context, and Block
+Operation message kinds without yet selecting a byte encoding or carrier.
+
 Block snapshots follow the living
 [Content Representation](../protocol/content-representation.md) requirements:
 content is self-contained and declarative, uses one explicitly typed and
