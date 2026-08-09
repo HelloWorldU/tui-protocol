@@ -59,11 +59,17 @@ and allowed character sets remain encoding choices.
 The Block content representation is defined separately. The wire format must
 carry the selected representation without changing its meaning.
 
+Each recognized protocol version uses closed logical schemas. An unknown
+field invalidates its complete Message; the receiver does not remove that
+field and partially interpret the remainder. Defined optional fields and
+negotiated optional content representations remain valid only where their
+selected schema permits them.
+
 ## 5. Failure Containment and Resynchronization
 
-A malformed, unknown, or over-limit frame is rejected as a unit. The parser
-can recover a valid message boundary and continue processing later ordinary
-output and protocol frames.
+A malformed, unrecognized, or over-limit frame is rejected as a unit. The
+parser can recover a valid message boundary and continue processing later
+ordinary output and protocol frames.
 
 The format requires bounded frame and payload sizes so an incomplete message
 cannot consume resources indefinitely. Concrete limits and discard behavior
@@ -83,8 +89,8 @@ understood protocol version. Successful Block Operations do not require an
 acknowledgment; rejected, reliably identified Operations produce a correlated
 protocol error.
 
-The common envelope, finite message kinds, request correlation, and explicit
-Context scope are consolidated in the
+The common envelope, finite message kinds, request correlation, explicit
+Context scope, and closed-schema compatibility rules are consolidated in the
 [Logical Wire Message Model](wire-format.md).
 
 ## Open Design Choices

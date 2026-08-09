@@ -110,7 +110,8 @@ capability negotiation.
 
 The living [Logical Wire Message Model](../protocol/wire-format.md) maps those
 semantics onto a common envelope and finite Capability, Context, Block
-Operation, and error-reporting message kinds without yet selecting a byte
+Operation, and error-reporting message kinds. It also defines closed
+per-version schemas and explicit extension paths without yet selecting a byte
 encoding or carrier.
 
 Block snapshots follow the living

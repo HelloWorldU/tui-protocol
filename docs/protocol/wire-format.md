@@ -146,7 +146,29 @@ associate the error reliably.
 `protocol.error` travels only from the terminal to the TUI and does not itself
 receive a protocol response.
 
-## 7. Semantic Mapping
+## 7. Closed Schemas and Extensions
+
+Each protocol version defines a closed schema for the common envelope and for
+every recognized message kind. A field that is not defined by that schema
+invalidates the entire Message. The receiver must not discard the unknown
+field and execute the remainder of the Message.
+
+When valid request or Operation identity makes correlation reliable, the
+receiver reports the rejection through the corresponding failure response or
+`protocol.error`. Otherwise, it discards the Message without guessing its
+meaning, following the recovery rules above.
+
+A field explicitly defined as optional by the selected schema is not an
+unknown field. Its permitted presence or absence is part of that schema.
+
+The initial protocol version has no generic extension dictionary, vendor
+field namespace, or other escape hatch for arbitrary fields. Changes to
+baseline message semantics require a new protocol version. Optional content
+representations use Capability negotiation. Experiments must use an explicitly
+non-standard experimental protocol identifier or version rather than adding
+fields under the standard version.
+
+## 8. Semantic Mapping
 
 The message body for each kind will carry the information required by its
 existing semantic definition. Defining those schemas is a mechanical mapping
@@ -162,6 +184,5 @@ encoding and nesting remain serialization decisions.
 - Concrete body schemas and field encodings for each message kind.
 - The initial stable error-code enumeration and its concrete encoding.
 - Resource bounds for retaining completed Context-open outcomes.
-- Handling of unknown fields and compatible protocol extensions.
 - Serialization, escaping, carrier, framing, and chunking.
 - Concrete size limits and resource-exhaustion behavior.
