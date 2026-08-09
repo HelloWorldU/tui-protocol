@@ -4,12 +4,12 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [Error codes](error-codes.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
 
 This document defines the observable semantics for discovering support for the
-Block Operations protocol. It does not define the query or response wire
-encoding. An SDK may expose the final decision as a boolean even if the
-underlying response is structured.
+Block Operations protocol. Message schemas and JSON serialization are defined
+separately; the terminal carrier and framing remain open. An SDK may expose
+the final decision as a boolean even if the underlying response is structured.
 
 ## 1. Positive Confirmation and External Fallback
 
@@ -72,8 +72,8 @@ when it completely supports that version. Support for another version does
 not imply compatibility.
 
 If both sides support multiple versions, the TUI may select a mutually
-supported version. The representation and selection of versions remain
-wire-level questions.
+supported version. The initial version is represented by JSON integer `1`;
+future version-selection behavior remains a wire-level question.
 
 ## 6. Connection Scope
 
@@ -107,8 +107,5 @@ These questions are constrained by the shared
 [Wire Format Requirements](wire-requirements.md):
 
 - The carrier and framing for queries and responses.
-- The concrete scalar encoding of the protocol version.
-- The encoding of the optional content-type set.
-- The correlation token encoding.
 - Timing, timeout, and repeated-query behavior.
 - Forwarding behavior across multiplexers and remote terminal paths.

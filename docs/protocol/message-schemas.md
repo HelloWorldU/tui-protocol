@@ -4,11 +4,11 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Logical wire message model](wire-format.md), [Error codes](error-codes.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
+| Related drafts | [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [Error codes](error-codes.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
 
 This document maps each message kind in the logical wire model to a concrete
-logical body schema. It defines fields and their conditions without selecting
-a serialization, scalar encoding, carrier, or framing mechanism.
+logical body schema. It defines fields and their conditions independently of
+the selected JSON serialization and the future carrier and framing mechanism.
 
 ## 1. Notation and Shared Types
 
@@ -40,7 +40,7 @@ human-readable diagnostic and is not a machine-readable contract.
 
 Request IDs, Operation IDs, Context IDs, and Block IDs retain the ownership,
 scope, uniqueness, and opacity rules of their semantic drafts. Their concrete
-scalar encodings remain wire-serialization decisions.
+JSON mapping is defined by [JSON Serialization](serialization.md).
 
 ## 2. Envelope Field Matrix
 
@@ -202,7 +202,4 @@ the correlated failure behavior defined by the logical wire model.
 
 ## Open Design Choices
 
-- Concrete scalar encodings for identifiers, outcomes, and lifecycle values.
-- Serialization of records, alternatives, arrays, text, and typed content
-  data.
 - Exact validity rules for baseline `text/plain` data.

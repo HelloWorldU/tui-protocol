@@ -4,12 +4,12 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Message schemas](message-schemas.md), [Logical wire message model](wire-format.md), [Operations](operations.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
+| Related drafts | [Message schemas](message-schemas.md), [JSON serialization](serialization.md), [Logical wire message model](wire-format.md), [Operations](operations.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
 
 This document defines the initial stable, machine-readable `ErrorCode` set.
 It classifies failures that a TUI may need to distinguish without exposing
-terminal implementation details. Concrete serialization of these symbolic
-values remains a wire-encoding decision.
+terminal implementation details. JSON serialization encodes each symbolic
+value as its exact string spelling.
 
 The set is closed for the selected protocol version. An unknown code makes
 its containing response or `protocol.error` invalid; adding a standard code
@@ -125,7 +125,6 @@ state left by earlier successful Operations.
 
 ## Open Design Choices
 
-- Concrete serialization of symbolic error-code values.
 - Resource limits and the boundary between frame-level discard and a
   correlated `resource_exhausted` response.
 - Whether future protocol versions introduce more specific recovery guidance.

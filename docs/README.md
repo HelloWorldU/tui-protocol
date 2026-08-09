@@ -15,6 +15,7 @@ here.
 | [Logical wire message model](protocol/wire-format.md) | Protocol draft | Draft |
 | [Concrete message schemas](protocol/message-schemas.md) | Protocol draft | Draft |
 | [Error codes](protocol/error-codes.md) | Protocol draft | Draft |
+| [JSON serialization](protocol/serialization.md) | Protocol draft | Draft |
 | [Content representation](protocol/content-representation.md) | Protocol draft | Draft |
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |

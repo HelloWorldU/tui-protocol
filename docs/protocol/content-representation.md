@@ -4,11 +4,11 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Error codes](error-codes.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
 
 This document defines the observable requirements for representing a Block's
-content. It does not yet select a wire serialization or define a catalog of
-optional content types.
+content. Content snapshots use the shared JSON serialization, but this
+document does not yet define a catalog of optional content types.
 
 ## 1. Self-Contained and Declarative
 
@@ -67,7 +67,6 @@ executed.
 
 ## Open Design Choices
 
-- Serialization and validation of the `ContentSnapshot` type and data fields.
 - Newline, control-character, and Unicode handling for `text/plain`.
 - The initial set of optional content types and their schemas.
 - Content-type naming, registration, and versioning.

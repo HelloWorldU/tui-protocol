@@ -4,11 +4,11 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Message schemas](message-schemas.md), [Error codes](error-codes.md), [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
+| Related drafts | [Message schemas](message-schemas.md), [JSON serialization](serialization.md), [Error codes](error-codes.md), [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
 
 This document defines the initial logical shape and classification of protocol
-messages. It maps existing protocol semantics onto messages without yet
-selecting a carrier, framing mechanism, byte encoding, or serialization.
+messages. It maps existing protocol semantics independently of their selected
+serialization and future carrier and framing mechanism.
 
 ## 1. Common Envelope
 
@@ -172,11 +172,11 @@ fields under the standard version.
 The [Concrete Message Schemas](message-schemas.md) map each message kind to
 the fields required by its existing semantic definition. That mapping does
 not create new Block lifecycle, ordering, content, or rendering behavior.
-Field serialization and scalar encodings remain separate decisions.
+The separate [JSON Serialization](serialization.md) document defines the
+initial mapping of those fields and scalar values to UTF-8 JSON.
 
 ## Open Design Choices
 
-- Concrete error-code encoding.
 - Resource bounds for retaining completed Context-open outcomes.
-- Serialization, escaping, carrier, framing, and chunking.
+- Carrier-specific escaping, framing, chunking, and optional compression.
 - Concrete size limits and resource-exhaustion behavior.

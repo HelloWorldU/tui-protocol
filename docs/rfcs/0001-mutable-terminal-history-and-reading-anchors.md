@@ -111,8 +111,7 @@ capability negotiation.
 The living [Logical Wire Message Model](../protocol/wire-format.md) maps those
 semantics onto a common envelope and finite Capability, Context, Block
 Operation, and error-reporting message kinds. It also defines closed
-per-version schemas and explicit extension paths without yet selecting a byte
-encoding or carrier.
+per-version schemas and explicit extension paths.
 
 The living [Concrete Message Schemas](../protocol/message-schemas.md) map each
 logical message kind to its required envelope and body fields without adding
@@ -120,6 +119,10 @@ new Block semantics.
 
 The initial machine-readable failure categories and their reporting paths are
 defined by the living [Error Codes](../protocol/error-codes.md) document.
+
+The initial logical Message serialization is UTF-8 JSON as defined by the
+living [JSON Serialization](../protocol/serialization.md) document. Terminal
+carrier and framing remain open.
 
 Block snapshots follow the living
 [Content Representation](../protocol/content-representation.md) requirements:
