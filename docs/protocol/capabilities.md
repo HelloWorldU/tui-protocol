@@ -107,7 +107,7 @@ These questions are constrained by the shared
 [Wire Format Requirements](wire-requirements.md):
 
 - The carrier and framing for queries and responses.
-- The capability identifier and version representation.
+- The concrete scalar encoding of the protocol version.
 - The encoding of the optional content-type set.
 - The correlation token encoding.
 - Timing, timeout, and repeated-query behavior.

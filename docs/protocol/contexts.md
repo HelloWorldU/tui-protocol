@@ -28,7 +28,8 @@ side effects. After positive capability confirmation, the TUI explicitly
 requests a new Context. Block Operations are invalid until that Context has
 been established successfully.
 
-The concrete control-message names and encoding remain wire-level choices.
+The logical control-message names are defined by the message model. Their
+serialization and encoding remain wire-level choices.
 
 ## 3. Atomic Positive Establishment
 

@@ -13,6 +13,7 @@ here.
 | [Capability negotiation](protocol/capabilities.md) | Protocol draft | Draft |
 | [Wire format requirements](protocol/wire-requirements.md) | Protocol draft | Draft |
 | [Logical wire message model](protocol/wire-format.md) | Protocol draft | Draft |
+| [Concrete message schemas](protocol/message-schemas.md) | Protocol draft | Draft |
 | [Content representation](protocol/content-representation.md) | Protocol draft | Draft |
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |

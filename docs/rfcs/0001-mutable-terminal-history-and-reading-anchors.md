@@ -114,6 +114,10 @@ Operation, and error-reporting message kinds. It also defines closed
 per-version schemas and explicit extension paths without yet selecting a byte
 encoding or carrier.
 
+The living [Concrete Message Schemas](../protocol/message-schemas.md) map each
+logical message kind to its required envelope and body fields without adding
+new Block semantics.
+
 Block snapshots follow the living
 [Content Representation](../protocol/content-representation.md) requirements:
 content is self-contained and declarative, uses one explicitly typed and

@@ -15,9 +15,9 @@ giving up the native terminal experience.
 This project is an early research prototype, not a standard or a stable
 protocol.
 
-Current focus (2026-07-31): define the requirements and observable invariants
-for mutable terminal history and reading anchors before choosing a wire
-format.
+Current focus (2026-08-09): map the agreed protocol semantics to concrete
+message schemas before selecting serialization, framing, and a terminal
+carrier.
 
 ## Documentation
 

@@ -67,7 +67,7 @@ executed.
 
 ## Open Design Choices
 
-- The concrete wire schema for the content type and data fields.
+- Serialization and validation of the `ContentSnapshot` type and data fields.
 - Newline, control-character, and Unicode handling for `text/plain`.
 - The initial set of optional content types and their schemas.
 - Content-type naming, registration, and versioning.

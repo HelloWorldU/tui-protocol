@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
+| Related drafts | [Message schemas](message-schemas.md), [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
 
 This document defines the initial logical shape and classification of protocol
 messages. It maps existing protocol semantics onto messages without yet
@@ -170,18 +170,13 @@ fields under the standard version.
 
 ## 8. Semantic Mapping
 
-The message body for each kind will carry the information required by its
-existing semantic definition. Defining those schemas is a mechanical mapping
-step and does not create new Block lifecycle, ordering, content, or rendering
-behavior.
-
-For example, the eventual `block.append` schema must carry its Block ID,
-initial lifecycle, and complete typed content snapshot. The exact field
-encoding and nesting remain serialization decisions.
+The [Concrete Message Schemas](message-schemas.md) map each message kind to
+the fields required by its existing semantic definition. That mapping does
+not create new Block lifecycle, ordering, content, or rendering behavior.
+Field serialization and scalar encodings remain separate decisions.
 
 ## Open Design Choices
 
-- Concrete body schemas and field encodings for each message kind.
 - The initial stable error-code enumeration and its concrete encoding.
 - Resource bounds for retaining completed Context-open outcomes.
 - Serialization, escaping, carrier, framing, and chunking.
