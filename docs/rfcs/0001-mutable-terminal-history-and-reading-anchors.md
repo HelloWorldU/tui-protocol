@@ -121,8 +121,9 @@ The initial machine-readable failure categories and their reporting paths are
 defined by the living [Error Codes](../protocol/error-codes.md) document.
 
 The initial logical Message serialization is UTF-8 JSON as defined by the
-living [JSON Serialization](../protocol/serialization.md) document. Terminal
-carrier and framing remain open.
+living [JSON Serialization](../protocol/serialization.md) document. The
+initial bidirectional carrier and message boundaries are defined by the living
+[OSC Carrier and Framing](../protocol/framing.md) document.
 
 Block snapshots follow the living
 [Content Representation](../protocol/content-representation.md) requirements:

@@ -4,12 +4,13 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Message schemas](message-schemas.md), [Error codes](error-codes.md), [Logical wire message model](wire-format.md), [Wire requirements](wire-requirements.md), [Content representation](content-representation.md) |
+| Related drafts | [Message schemas](message-schemas.md), [Error codes](error-codes.md), [Logical wire message model](wire-format.md), [Wire requirements](wire-requirements.md), [OSC framing](framing.md), [Content representation](content-representation.md) |
 | Base standard | [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259) |
 
 This document defines the initial serialization of one logical protocol
-Message as UTF-8 JSON. It does not define the frame that contains those bytes
-or the terminal carrier that transports the frame.
+Message as UTF-8 JSON. The separate
+[OSC Carrier and Framing](framing.md) document defines how those bytes travel
+through the terminal stream.
 
 ## 1. One Message, One JSON Object
 
@@ -153,7 +154,7 @@ equivalent JSON string escaping do not create a different request.
 ## 8. Separation from Framing and Carrier
 
 JSON escaping protects JSON syntax only. It does not protect a payload from a
-terminal carrier's delimiters or control bytes. The framing design must carry
+terminal carrier's delimiters or control bytes. The OSC framing layer carries
 the complete UTF-8 payload without truncation, delimiter injection, or
 accidental terminal execution.
 
@@ -163,9 +164,8 @@ decoded logical Message.
 
 ## Open Design Choices
 
-- Maximum JSON payload size, nesting depth, string length, and identifier
-  length.
+- Maximum JSON nesting depth, string length, and identifier length within the
+  framing layer's complete-Message limit.
 - Detailed newline, control-character, and Unicode validity for baseline
   `text/plain` content.
 - JSON `data` schemas for future optional content types.
-- Carrier, framing, carrier-safe payload encoding, and chunking.

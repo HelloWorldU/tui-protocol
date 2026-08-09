@@ -6,7 +6,8 @@ It validates that an OSC sequence can carry experimental Block Operations
 through arbitrary write boundaries.
 
 The spike deliberately uses OSC 777 with a JSON payload. Both the identifier
-and encoding are temporary test fixtures, not protocol proposals.
+and encoding are temporary test fixtures, not the subsequently selected OSC
+carrier and Base64 framing.
 
 ## Proven
 

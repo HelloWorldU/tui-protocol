@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md) |
 
 This document defines the lifecycle and addressing scope for a TUI's Block
 state. A Protocol Context is not a third content primitive and its control
@@ -29,8 +29,8 @@ requests a new Context. Block Operations are invalid until that Context has
 been established successfully.
 
 The logical control-message names are defined by the message model. Their
-[JSON serialization](serialization.md) is defined separately; carrier and
-framing remain wire-level choices.
+[JSON serialization](serialization.md) and [OSC framing](framing.md) are
+defined separately.
 
 ## 3. Atomic Positive Establishment
 
@@ -133,7 +133,6 @@ streams remains undefined.
 
 ## Open Design Choices
 
-- Carrier and framing for establishment and closure messages.
 - Recovery and resource policy for abandoned Contexts.
 - Authentication, provenance, and authority within a shared byte stream.
 - Context behavior across terminal reset mechanisms.

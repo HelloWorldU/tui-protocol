@@ -8,7 +8,7 @@
 
 This document maps each message kind in the logical wire model to a concrete
 logical body schema. It defines fields and their conditions independently of
-the selected JSON serialization and the future carrier and framing mechanism.
+the selected JSON serialization, OSC carrier, and framing mechanism.
 
 ## 1. Notation and Shared Types
 

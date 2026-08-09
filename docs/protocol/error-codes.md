@@ -99,8 +99,9 @@ terminal to infer another type, repair the snapshot, or partially apply it.
 
 `resource_exhausted` reports a defined implementation limit or unavailable
 capacity that prevents atomic completion. It can apply, for example, to
-Context allocation or to an otherwise valid Block Operation. Concrete limits
-and pre-decode frame-size handling remain wire-level questions.
+Context allocation or to an otherwise valid Block Operation. Carrier and
+complete-Message size violations are handled before logical error reporting by
+the framing layer.
 
 `internal_error` is the final category for an unexpected implementation
 failure after the Message is structurally and semantically valid. It must not
@@ -125,6 +126,4 @@ state left by earlier successful Operations.
 
 ## Open Design Choices
 
-- Resource limits and the boundary between frame-level discard and a
-  correlated `resource_exhausted` response.
 - Whether future protocol versions introduce more specific recovery guidance.

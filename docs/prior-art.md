@@ -2,7 +2,7 @@
 
 Status: living research note
 
-Last reviewed: 2026-07-31
+Last reviewed: 2026-08-09
 
 This document records primary sources that constrain the project. It is not a
 claim that every terminal or proposal has been surveyed.
@@ -69,5 +69,8 @@ active screen, and preservation of a logical reading anchor. This is a
 bounded conclusion from the sources above, not proof that no such work
 exists.
 
-Before defining a new wire format, the project must decide whether the missing
-semantics belong in an extension or profile of TBP.
+The project uses an independent logical protocol because its baseline concerns
+terminal-owned mutable history and reading-anchor preservation rather than a
+bundle of rich representations. It reuses the demonstrated deployment pattern
+of OSC carrying Base64-encoded structured data without adopting TBP's content
+model or patch semantics.

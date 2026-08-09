@@ -4,11 +4,11 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Message schemas](message-schemas.md), [JSON serialization](serialization.md), [Error codes](error-codes.md), [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
+| Related drafts | [Message schemas](message-schemas.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md), [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
 
 This document defines the initial logical shape and classification of protocol
 messages. It maps existing protocol semantics independently of their selected
-serialization and future carrier and framing mechanism.
+serialization, carrier, and framing mechanism.
 
 ## 1. Common Envelope
 
@@ -125,10 +125,10 @@ machine-readable error code, and an optional human-readable diagnostic. The
 diagnostic is not part of the machine-readable contract. The initial stable
 set and its failure mapping are defined by [Error Codes](error-codes.md).
 
-A complete frame whose logical Message fails schema validation is also
-rejected atomically. It produces a correlated failure only when enough of its
-request or Operation identity has been validated to associate that failure
-reliably.
+A completely assembled payload whose logical Message fails schema validation
+is also rejected atomically. It produces a correlated failure only when enough
+of its request or Operation identity has been validated to associate that
+failure reliably.
 
 Rejecting an Operation does not close its Context or change any other protocol
 state. Later messages continue to be processed in byte-stream order against
@@ -136,11 +136,11 @@ the state left by earlier successful Operations. An error notification is not
 an execution barrier and does not roll back later Operations already sent or
 applied. Recovery and fallback remain TUI-owned decisions.
 
-If frame bytes are incomplete or malformed, the receiver does not guess their
-intended message, fields, or correlation IDs. It changes no protocol state,
-discards through a recoverable boundary, and resumes parsing. No error response
-is required unless a complete frame provides enough valid identity to
-associate the error reliably.
+If carrier or assembly bytes are incomplete or malformed, the receiver does
+not guess their intended Message, fields, or correlation IDs. It changes no
+protocol state, discards through a recoverable boundary, and resumes parsing.
+No error response is required unless a complete assembled Message provides
+enough valid identity to associate the error reliably.
 
 `protocol.error` travels only from the terminal to the TUI and does not itself
 receive a protocol response.
@@ -178,5 +178,4 @@ initial mapping of those fields and scalar values to UTF-8 JSON.
 ## Open Design Choices
 
 - Resource bounds for retaining completed Context-open outcomes.
-- Carrier-specific escaping, framing, chunking, and optional compression.
-- Concrete size limits and resource-exhaustion behavior.
+- Resource-exhaustion behavior outside the initial framing limits.

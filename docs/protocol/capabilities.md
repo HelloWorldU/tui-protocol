@@ -4,11 +4,11 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md) |
 
 This document defines the observable semantics for discovering support for the
 Block Operations protocol. Message schemas and JSON serialization are defined
-separately; the terminal carrier and framing remain open. An SDK may expose
+separately; the initial wire uses bidirectional OSC framing. An SDK may expose
 the final decision as a boolean even if the underlying response is structured.
 
 ## 1. Positive Confirmation and External Fallback
@@ -106,6 +106,5 @@ separate correlated exchange before sending Block Operations.
 These questions are constrained by the shared
 [Wire Format Requirements](wire-requirements.md):
 
-- The carrier and framing for queries and responses.
 - Timing, timeout, and repeated-query behavior.
 - Forwarding behavior across multiplexers and remote terminal paths.
