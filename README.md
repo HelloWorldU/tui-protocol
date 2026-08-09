@@ -15,9 +15,9 @@ giving up the native terminal experience.
 This project is an early research prototype, not a standard or a stable
 protocol.
 
-Current focus (2026-08-09): map the agreed protocol semantics to concrete
-message schemas before selecting serialization, framing, and a terminal
-carrier.
+Current focus (2026-08-09): complete the concrete logical wire design,
+including message schemas and error taxonomy, before selecting serialization,
+framing, and a terminal carrier.
 
 ## Documentation
 

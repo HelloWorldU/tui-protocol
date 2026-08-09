@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Message schemas](message-schemas.md), [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
+| Related drafts | [Message schemas](message-schemas.md), [Error codes](error-codes.md), [Wire requirements](wire-requirements.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md) |
 
 This document defines the initial logical shape and classification of protocol
 messages. It maps existing protocol semantics onto messages without yet
@@ -122,9 +122,8 @@ protocol error.
 A semantically invalid Block Operation is rejected atomically and produces a
 `protocol.error` containing its Context ID, Operation ID, a stable
 machine-readable error code, and an optional human-readable diagnostic. The
-diagnostic is not part of the machine-readable contract. The error codes form
-a protocol-defined set; their concrete initial members remain to be
-enumerated from the invalid conditions in the semantic drafts.
+diagnostic is not part of the machine-readable contract. The initial stable
+set and its failure mapping are defined by [Error Codes](error-codes.md).
 
 A complete frame whose logical Message fails schema validation is also
 rejected atomically. It produces a correlated failure only when enough of its
@@ -177,7 +176,7 @@ Field serialization and scalar encodings remain separate decisions.
 
 ## Open Design Choices
 
-- The initial stable error-code enumeration and its concrete encoding.
+- Concrete error-code encoding.
 - Resource bounds for retaining completed Context-open outcomes.
 - Serialization, escaping, carrier, framing, and chunking.
 - Concrete size limits and resource-exhaustion behavior.

@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Error codes](error-codes.md) |
 
 This document defines the observable requirements for representing a Block's
 content. It does not yet select a wire serialization or define a catalog of

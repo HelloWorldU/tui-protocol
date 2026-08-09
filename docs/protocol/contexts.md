@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [Error codes](error-codes.md) |
 
 This document defines the lifecycle and addressing scope for a TUI's Block
 state. A Protocol Context is not a third content primitive and its control

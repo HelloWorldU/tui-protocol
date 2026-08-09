@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Logical wire message model](wire-format.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
+| Related drafts | [Logical wire message model](wire-format.md), [Error codes](error-codes.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
 
 This document maps each message kind in the logical wire model to a concrete
 logical body schema. It defines fields and their conditions without selecting
@@ -34,9 +34,9 @@ Failure {
 baseline `text/plain` representation, `data` is a logical text value. Each
 optional content type defines its own complete `ContentData` schema.
 
-`ErrorCode` belongs to a stable protocol-defined enumeration. Its initial
-members are defined separately from these structural schemas. `message` is an
-optional human-readable diagnostic and is not a machine-readable contract.
+`ErrorCode` belongs to the stable protocol-defined
+[Error Codes](error-codes.md) enumeration. `message` is an optional
+human-readable diagnostic and is not a machine-readable contract.
 
 Request IDs, Operation IDs, Context IDs, and Block IDs retain the ownership,
 scope, uniqueness, and opacity rules of their semantic drafts. Their concrete
@@ -202,7 +202,6 @@ the correlated failure behavior defined by the logical wire model.
 
 ## Open Design Choices
 
-- The initial stable `ErrorCode` enumeration.
 - Concrete scalar encodings for identifiers, outcomes, and lifecycle values.
 - Serialization of records, alternatives, arrays, text, and typed content
   data.

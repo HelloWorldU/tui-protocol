@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Logical wire message model](wire-format.md), [Message schemas](message-schemas.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
+| Related drafts | [Logical wire message model](wire-format.md), [Message schemas](message-schemas.md), [Error codes](error-codes.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
 
 This document defines the requirements that a future wire format must satisfy.
 It does not yet select a carrier, byte encoding, or serialization for the

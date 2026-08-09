@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [Error codes](error-codes.md) |
 
 This document defines the observable semantics for discovering support for the
 Block Operations protocol. It does not define the query or response wire
