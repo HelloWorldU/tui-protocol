@@ -15,8 +15,8 @@ giving up the native terminal experience.
 This project is an early research prototype, not a standard or a stable
 protocol.
 
-Current focus (2026-08-09): implement and validate a TypeScript reference
-codec for the selected UTF-8 JSON serialization and OSC framing.
+Current focus (2026-08-10): validate the initial TypeScript reference codec
+for the selected UTF-8 JSON serialization and OSC framing.
 
 ## Documentation
 

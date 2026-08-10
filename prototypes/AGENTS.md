@@ -23,8 +23,9 @@ related documents and link to the supporting prototype or test.
 
 ## Verification
 
-Tests should verify the claims recorded in each prototype's `README.md`. Run
-the relevant commands from the repository root before submitting a change:
+Tests should verify the claims recorded in each prototype's `README.md`. Keep
+claims precise and do not overstate what the evidence proves. Run the relevant
+commands from the repository root before submitting a change:
 
 ```sh
 pnpm typecheck

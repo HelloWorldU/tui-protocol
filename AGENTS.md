@@ -21,6 +21,7 @@ docs/                         Project documentation and its main index.
   rfcs/                       Numbered proposals and design rationale.
 prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
+  reference-codec/            TypeScript JSON and OSC codec experiment.
   xterm-headless/             xterm integration and OSC feasibility spikes.
 ```
 
