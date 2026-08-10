@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  FrameCodecError,
+  MAX_MESSAGE_BYTES,
   MessageCodecError,
   ProtocolStreamDecoder,
   deserializeMessage,
   encodeMessageFrames,
+  serializeMessage,
   type DecoderEvent,
   type Message,
 } from "./index.ts";
@@ -121,6 +124,69 @@ const messages: readonly Message[] = [
   },
 ];
 
+const goldenMessage: Message = {
+  version: 1,
+  kind: "capability.query",
+  request_id: "r",
+  body: {},
+};
+const goldenJson =
+  '{"version":1,"kind":"capability.query","request_id":"r","body":{}}';
+const goldenOsc =
+  "\u001B]9002;1;7;0;0;" +
+  "eyJ2ZXJzaW9uIjoxLCJraW5kIjoiY2FwYWJpbGl0eS5xdWVyeSIs" +
+  "InJlcXVlc3RfaWQiOiJyIiwiYm9keSI6e319\u001B\\";
+const goldenUpdate: Message = {
+  version: 1,
+  kind: "block.update",
+  operation_id: "42",
+  context_id: "ctx-1",
+  body: {
+    block_id: "thinking-1",
+    content: { type: "text/plain", data: "complete replacement text" },
+  },
+};
+const goldenUpdateJson =
+  '{"version":1,"kind":"block.update","operation_id":"42",' +
+  '"context_id":"ctx-1","body":{"block_id":"thinking-1",' +
+  '"content":{"type":"text/plain","data":"complete replacement text"}}}';
+
+test("fixed JSON and OSC fixtures match the draft wire format", () => {
+  assert.equal(
+    new TextDecoder().decode(serializeMessage(goldenMessage)),
+    goldenJson,
+  );
+  assert.deepEqual(
+    deserializeMessage(new TextEncoder().encode(goldenJson)),
+    goldenMessage,
+  );
+  assert.deepEqual(encodeMessageFrames(goldenMessage, 7), [
+    new TextEncoder().encode(goldenOsc),
+  ]);
+
+  const decoder = new ProtocolStreamDecoder();
+  assert.deepEqual(decoder.push(new TextEncoder().encode(goldenOsc)), [
+    { type: "message", frameId: 7, message: goldenMessage },
+  ]);
+  assert.equal(
+    new TextDecoder().decode(serializeMessage(goldenUpdate)),
+    goldenUpdateJson,
+  );
+  assert.deepEqual(
+    deserializeMessage(new TextEncoder().encode(goldenUpdateJson)),
+    goldenUpdate,
+  );
+});
+
+test("serialization snapshots data instead of invoking inherited toJSON", () => {
+  const prototype = {
+    toJSON: () => ({ ...goldenMessage, extra: true }),
+  };
+  const input = Object.assign(Object.create(prototype), goldenMessage) as Message;
+
+  assert.equal(new TextDecoder().decode(serializeMessage(input)), goldenJson);
+});
+
 test("every baseline Message schema round-trips through OSC framing", () => {
   const decoder = new ProtocolStreamDecoder();
 
@@ -155,6 +221,50 @@ test("a fragmented Message survives a write boundary after every byte", () => {
   }
 
   assert.deepEqual(events, [{ type: "message", frameId: 42, message }]);
+});
+
+test("framing accepts the byte limit and rejects one byte beyond it", () => {
+  const empty: Message = {
+    version: 1,
+    kind: "block.update",
+    operation_id: "limit",
+    context_id: "context-limit",
+    body: {
+      block_id: "block-limit",
+      content: { type: "text/plain", data: "" },
+    },
+  };
+  const overhead = serializeMessage(empty).length;
+  const exact: Message = {
+    ...empty,
+    body: {
+      ...empty.body,
+      content: {
+        type: "text/plain",
+        data: "a".repeat(MAX_MESSAGE_BYTES - overhead),
+      },
+    },
+  };
+
+  assert.equal(serializeMessage(exact).length, MAX_MESSAGE_BYTES);
+  const frames = encodeMessageFrames(exact, 43);
+  assert.equal(frames.length, 342);
+  const decoder = new ProtocolStreamDecoder();
+  const events = frames.flatMap((frame) => decoder.push(frame));
+  assert.equal(events.length, 1);
+  assert.equal(events[0]?.type, "message");
+
+  const tooLarge: Message = {
+    ...exact,
+    body: {
+      ...exact.body,
+      content: {
+        type: "text/plain",
+        data: `${exact.body.content.data}a`,
+      },
+    },
+  };
+  assert.throws(() => encodeMessageFrames(tooLarge, 44), FrameCodecError);
 });
 
 test("strict decoding rejects invalid UTF-8, BOM, and tested JSON failures", () => {
@@ -203,6 +313,27 @@ test("a framing failure is isolated and the next valid frame is decoded", () => 
     type: "message",
     frameId: 8,
     message: messages[0],
+  });
+});
+
+test("an invalid OSC control does not swallow the next valid frame", () => {
+  const decoder = new ProtocolStreamDecoder();
+  const malformed = new TextEncoder().encode(
+    "\u001B]9002;1;7;0;0;AAAA\u001B\u0007",
+  );
+  const events = decoder.push(
+    concatenate([malformed, new TextEncoder().encode(goldenOsc)]),
+  );
+
+  assert.equal(events[0]?.type, "error");
+  assert.equal(
+    events[0]?.type === "error" ? events[0].layer : undefined,
+    "framing",
+  );
+  assert.deepEqual(events[1], {
+    type: "message",
+    frameId: 7,
+    message: goldenMessage,
   });
 });
 

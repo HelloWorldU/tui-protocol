@@ -175,8 +175,17 @@ export class MessageCodecError extends Error {
 const encoder = new TextEncoder();
 
 export function serializeMessage(message: Message): Uint8Array {
-  validateMessage(message);
-  return encoder.encode(JSON.stringify(message));
+  let snapshot: unknown;
+  try {
+    snapshot = structuredClone(message);
+  } catch (error: unknown) {
+    throw new MessageCodecError(
+      "invalid_schema",
+      `Message cannot be snapshotted: ${toError(error).message}`,
+    );
+  }
+
+  return encoder.encode(stringifyJsonValue(validateMessage(snapshot)));
 }
 
 export function deserializeMessage(bytes: Uint8Array): Message {
@@ -478,6 +487,47 @@ function requireExactKeys(
 
 function invalid(message: string): never {
   throw new MessageCodecError("invalid_schema", message);
+}
+
+function stringifyJsonValue(value: unknown): string {
+  if (typeof value === "string") {
+    return quoteJsonString(value);
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      invalid("Message contains a non-finite number.");
+    }
+    return String(value);
+  }
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stringifyJsonValue(item)).join(",")}]`;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const members: string[] = [];
+    for (const key of Object.keys(record)) {
+      const item = record[key];
+      if (item !== undefined) {
+        members.push(`${quoteJsonString(key)}:${stringifyJsonValue(item)}`);
+      }
+    }
+    return `{${members.join(",")}}`;
+  }
+  invalid(`Message contains a non-JSON value of type ${typeof value}.`);
+}
+
+function quoteJsonString(value: string): string {
+  const quoted = JSON.stringify(value);
+  if (quoted === undefined) {
+    invalid("Message contains a string that cannot be serialized.");
+  }
+  return quoted;
 }
 
 function toError(error: unknown): Error {

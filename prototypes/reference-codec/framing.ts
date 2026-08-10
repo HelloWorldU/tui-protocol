@@ -164,8 +164,12 @@ export class ProtocolStreamDecoder {
         if (byte === BACKSLASH) {
           this.#finishOsc("ST", events);
         } else {
-          this.#beginDiscard("OSC contains an invalid control byte.");
-          this.#state = byte === ESC ? "discardOscEscape" : "discardOsc";
+          this.#abortOsc("OSC contains an invalid control byte.", events);
+          if (byte === RIGHT_BRACKET) {
+            this.#state = "osc";
+          } else {
+            this.#state = byte === ESC ? "escape" : "ground";
+          }
         }
         return;
       case "discardOsc":
@@ -217,6 +221,16 @@ export class ProtocolStreamDecoder {
     this.#discardedProtocolOsc = isProtocolContent(this.#oscContent);
     this.#discardReason = reason;
     this.#state = "discardOsc";
+  }
+
+  #abortOsc(reason: string, events: DecoderEvent[]): void {
+    if (isProtocolContent(this.#oscContent) || this.#assembly !== undefined) {
+      events.push(framingError(reason));
+    }
+    this.#assembly = undefined;
+    this.#oscContent = [];
+    this.#discardedProtocolOsc = false;
+    this.#discardReason = "Invalid OSC content.";
   }
 
   #finishDiscard(events: DecoderEvent[]): void {

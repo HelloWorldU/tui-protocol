@@ -12,9 +12,13 @@ It implements the current drafts for:
 
 ## Proven
 
+- A fixed Capability query matches independently recorded JSON and OSC wire
+  bytes.
 - Every baseline Message kind can round-trip through JSON and OSC framing.
 - A Message larger than one frame is split, independently Base64 encoded,
   reassembled, and decoded when every byte arrives in a separate write.
+- A complete Message is accepted at the `1048576`-byte framing limit and
+  rejected when its serialized form exceeds that limit by one byte.
 - The tested invalid-UTF-8, BOM, closed-schema, duplicate-member,
   invalid-Unicode, malformed-Base64, invalid-framing, and
   fragment-interruption cases are rejected deterministically.
