@@ -32,6 +32,10 @@ prototypes/                   Executable experiments that test assumptions.
 3. Run the relevant tests and inspect the complete diff.
 4. Commit the change, push its branch, and open a pull request against `main`.
 
+Treat the root README's Milestones as an append-only history. Add only
+completed, significant project events, and do not replace earlier entries with
+rolling current-focus updates.
+
 ## Human accountability
 
 Do not submit pull requests produced entirely by a code agent without human

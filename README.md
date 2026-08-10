@@ -10,13 +10,20 @@ rendering and history. The vision is to work with historical messages as
 identifiable components—somewhat like updating nodes in a document—without
 giving up the native terminal experience.
 
-## Status
-
 This project is an early research prototype, not a standard or a stable
 protocol.
 
-Current focus (2026-08-10): validate the initial TypeScript reference codec
-for the selected UTF-8 JSON serialization and OSC framing.
+## Milestones
+
+- **2026-07-31:** Initialized the repository and documented the protocol's
+  motivation and goals.
+- **2026-08-01:** Defined the initial Block and Operation model and added its
+  first executable prototype.
+- **2026-08-04:** Connected experimental OSC Operations to mutable xterm
+  history end to end.
+- **2026-08-09:** Documented the initial logical Message model, JSON
+  serialization, and OSC framing.
+- **2026-08-10:** Added the first TypeScript reference codec prototype.
 
 ## Documentation
 
