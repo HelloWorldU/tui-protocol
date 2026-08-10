@@ -21,6 +21,7 @@ here.
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
+| [Protocol session prototype](../prototypes/protocol-session/README.md) | Executable prototype | Experimental |
 | [TypeScript reference codec](../prototypes/reference-codec/README.md) | Executable prototype | Experimental |
 | [xterm-headless OSC spike](../prototypes/xterm-headless/README.md) | Integration prototype | Experimental |
 | [Prior art and project evidence](prior-art.md) | Research note | Living document |
