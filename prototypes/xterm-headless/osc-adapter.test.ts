@@ -17,7 +17,7 @@ import {
 
 const { Terminal } = headless;
 
-test("xterm OSC parsing applies Operations across split writes", async () => {
+test("xterm assembles an OSC Operation split across writes without printing its protocol bytes", async () => {
   const xterm = new Terminal({
     allowProposedApi: true,
     cols: 12,
@@ -64,7 +64,7 @@ test("xterm OSC parsing applies Operations across split writes", async () => {
   xterm.dispose();
 });
 
-test("the addon isolates decoding and lifecycle failures", async () => {
+test("invalid OSC messages and a rejected Update report errors without changing the valid Block", async () => {
   const xterm = new Terminal({
     allowProposedApi: true,
     cols: 10,
@@ -99,7 +99,7 @@ test("the addon isolates decoding and lifecycle failures", async () => {
   xterm.dispose();
 });
 
-test("xterm resize events reflow the semantic model", () => {
+test("resizing xterm rewraps rows while keeping the same Block character anchored", () => {
   const xterm = new Terminal({
     allowProposedApi: true,
     cols: 12,

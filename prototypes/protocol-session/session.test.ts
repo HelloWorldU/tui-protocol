@@ -13,7 +13,7 @@ import {
   TerminalProtocolSession,
 } from "./session.ts";
 
-test("capability queries are correlated and request IDs cannot change meaning", () => {
+test("repeating a capability query returns the same response, while using its request ID to open a Context is rejected", () => {
   const session = supportedSession();
   const query: Message = {
     version: 1,
@@ -52,7 +52,7 @@ test("capability queries are correlated and request IDs cannot change meaning", 
   assert.deepEqual(session.contexts(), []);
 });
 
-test("Capability support follows the host's explicit baseline assertion", () => {
+test("a host that does not claim complete version 1 support returns unsupported", () => {
   const session = new TerminalProtocolSession({
     completeBaselineSupported: false,
   });
@@ -75,7 +75,7 @@ test("Capability support follows the host's explicit baseline assertion", () => 
   );
 });
 
-test("retrying context establishment returns its original context", () => {
+test("sending the same context.open request twice creates only one Context", () => {
   const session = supportedSession();
   const open: Message = {
     version: 1,
@@ -98,7 +98,7 @@ test("retrying context establishment returns its original context", () => {
   ]);
 });
 
-test("append, complete update, and seal apply the Block lifecycle", () => {
+test("Append creates a mutable Block, Update replaces its content, and Seal prevents later Updates", () => {
   const session = openSession();
 
   assert.deepEqual(session.handle(append("1", "thinking", "partial")), []);
@@ -127,7 +127,7 @@ test("append, complete update, and seal apply the Block lifecycle", () => {
   );
 });
 
-test("operation failures are isolated and operation identity is non-reusable", () => {
+test("a failed Operation leaves Blocks unchanged and its operation ID cannot be reused", () => {
   const session = openSession();
 
   assertOperationError(
@@ -173,7 +173,7 @@ test("Seal rejects unknown and already sealed Blocks", () => {
   );
 });
 
-test("closing seals retained Blocks and remains idempotent", () => {
+test("closing a Context seals mutable Blocks, retains their content, and succeeds when repeated", () => {
   const session = openSession();
   session.handle(append("1", "mutable", "draft"));
   session.handle(append("2", "static", "done", "sealed"));
@@ -221,7 +221,7 @@ test("closing seals retained Blocks and remains idempotent", () => {
   );
 });
 
-test("unknown context closure fails without inventing a context", () => {
+test("closing a Context that was never opened returns context_not_open and creates nothing", () => {
   const session = supportedSession();
   assert.deepEqual(
     session.handle({
@@ -284,7 +284,7 @@ test("one request ID cannot close two different Contexts", () => {
   assert.equal(session.context("context-2")?.state, "open");
 });
 
-test("interleaved contexts have independent Block namespaces", () => {
+test("the same Block and Operation IDs can be used in two different Contexts", () => {
   const session = openSession();
   session.handle({
     version: 1,
@@ -305,7 +305,7 @@ test("interleaved contexts have independent Block namespaces", () => {
   assert.equal(session.context("context-2")?.blocks[0]?.content.data, "second");
 });
 
-test("terminal-originated messages are rejected by the local API", () => {
+test("the terminal-side Session rejects a capability.response Message", () => {
   const session = supportedSession();
   assert.throws(
     () =>
@@ -319,7 +319,7 @@ test("terminal-originated messages are rejected by the local API", () => {
   );
 });
 
-test("ending the connection closes every Context and rejects later input", () => {
+test("ending the connection closes all Contexts, seals their Blocks, and rejects later Messages", () => {
   const session = openSession();
   session.handle(append("1", "first", "draft"));
   session.handle({

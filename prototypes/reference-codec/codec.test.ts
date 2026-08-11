@@ -199,7 +199,7 @@ test("every baseline Message schema round-trips through OSC framing", () => {
   }
 });
 
-test("a fragmented Message survives a write boundary after every byte", () => {
+test("a fragmented Message decodes when input arrives one byte at a time", () => {
   const message: Message = {
     version: 1,
     kind: "block.update",
@@ -296,7 +296,7 @@ test("strict decoding rejects invalid UTF-8, BOM, and tested JSON failures", () 
   );
 });
 
-test("a framing failure is isolated and the next valid frame is decoded", () => {
+test("after rejecting a malformed frame, the decoder still decodes the next valid frame", () => {
   const decoder = new ProtocolStreamDecoder();
   const malformed = new TextEncoder().encode(
     "\u001B]9002;1;7;0;0;!!!!\u001B\\",
@@ -337,7 +337,7 @@ test("an invalid OSC control does not swallow the next valid frame", () => {
   });
 });
 
-test("ordinary output between fragments abandons only that Message", () => {
+test("ordinary output between Message fragments rejects that Message but not the next valid one", () => {
   const longMessage: Message = {
     version: 1,
     kind: "block.update",

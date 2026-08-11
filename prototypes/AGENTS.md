@@ -24,8 +24,12 @@ related documents and link to the supporting prototype or test.
 ## Verification
 
 Tests should verify the claims recorded in each prototype's `README.md`. Keep
-claims precise and do not overstate what the evidence proves. Run the relevant
-commands from the repository root before submitting a change:
+claims precise and do not overstate what the evidence proves. Write each test
+name as a direct, observable scenario and outcome that a human can understand
+without reading the implementation. Do not substitute an abstract summary for
+the concrete behavior being tested.
+
+Run the relevant commands from the repository root before submitting a change:
 
 ```sh
 pnpm typecheck

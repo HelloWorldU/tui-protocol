@@ -7,7 +7,7 @@ import {
   type Operation,
 } from "./model.ts";
 
-test("Append, Update, and Seal enforce the Block lifecycle", () => {
+test("Append creates Blocks, Update changes mutable content, and Seal prevents later Updates", () => {
   const terminal = new TerminalPrototype({ width: 20, height: 4 });
 
   terminal.apply(
@@ -46,7 +46,7 @@ test("Append, Update, and Seal enforce the Block lifecycle", () => {
   );
 });
 
-test("an offscreen mutable Block updates without moving a semantic reading anchor", () => {
+test("updating an earlier offscreen Block does not move the viewport away from the Block being read", () => {
   const terminal = new TerminalPrototype({ width: 12, height: 3 });
 
   terminal.apply(
@@ -88,7 +88,7 @@ test("an offscreen mutable Block updates without moving a semantic reading ancho
   );
 });
 
-test("terminal reflow preserves a Block-relative anchor across resize", () => {
+test("resizing the terminal keeps the same character position in the anchored Block visible", () => {
   const terminal = new TerminalPrototype({ width: 12, height: 3 });
 
   terminal.apply(append("before", "content above", "sealed"));

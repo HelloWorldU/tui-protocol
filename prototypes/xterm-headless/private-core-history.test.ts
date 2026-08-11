@@ -74,7 +74,7 @@ test("a private core Update replaces history and preserves a later reading posit
   xterm.dispose();
 });
 
-test("Block ranges survive xterm reflow before a historical Update", async () => {
+test("resizing xterm before a historical Update preserves every Block boundary", async () => {
   const xterm = new Terminal({
     allowProposedApi: true,
     cols: 10,
