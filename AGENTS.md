@@ -33,9 +33,11 @@ prototypes/                   Executable experiments that test assumptions.
 3. Run the relevant tests and inspect the complete diff.
 4. Commit the change, push its branch, and open a pull request against `main`.
 
-Treat the root README's Milestones as an append-only history. Add only
-completed, significant project events, and do not replace earlier entries with
-rolling current-focus updates.
+Treat the root README's Milestones as a chronological history with one entry
+per date. When another significant event belongs to an existing date, extend
+that date's entry instead of adding a duplicate. Add only completed,
+significant project events, and do not replace earlier entries with rolling
+current-focus updates.
 
 ## Human accountability
 

@@ -23,10 +23,8 @@ protocol.
   history end to end.
 - **2026-08-09:** Documented the initial logical Message model, JSON
   serialization, and OSC framing.
-- **2026-08-10:** Added the first TypeScript reference codec prototype.
-- **2026-08-10:** Added an in-memory terminal-side protocol session that maps
-  decoded Capability, Context, and Block Messages to deterministic state
-  transitions and responses.
+- **2026-08-10:** Added the first TypeScript reference codec and an in-memory
+  terminal-side protocol session for deterministic Message execution.
 
 ## Documentation
 
