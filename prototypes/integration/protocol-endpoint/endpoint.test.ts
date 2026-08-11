@@ -1,0 +1,289 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  ProtocolStreamDecoder,
+  encodeMessageFrames,
+  type Message,
+} from "../../reference-codec/index.ts";
+import {
+  ProtocolEndpointError,
+  TerminalProtocolEndpoint,
+  type EndpointResult,
+} from "./endpoint.ts";
+
+test("capability query bytes split across two writes produce a supported response Message", () => {
+  const endpoint = supportedEndpoint();
+  const bytes = encodeInput(
+    {
+      version: 1,
+      kind: "capability.query",
+      request_id: "capability-1",
+      body: {},
+    },
+    10,
+  );
+  const splitAt = Math.floor(bytes.length / 2);
+
+  assert.deepEqual(endpoint.push(bytes.subarray(0, splitAt)), emptyResult());
+  const result = endpoint.push(bytes.subarray(splitAt));
+
+  assert.deepEqual(result.diagnostics, []);
+  assert.deepEqual(decodeResponses(result), [
+    {
+      version: 1,
+      kind: "capability.response",
+      request_id: "capability-1",
+      body: { outcome: "supported", optional_content_types: [] },
+    },
+  ]);
+});
+
+test("a host without complete version 1 support returns unsupported response bytes", () => {
+  const endpoint = new TerminalProtocolEndpoint({
+    completeBaselineSupported: false,
+  });
+
+  const result = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "capability.query",
+        request_id: "capability-unsupported",
+        body: {},
+      },
+      1,
+    ),
+  );
+
+  assert.deepEqual(result.diagnostics, []);
+  assert.deepEqual(decodeResponses(result), [
+    {
+      version: 1,
+      kind: "capability.response",
+      request_id: "capability-unsupported",
+      body: { outcome: "unsupported" },
+    },
+  ]);
+});
+
+test("Context and Block Operation bytes update Session state, while a rejected Update returns protocol.error bytes", () => {
+  const endpoint = supportedEndpoint();
+  const contextId = openContext(endpoint);
+
+  const operations: readonly Message[] = [
+    {
+      version: 1,
+      kind: "block.append",
+      operation_id: "1",
+      context_id: contextId,
+      body: {
+        block_id: "thinking",
+        lifecycle: "mutable",
+        content: { type: "text/plain", data: "partial" },
+      },
+    },
+    {
+      version: 1,
+      kind: "block.update",
+      operation_id: "2",
+      context_id: contextId,
+      body: {
+        block_id: "thinking",
+        content: { type: "text/plain", data: "complete" },
+      },
+    },
+    {
+      version: 1,
+      kind: "block.seal",
+      operation_id: "3",
+      context_id: contextId,
+      body: { block_id: "thinking" },
+    },
+  ];
+  const applied = endpoint.push(
+    concatenate(operations.map((message, index) => encodeInput(message, index + 2))),
+  );
+
+  assert.deepEqual(applied, emptyResult());
+  assert.deepEqual(endpoint.context(contextId), {
+    id: contextId,
+    state: "open",
+    blocks: [
+      {
+        id: "thinking",
+        lifecycle: "sealed",
+        content: { type: "text/plain", data: "complete" },
+      },
+    ],
+  });
+
+  const rejected = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.update",
+        operation_id: "4",
+        context_id: contextId,
+        body: {
+          block_id: "thinking",
+          content: { type: "text/plain", data: "too late" },
+        },
+      },
+      5,
+    ),
+  );
+
+  assert.deepEqual(rejected.diagnostics, []);
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "4",
+      context_id: contextId,
+      body: { code: "block_sealed" },
+    },
+  ]);
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "complete",
+  );
+});
+
+test("after malformed framing reports a diagnostic, later valid query bytes still produce a response", () => {
+  const endpoint = supportedEndpoint();
+  const malformed = new TextEncoder().encode(
+    "\u001B]9002;1;7;0;0;!!!!\u001B\\",
+  );
+  const valid = encodeInput(
+    {
+      version: 1,
+      kind: "capability.query",
+      request_id: "after-error",
+      body: {},
+    },
+    8,
+  );
+
+  const result = endpoint.push(concatenate([malformed, valid]));
+
+  assert.equal(result.diagnostics.length, 1);
+  assert.equal(result.diagnostics[0]?.layer, "framing");
+  assert.deepEqual(endpoint.contexts(), []);
+  assert.deepEqual(decodeResponses(result), [
+    {
+      version: 1,
+      kind: "capability.response",
+      request_id: "after-error",
+      body: { outcome: "supported", optional_content_types: [] },
+    },
+  ]);
+});
+
+test("ending the byte stream rejects an incomplete Message, closes Contexts, and prevents later input", () => {
+  const endpoint = supportedEndpoint();
+  const contextId = openContext(endpoint);
+  endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.append",
+        operation_id: "1",
+        context_id: contextId,
+        body: {
+          block_id: "thinking",
+          lifecycle: "mutable",
+          content: { type: "text/plain", data: "draft" },
+        },
+      },
+      2,
+    ),
+  );
+  const incomplete = encodeMessageFrames(
+    {
+      version: 1,
+      kind: "block.update",
+      operation_id: "2",
+      context_id: contextId,
+      body: {
+        block_id: "thinking",
+        content: { type: "text/plain", data: "x".repeat(4_000) },
+      },
+    },
+    3,
+  );
+  assert.ok(incomplete.length > 1);
+  assert.deepEqual(endpoint.push(incomplete[0]), emptyResult());
+
+  const finished = endpoint.finish();
+
+  assert.equal(finished.responseFrames.length, 0);
+  assert.equal(finished.diagnostics.length, 1);
+  assert.equal(finished.diagnostics[0]?.layer, "framing");
+  assert.deepEqual(endpoint.context(contextId), {
+    id: contextId,
+    state: "closed",
+    blocks: [
+      {
+        id: "thinking",
+        lifecycle: "sealed",
+        content: { type: "text/plain", data: "draft" },
+      },
+    ],
+  });
+  assert.deepEqual(endpoint.finish(), emptyResult());
+  assert.throws(() => endpoint.push(incomplete[1]), ProtocolEndpointError);
+});
+
+function supportedEndpoint(): TerminalProtocolEndpoint {
+  return new TerminalProtocolEndpoint({ completeBaselineSupported: true });
+}
+
+function openContext(endpoint: TerminalProtocolEndpoint): string {
+  const result = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "context.open",
+        request_id: "open-1",
+        body: {},
+      },
+      1,
+    ),
+  );
+  assert.deepEqual(result.diagnostics, []);
+  const [response] = decodeResponses(result);
+  assert.equal(response?.kind, "context.open.response");
+  if (response?.kind !== "context.open.response" || !("context_id" in response)) {
+    throw new Error("Expected a successful Context open response.");
+  }
+  return response.context_id;
+}
+
+function encodeInput(message: Message, frameId: number): Uint8Array {
+  return concatenate(encodeMessageFrames(message, frameId));
+}
+
+function decodeResponses(result: EndpointResult): readonly Message[] {
+  const decoder = new ProtocolStreamDecoder();
+  const events = result.responseFrames.flatMap((frame) => decoder.push(frame));
+  assert.ok(events.every((event) => event.type === "message"));
+  return events.flatMap((event) =>
+    event.type === "message" ? [event.message] : [],
+  );
+}
+
+function emptyResult(): EndpointResult {
+  return { responseFrames: [], diagnostics: [] };
+}
+
+function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
+  const size = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const result = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}

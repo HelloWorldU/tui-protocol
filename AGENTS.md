@@ -21,9 +21,11 @@ docs/                         Project documentation and its main index.
   rfcs/                       Numbered proposals and design rationale.
 prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
+  integration/                Current protocol-layer integration experiments.
+    protocol-endpoint/        Terminal-side bytes-to-state and response path.
   protocol-session/           In-memory terminal-side protocol state machine.
   reference-codec/            TypeScript JSON and OSC codec experiment.
-  xterm-headless/             xterm integration and OSC feasibility spikes.
+  xterm-headless/             Early xterm feasibility spikes using fixtures.
 ```
 
 ## Pull request workflow

@@ -6,6 +6,16 @@ The `prototypes/` tree contains executable experiments that test protocol and
 terminal-integration assumptions. A prototype supplies evidence; it does not
 define the protocol by itself.
 
+## Experiment categories
+
+- Unit prototypes isolate one protocol or implementation mechanism and test
+  its behavior independently.
+- Integration prototypes compose two or more prototype layers and test whether
+  their interfaces and documented semantics work together.
+
+Both categories remain experimental evidence. Their classification describes
+the boundary being tested, not the size or maturity of the implementation.
+
 ## Experiment records
 
 Each prototype's `README.md` must:
@@ -15,7 +25,10 @@ Each prototype's `README.md` must:
 - clearly label temporary identifiers, encodings, private or unstable APIs,
   and other experimental fixtures, including their purpose and limitations;
   and
-- link to the design or protocol documents whose assumptions it tests.
+- for a unit prototype, link to the design or protocol documents whose
+  assumptions it tests; for an integration prototype, link to the component
+  prototype records it composes and any document whose cross-layer requirement
+  it directly tests.
 
 Do not present experimental fixtures as selected protocol behavior. When an
 experiment confirms, refutes, or narrows a documented inference, update the

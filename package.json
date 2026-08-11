@@ -9,7 +9,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "test": "node --test prototypes/block-model/model.test.ts prototypes/protocol-session/*.test.ts prototypes/reference-codec/*.test.ts prototypes/xterm-headless/*.test.ts",
+    "test": "node --test prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts prototypes/reference-codec/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
