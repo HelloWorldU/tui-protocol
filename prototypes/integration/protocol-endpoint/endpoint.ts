@@ -76,20 +76,23 @@ export class TerminalProtocolEndpoint {
     const diagnostics: EndpointDiagnostic[] = [];
 
     for (const event of events) {
+      let responses: readonly Message[];
       if (event.type === "error") {
         diagnostics.push({ layer: event.layer, reason: event.reason });
-        continue;
-      }
-
-      let responses: readonly Message[];
-      try {
-        responses = this.#session.handle(event.message);
-      } catch (error: unknown) {
-        if (!(error instanceof ProtocolSessionError)) {
-          throw error;
+        if (event.identity === undefined) {
+          continue;
         }
-        diagnostics.push({ layer: "session", reason: error.message });
-        continue;
+        responses = this.#session.handleInvalidMessage(event.identity);
+      } else {
+        try {
+          responses = this.#session.handle(event.message);
+        } catch (error: unknown) {
+          if (!(error instanceof ProtocolSessionError)) {
+            throw error;
+          }
+          diagnostics.push({ layer: "session", reason: error.message });
+          continue;
+        }
       }
 
       for (const response of responses) {

@@ -41,6 +41,9 @@ It exercises the current drafts for:
   not a stable terminal or SDK interface.
 - The session accepts already validated logical Messages and implements only
   the baseline `text/plain` representation.
+- `handleInvalidMessage()` is a separate experimental integration hook for
+  reliable correlation metadata produced when the codec rejects a complete
+  Message. It does not parse or accept malformed bytes itself.
 - `ProtocolSessionError` reports misuse of the local API, such as sending a
   terminal-originated Message into the terminal-side session. It is not a
   wire-level `protocol.error`.

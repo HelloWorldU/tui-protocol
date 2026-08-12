@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import test from "node:test";
 
 import {
@@ -180,6 +181,170 @@ test("after malformed framing reports a diagnostic, later valid query bytes stil
   ]);
 });
 
+test("an invalid capability query with a valid request ID returns invalid_message, while corrected reuse returns request_id_conflict", () => {
+  const endpoint = supportedEndpoint();
+  const invalid = encodeRawJson(
+    '{"version":1,"kind":"capability.query","request_id":"invalid-1","body":{"extra":true}}',
+    20,
+  );
+
+  const first = endpoint.push(invalid);
+  assert.equal(first.diagnostics.length, 1);
+  assert.equal(first.diagnostics[0]?.layer, "message");
+  assert.deepEqual(decodeResponses(first), [
+    {
+      version: 1,
+      kind: "capability.response",
+      request_id: "invalid-1",
+      body: { outcome: "error", error: { code: "invalid_message" } },
+    },
+  ]);
+
+  const retry = endpoint.push(
+    encodeRawJson(
+      '{"body":{"extra":true},"request_id":"invalid-1","kind":"capability.query","version":1}',
+      27,
+    ),
+  );
+  assert.deepEqual(decodeResponses(retry), decodeResponses(first));
+
+  const corrected = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "capability.query",
+        request_id: "invalid-1",
+        body: {},
+      },
+      21,
+    ),
+  );
+  assert.deepEqual(decodeResponses(corrected), [
+    {
+      version: 1,
+      kind: "capability.response",
+      request_id: "invalid-1",
+      body: {
+        outcome: "error",
+        error: { code: "request_id_conflict" },
+      },
+    },
+  ]);
+});
+
+test("invalid Context requests with valid IDs return their matching error responses without closing the Context", () => {
+  const endpoint = supportedEndpoint();
+  const invalidOpen = endpoint.push(
+    encodeRawJson(
+      '{"version":1,"kind":"context.open","request_id":"invalid-open","body":{"extra":true}}',
+      25,
+    ),
+  );
+  assert.deepEqual(decodeResponses(invalidOpen), [
+    {
+      version: 1,
+      kind: "context.open.response",
+      request_id: "invalid-open",
+      body: { outcome: "error", error: { code: "invalid_message" } },
+    },
+  ]);
+  assert.deepEqual(endpoint.contexts(), []);
+
+  const contextId = openContext(endpoint);
+  const invalidClose = endpoint.push(
+    encodeRawJson(
+      JSON.stringify({
+        version: 1,
+        kind: "context.close",
+        request_id: "invalid-close",
+        context_id: contextId,
+        body: { extra: true },
+      }),
+      26,
+    ),
+  );
+  assert.deepEqual(decodeResponses(invalidClose), [
+    {
+      version: 1,
+      kind: "context.close.response",
+      request_id: "invalid-close",
+      context_id: contextId,
+      body: { outcome: "error", error: { code: "invalid_message" } },
+    },
+  ]);
+  assert.equal(endpoint.context(contextId)?.state, "open");
+});
+
+test("an invalid Block Operation with valid IDs returns invalid_message and prevents reuse of its operation ID", () => {
+  const endpoint = supportedEndpoint();
+  const contextId = openContext(endpoint);
+  const invalid = encodeRawJson(
+    JSON.stringify({
+      version: 1,
+      kind: "block.update",
+      operation_id: "invalid-operation-1",
+      context_id: contextId,
+      body: { block_id: "missing-content" },
+    }),
+    22,
+  );
+
+  const rejected = endpoint.push(invalid);
+  assert.equal(rejected.diagnostics.length, 1);
+  assert.equal(rejected.diagnostics[0]?.layer, "message");
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "invalid-operation-1",
+      context_id: contextId,
+      body: { code: "invalid_message" },
+    },
+  ]);
+
+  const reused = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.append",
+        operation_id: "invalid-operation-1",
+        context_id: contextId,
+        body: {
+          block_id: "would-be-valid",
+          lifecycle: "sealed",
+          content: { type: "text/plain", data: "not applied" },
+        },
+      },
+      23,
+    ),
+  );
+  assert.deepEqual(decodeResponses(reused), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "invalid-operation-1",
+      context_id: contextId,
+      body: { code: "operation_id_reused" },
+    },
+  ]);
+  assert.deepEqual(endpoint.context(contextId)?.blocks, []);
+});
+
+test("an invalid Message without a valid request ID produces only a local diagnostic", () => {
+  const endpoint = supportedEndpoint();
+  const result = endpoint.push(
+    encodeRawJson(
+      '{"version":1,"kind":"capability.query","request_id":"","body":{"extra":true}}',
+      24,
+    ),
+  );
+
+  assert.equal(result.diagnostics.length, 1);
+  assert.equal(result.diagnostics[0]?.layer, "message");
+  assert.deepEqual(result.responseFrames, []);
+  assert.deepEqual(endpoint.contexts(), []);
+});
+
 test("ending the byte stream rejects an incomplete Message, closes Contexts, and prevents later input", () => {
   const endpoint = supportedEndpoint();
   const contextId = openContext(endpoint);
@@ -262,6 +427,13 @@ function openContext(endpoint: TerminalProtocolEndpoint): string {
 
 function encodeInput(message: Message, frameId: number): Uint8Array {
   return concatenate(encodeMessageFrames(message, frameId));
+}
+
+function encodeRawJson(source: string, frameId: number): Uint8Array {
+  const payload = Buffer.from(source, "utf8").toString("base64");
+  return new TextEncoder().encode(
+    `\u001B]9002;1;${frameId};0;0;${payload}\u001B\\`,
+  );
 }
 
 function decodeResponses(result: EndpointResult): readonly Message[] {

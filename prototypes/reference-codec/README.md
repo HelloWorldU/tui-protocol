@@ -22,6 +22,9 @@ It implements the current drafts for:
 - The tested invalid-UTF-8, BOM, closed-schema, duplicate-member,
   invalid-Unicode, malformed-Base64, invalid-framing, and
   fragment-interruption cases are rejected deterministically.
+- For tested schema-invalid requests and Operations, the decoder exposes a
+  correlation identity only when the recognized version, kind, and required
+  request or Operation IDs are valid.
 - A framing failure discards only its incomplete Message and parsing resumes
   at a later valid protocol frame.
 
@@ -34,6 +37,8 @@ It implements the current drafts for:
   optional content type schema has been selected.
 - Decoder error events are local diagnostics; they are not wire-level
   `protocol.error` Messages.
+- A reported invalid-Message identity is only a correlation hint for a higher
+  protocol layer; the codec does not construct responses or consume IDs.
 - The stream decoder reports protocol events only; it is not a pass-through
   terminal parser for ordinary bytes or unrelated control sequences.
 

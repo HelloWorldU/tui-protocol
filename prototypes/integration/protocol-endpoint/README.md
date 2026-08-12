@@ -26,6 +26,12 @@ It composes:
 - The tested malformed protocol frame produces a local diagnostic without
   creating protocol state, and a later valid query in the same incoming chunk
   still produces its response.
+- A tested schema-invalid control request with a reliable request ID produces
+  a correlated `invalid_message` response; retrying the same invalid request
+  returns that result, while corrected reuse produces `request_id_conflict`.
+- A tested schema-invalid Block Operation with reliable Context and Operation
+  IDs produces `invalid_message` and consumes its Operation ID. An invalid
+  request without reliable identity produces no wire response.
 - Ending the tested byte stream rejects an incomplete Message, closes all open
   Contexts, seals their mutable Blocks, and prevents later input.
 
@@ -47,8 +53,6 @@ It composes:
 
 ## Not Proven
 
-- Correlated `invalid_message` responses when a complete payload fails schema
-  validation but contains reliable request or Operation identity.
 - Integration with a real terminal parser, PTY, multiplexer, remote transport,
   renderer, scrollback, reflow, or reading-anchor implementation.
 - Backpressure, partial response writes, concurrency, timeouts, authentication,

@@ -25,6 +25,9 @@ protocol.
   serialization, and OSC framing.
 - **2026-08-10:** Added the first TypeScript reference codec and an in-memory
   terminal-side protocol session for deterministic Message execution.
+- **2026-08-12:** Connected the codec and session into a terminal-side byte
+  path, including correlated responses for schema-invalid Messages with
+  reliable identities.
 
 ## Documentation
 

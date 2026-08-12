@@ -3,6 +3,7 @@ import type {
   BlockSeal,
   BlockUpdate,
   ContextClose,
+  InvalidMessageIdentity,
   Message,
   OperationErrorCode,
   PlainTextSnapshot,
@@ -96,6 +97,17 @@ export class TerminalProtocolSession {
     }
   }
 
+  handleInvalidMessage(identity: InvalidMessageIdentity): readonly Message[] {
+    if (this.#ended) {
+      throw new ProtocolSessionError(
+        "Terminal session cannot receive Messages after its connection ends.",
+      );
+    }
+    return identity.category === "control"
+      ? [this.#handleInvalidControl(identity)]
+      : [this.#handleInvalidOperation(identity)];
+  }
+
   context(id: string): SessionContextSnapshot | undefined {
     const context = this.#contexts.get(id);
     return context === undefined ? undefined : snapshotContext(context);
@@ -129,6 +141,42 @@ export class TerminalProtocolSession {
     const response = this.#executeControl(request);
     this.#controlResults.set(request.request_id, { fingerprint, response });
     return cloneMessage(response);
+  }
+
+  #handleInvalidControl(
+    identity: Extract<InvalidMessageIdentity, { readonly category: "control" }>,
+  ): Message {
+    const previous = this.#controlResults.get(identity.request_id);
+    if (previous !== undefined) {
+      return cloneMessage(
+        previous.fingerprint === identity.fingerprint
+          ? previous.response
+          : invalidControlError(identity, "request_id_conflict"),
+      );
+    }
+
+    const response = invalidControlError(identity, "invalid_message");
+    this.#controlResults.set(identity.request_id, {
+      fingerprint: identity.fingerprint,
+      response,
+    });
+    return cloneMessage(response);
+  }
+
+  #handleInvalidOperation(
+    identity: Extract<
+      InvalidMessageIdentity,
+      { readonly category: "operation" }
+    >,
+  ): Message {
+    const context = this.#contexts.get(identity.context_id);
+    if (context !== undefined && context.state === "open") {
+      if (context.operationIds.has(identity.operation_id)) {
+        return invalidOperationError(identity, "operation_id_reused");
+      }
+      context.operationIds.add(identity.operation_id);
+    }
+    return invalidOperationError(identity, "invalid_message");
   }
 
   #executeControl(request: ControlRequest): Message {
@@ -252,8 +300,54 @@ export class TerminalProtocolSession {
 
 function controlFingerprint(request: ControlRequest): string {
   return request.kind === "context.close"
-    ? `${request.version}:${request.kind}:${request.context_id}`
-    : `${request.version}:${request.kind}`;
+    ? `valid:${request.version}:${request.kind}:${request.context_id}`
+    : `valid:${request.version}:${request.kind}`;
+}
+
+function invalidControlError(
+  identity: Extract<InvalidMessageIdentity, { readonly category: "control" }>,
+  code: "invalid_message" | "request_id_conflict",
+): Message {
+  const error = { code } as const;
+  switch (identity.kind) {
+    case "capability.query":
+      return {
+        version: 1,
+        kind: "capability.response",
+        request_id: identity.request_id,
+        body: { outcome: "error", error },
+      };
+    case "context.open":
+      return {
+        version: 1,
+        kind: "context.open.response",
+        request_id: identity.request_id,
+        body: { outcome: "error", error },
+      };
+    case "context.close":
+      return {
+        version: 1,
+        kind: "context.close.response",
+        request_id: identity.request_id,
+        context_id: identity.context_id,
+        body: { outcome: "error", error },
+      };
+    default:
+      return assertNever(identity);
+  }
+}
+
+function invalidOperationError(
+  identity: Extract<InvalidMessageIdentity, { readonly category: "operation" }>,
+  code: "invalid_message" | "operation_id_reused",
+): Message {
+  return {
+    version: 1,
+    kind: "protocol.error",
+    operation_id: identity.operation_id,
+    context_id: identity.context_id,
+    body: { code },
+  };
 }
 
 function controlError(

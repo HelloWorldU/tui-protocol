@@ -296,6 +296,56 @@ test("strict decoding rejects invalid UTF-8, BOM, and tested JSON failures", () 
   );
 });
 
+test("a schema-invalid query exposes its valid request ID, while an empty request ID exposes none", () => {
+  const correlated = captureMessageError(
+    '{"version":1,"kind":"capability.query","request_id":"request-invalid","body":{"extra":true}}',
+  );
+  assert.equal(correlated.code, "invalid_schema");
+  assert.equal(correlated.identity?.category, "control");
+  if (correlated.identity?.category !== "control") {
+    throw new Error("Expected a reliable control request identity.");
+  }
+  assert.equal(correlated.identity.kind, "capability.query");
+  assert.equal(correlated.identity.request_id, "request-invalid");
+  assert.ok(correlated.identity.fingerprint.length > 0);
+
+  const uncorrelated = captureMessageError(
+    '{"version":1,"kind":"capability.query","request_id":"","body":{"extra":true}}',
+  );
+  assert.equal(uncorrelated.code, "invalid_schema");
+  assert.equal(uncorrelated.identity, undefined);
+});
+
+test("an unrecognized version or Message kind exposes no request identity", () => {
+  const unknownVersion = captureMessageError(
+    '{"version":2,"kind":"capability.query","request_id":"request-1","body":{}}',
+  );
+  const unknownKind = captureMessageError(
+    '{"version":1,"kind":"unknown.request","request_id":"request-2","body":{}}',
+  );
+
+  assert.equal(unknownVersion.identity, undefined);
+  assert.equal(unknownKind.identity, undefined);
+});
+
+test("the same invalid control request gets the same fingerprint when its JSON fields are reordered", () => {
+  const first = captureMessageError(
+    '{"version":1,"kind":"context.open","request_id":"same-request","body":{"extra":true}}',
+  );
+  const reordered = captureMessageError(
+    '{"body":{"extra":true},"request_id":"same-request","kind":"context.open","version":1}',
+  );
+
+  assert.equal(first.identity?.category, "control");
+  assert.equal(reordered.identity?.category, "control");
+  assert.equal(
+    first.identity?.category === "control" ? first.identity.fingerprint : "",
+    reordered.identity?.category === "control"
+      ? reordered.identity.fingerprint
+      : "different",
+  );
+});
+
 test("after rejecting a malformed frame, the decoder still decodes the next valid frame", () => {
   const decoder = new ProtocolStreamDecoder();
   const malformed = new TextEncoder().encode(
@@ -370,6 +420,16 @@ function assertMessageError(
   expectedCode: MessageCodecError["code"],
 ): void {
   assertBytesError(new TextEncoder().encode(source), expectedCode);
+}
+
+function captureMessageError(source: string): MessageCodecError {
+  try {
+    deserializeMessage(new TextEncoder().encode(source));
+  } catch (error: unknown) {
+    assert.ok(error instanceof MessageCodecError);
+    return error;
+  }
+  throw new Error("Expected Message decoding to fail.");
 }
 
 function assertBytesError(

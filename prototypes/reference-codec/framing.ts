@@ -2,7 +2,9 @@ import { Buffer } from "node:buffer";
 
 import {
   deserializeMessage,
+  MessageCodecError,
   serializeMessage,
+  type InvalidMessageIdentity,
   type Message,
 } from "./message.ts";
 
@@ -35,6 +37,7 @@ export interface DecoderErrorEvent {
   readonly type: "error";
   readonly layer: "framing" | "message";
   readonly reason: string;
+  readonly identity?: InvalidMessageIdentity;
 }
 
 export type DecoderEvent = DecodedMessageEvent | DecoderErrorEvent;
@@ -308,11 +311,16 @@ export class ProtocolStreamDecoder {
         message: deserializeMessage(payload),
       });
     } catch (error: unknown) {
-      events.push({
+      const event: DecoderErrorEvent = {
         type: "error",
         layer: "message",
         reason: toError(error).message,
-      });
+      };
+      if (error instanceof MessageCodecError && error.identity !== undefined) {
+        events.push({ ...event, identity: error.identity });
+      } else {
+        events.push(event);
+      }
     }
   }
 

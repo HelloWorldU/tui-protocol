@@ -145,6 +145,27 @@ export interface ProtocolErrorMessage extends BlockOperationEnvelope {
   readonly body: Failure<OperationErrorCode>;
 }
 
+export type InvalidMessageIdentity =
+  | {
+      readonly category: "control";
+      readonly kind: "capability.query" | "context.open";
+      readonly request_id: string;
+      readonly fingerprint: string;
+    }
+  | {
+      readonly category: "control";
+      readonly kind: "context.close";
+      readonly request_id: string;
+      readonly context_id: string;
+      readonly fingerprint: string;
+    }
+  | {
+      readonly category: "operation";
+      readonly kind: "block.append" | "block.update" | "block.seal";
+      readonly operation_id: string;
+      readonly context_id: string;
+    };
+
 const CONTROL_ERROR_CODES: readonly ControlErrorCode[] = [
   "invalid_message",
   "request_id_conflict",
@@ -164,11 +185,17 @@ export type MessageCodecErrorCode =
 
 export class MessageCodecError extends Error {
   readonly code: MessageCodecErrorCode;
+  readonly identity: InvalidMessageIdentity | undefined;
 
-  constructor(code: MessageCodecErrorCode, message: string) {
+  constructor(
+    code: MessageCodecErrorCode,
+    message: string,
+    identity?: InvalidMessageIdentity,
+  ) {
     super(message);
     this.name = "MessageCodecError";
     this.code = code;
+    this.identity = identity;
   }
 }
 
@@ -212,7 +239,21 @@ export function deserializeMessage(bytes: Uint8Array): Message {
     throw new MessageCodecError("invalid_json", detail);
   }
 
-  return validateMessage(decoded);
+  try {
+    return validateMessage(decoded);
+  } catch (error: unknown) {
+    if (
+      error instanceof MessageCodecError &&
+      error.code === "invalid_schema"
+    ) {
+      throw new MessageCodecError(
+        error.code,
+        error.message,
+        identifyInvalidMessage(decoded),
+      );
+    }
+    throw error;
+  }
 }
 
 export function validateMessage(value: unknown): Message {
@@ -483,6 +524,91 @@ function requireExactKeys(
       invalid(`Missing required field ${JSON.stringify(key)}.`);
     }
   }
+}
+
+function identifyInvalidMessage(
+  value: unknown,
+): InvalidMessageIdentity | undefined {
+  if (!isRecord(value) || value.version !== PROTOCOL_VERSION) {
+    return undefined;
+  }
+  const kind = reliableId(value.kind);
+  if (kind === undefined) {
+    return undefined;
+  }
+
+  switch (kind) {
+    case "capability.query":
+    case "context.open": {
+      const requestId = reliableId(value.request_id);
+      return requestId === undefined
+        ? undefined
+        : {
+            category: "control",
+            kind,
+            request_id: requestId,
+            fingerprint: `invalid:${canonicalJson(value)}`,
+          };
+    }
+    case "context.close": {
+      const requestId = reliableId(value.request_id);
+      const contextId = reliableId(value.context_id);
+      return requestId === undefined || contextId === undefined
+        ? undefined
+        : {
+            category: "control",
+            kind,
+            request_id: requestId,
+            context_id: contextId,
+            fingerprint: `invalid:${canonicalJson(value)}`,
+          };
+    }
+    case "block.append":
+    case "block.update":
+    case "block.seal": {
+      const operationId = reliableId(value.operation_id);
+      const contextId = reliableId(value.context_id);
+      return operationId === undefined || contextId === undefined
+        ? undefined
+        : {
+            category: "operation",
+            kind,
+            operation_id: operationId,
+            context_id: contextId,
+          };
+    }
+    default:
+      return undefined;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function reliableId(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length === 0) {
+    return undefined;
+  }
+  try {
+    return requireScalarString(value, "Message identity");
+  } catch {
+    return undefined;
+  }
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${quoteJsonString(key)}:${canonicalJson(record[key])}`)
+    .join(",")}}`;
 }
 
 function invalid(message: string): never {
