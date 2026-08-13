@@ -1,4 +1,4 @@
-# Terminal-Native History and Reading Behavior
+# Terminal-Native Behavior
 
 | Field | Value |
 |---|---|
@@ -6,10 +6,10 @@
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
 | Related drafts | [Operation semantics](operations.md), [Content representation](content-representation.md) |
 
-This document defines the initial observable behavior of terminal-owned
-history and reading position when protocol Operations change Block content.
-It does not expose the viewport to the TUI or prescribe a terminal rendering
-algorithm.
+This document defines the initial observable behavior of terminal-native
+history, reading, and interaction when protocol Operations change Block
+content. It does not expose terminal interaction state to the TUI or prescribe
+a terminal rendering algorithm.
 
 ## 1. Terminal-Owned Reading State
 
@@ -64,9 +64,71 @@ anchor was trimmed.
 Capacity trimming is terminal-owned resource management. It is distinct from
 history being cleared, duplicated, or lost while realizing an Operation.
 
+## 6. Resize and Reflow
+
+A terminal resize may reflow the presentation of every retained Block. Reflow
+changes physical layout only; it does not change Block content, identity,
+lifecycle, or append order and does not produce a protocol Operation or
+Message.
+
+Tail following continues across resize. During history reading, reflow keeps
+the same logical reading anchor and its viewport-relative row. If the old row
+does not exist in a smaller viewport, the terminal uses the closest available
+row without switching to tail following.
+
+## 7. Selection and Copying
+
+A selection remains attached to the same logical content when another Block
+changes or when reflow moves that content to different physical rows. Append
+and Seal do not clear an otherwise valid selection.
+
+If an Update replaces any Block intersected by the selection, the terminal
+clears the complete selection. The initial complete-snapshot model provides
+no mapping from selected positions in the old content to the replacement.
+Scrollback-capacity trimming that removes any selected content has the same
+effect.
+
+Clearing a selection removes its highlight and copy target; it does not remove
+Block content. Copying returns only the content of a current valid selection,
+never content retained from a replaced snapshot.
+
+## 8. Search
+
+Terminal-native search operates on the current searchable text projection of
+each retained Block. After an Update, matches from the replaced snapshot are
+no longer results, and matches from the new snapshot are eligible results.
+Matches in unaffected Blocks remain attached to the same logical content even
+if their physical rows move.
+
+If the current match disappears, the terminal does not retain a match that
+points to old or unrelated content. Whether its local search interface moves
+to another result, stays at the current viewport, or reports no current result
+remains terminal-owned UX.
+
+## 9. Content Metadata
+
+Links, styles, and other metadata defined by a content representation belong
+to that content snapshot. Update removes the old snapshot's metadata and
+projects only metadata defined by the replacement. Metadata in unaffected
+Blocks remains attached to its logical content rather than its former physical
+rows.
+
+Metadata does not create an independent Block Operation or allow a content
+snapshot to modify terminal-global state. Each content type defines its own
+logical metadata and terminal-native projection.
+
+## 10. Active Input State
+
+Changing historical Blocks does not itself alter current input content, the
+input cursor's logical position, input focus, or an in-progress input-method
+composition. The terminal may scroll while tail following to keep current
+input visible, but physical layout changes do not move the logical input
+position.
+
 ## Current Scope
 
-This draft defines reading behavior for Operations that affect content other
-than the anchored Block, plus the capacity boundary above. It does not yet
-define the interaction of mutable Blocks with resize and reflow, selections,
-search results, hyperlinks, or other terminal-native metadata.
+This draft defines initial correctness boundaries for reading, reflow,
+selection, search, content metadata, and active input. It does not standardize
+terminal shortcuts, search navigation policy, visual presentation, or internal
+data structures. Detailed behavior for optional content representations
+remains part of each representation's definition.

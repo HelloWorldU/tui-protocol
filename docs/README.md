@@ -19,7 +19,7 @@ here.
 | [OSC carrier and framing](protocol/framing.md) | Protocol draft | Draft |
 | [Content representation](protocol/content-representation.md) | Protocol draft | Draft |
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
-| [Terminal-native history and reading behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
+| [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Integration prototype | Experimental |

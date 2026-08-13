@@ -131,8 +131,6 @@ content is self-contained and declarative, uses one explicitly typed and
 negotiated representation, and defines how terminal-native capabilities apply
 to its logical content.
 
-The living [Terminal-Native History and Reading
-Behavior](../protocol/terminal-native-behavior.md) document defines how the
-terminal owns history-reading and tail-following state, preserves a logical
-reading anchor when another Block changes, and degrades when capacity trimming
-removes the anchored content.
+The living [Terminal-Native Behavior](../protocol/terminal-native-behavior.md)
+document defines how Block changes interact with terminal-owned reading,
+reflow, selection, search, content metadata, and active input state.

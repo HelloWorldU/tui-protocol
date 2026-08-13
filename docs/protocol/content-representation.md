@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Terminal-native behavior](terminal-native-behavior.md), [Wire requirements](wire-requirements.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
 
 This document defines the observable requirements for representing a Block's
 content. Content snapshots use the shared JSON serialization, but this
@@ -63,7 +63,8 @@ the corresponding logical text.
 
 The content type specifies these observable semantics. The terminal retains
 ownership of how native capabilities are implemented, presented, and
-executed.
+executed. Their shared interaction with Block Operations is defined by
+[Terminal-Native Behavior](terminal-native-behavior.md).
 
 ## Open Design Choices
 
