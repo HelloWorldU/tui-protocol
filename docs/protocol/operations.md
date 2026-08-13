@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Terminal-native history and reading behavior](terminal-native-behavior.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [Error codes](error-codes.md) |
 
 This document consolidates the observable semantics currently agreed for
 protocol Operations. It remains non-normative while the protocol is under
@@ -71,7 +71,9 @@ offers shorthand or defaults.
 The new Block appears exactly once at the logical tail. If the user is reading
 existing history, their anchor remains bound to the same logical position and
 keeps its viewport-relative position. A user following the tail continues to
-follow the tail.
+follow the tail. The terminal-owned reading states and scrollback-capacity
+boundary are defined by [Terminal-Native History and Reading
+Behavior](terminal-native-behavior.md).
 
 Appending content may push earlier rendered rows into scrollback, but that
 presentation event does not change any Block's lifecycle.
@@ -119,7 +121,9 @@ the same logical position and keeps its viewport-relative position. A user
 following the tail continues to follow the tail.
 
 Mapping a reading anchor through replacement of its own Block remains
-undefined.
+undefined. The detailed anchor ownership, history-reading behavior, and
+scrollback-capacity boundary are defined by [Terminal-Native History and
+Reading Behavior](terminal-native-behavior.md).
 
 ### 5. Failure Isolation
 

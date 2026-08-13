@@ -28,6 +28,8 @@ protocol.
 - **2026-08-12:** Connected the codec and session into a terminal-side byte
   path, including correlated responses for schema-invalid Messages with
   reliable identities.
+- **2026-08-13:** Defined the initial terminal-owned reading-anchor behavior
+  across Block changes and scrollback-capacity trimming.
 
 ## Documentation
 
