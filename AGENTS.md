@@ -23,6 +23,7 @@ prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.
     protocol-endpoint/        Terminal-side bytes-to-state and response path.
+    xterm-protocol-endpoint/  Protocol bytes to mutable xterm history path.
   protocol-session/           In-memory terminal-side protocol state machine.
   reference-codec/            TypeScript JSON and OSC codec experiment.
   xterm-headless/             Early xterm feasibility spikes using fixtures.

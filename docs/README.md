@@ -23,6 +23,7 @@ here.
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Integration prototype | Experimental |
+| [xterm protocol endpoint](../prototypes/integration/xterm-protocol-endpoint/README.md) | Integration prototype | Experimental |
 | [Protocol session prototype](../prototypes/protocol-session/README.md) | Executable prototype | Experimental |
 | [TypeScript reference codec](../prototypes/reference-codec/README.md) | Executable prototype | Experimental |
 | [xterm-headless OSC spike](../prototypes/xterm-headless/README.md) | Feasibility spike | Experimental |

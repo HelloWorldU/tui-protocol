@@ -21,6 +21,8 @@ It composes:
   response bytes that decode to the expected unsupported outcome.
 - Tested Context-open, Append, complete Update, and Seal Messages encoded as
   incoming bytes produce the expected Session state without success responses.
+- Successful tested Block Operations are reported to an optional host hook in
+  byte-stream order; rejected Operations are not reported as applied.
 - A tested Update of a sealed Block leaves its content unchanged and produces
   response bytes that decode to the correlated `block_sealed` protocol error.
 - The tested malformed protocol frame produces a local diagnostic without
@@ -39,6 +41,9 @@ It composes:
 
 - The exported TypeScript API is an integration harness, not a stable Terminal
   or SDK interface.
+- The optional applied-Operation hook is a synchronous integration seam. It
+  does not make Session state and an external renderer one failure-atomic
+  transaction.
 - Outgoing response frame IDs use a local increasing counter that wraps after
   the framing maximum. The values are experimental transport fixtures with no
   application-level meaning.

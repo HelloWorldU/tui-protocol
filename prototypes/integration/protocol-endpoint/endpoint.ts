@@ -12,8 +12,16 @@ import {
 
 const MAX_FRAME_ID = 2_147_483_647;
 
+export type AppliedBlockOperation = Extract<
+  Message,
+  {
+    readonly kind: "block.append" | "block.update" | "block.seal";
+  }
+>;
+
 export interface TerminalProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
+  readonly onOperationApplied?: (operation: AppliedBlockOperation) => void;
 }
 
 export interface EndpointDiagnostic {
@@ -36,11 +44,15 @@ export class ProtocolEndpointError extends Error {
 export class TerminalProtocolEndpoint {
   readonly #decoder = new ProtocolStreamDecoder();
   readonly #session: TerminalProtocolSession;
+  readonly #onOperationApplied:
+    | ((operation: AppliedBlockOperation) => void)
+    | undefined;
   #nextResponseFrameId = 1;
   #ended = false;
 
   constructor(options: TerminalProtocolEndpointOptions) {
     this.#session = new TerminalProtocolSession(options);
+    this.#onOperationApplied = options.onOperationApplied;
   }
 
   push(bytes: Uint8Array): EndpointResult {
@@ -84,14 +96,21 @@ export class TerminalProtocolEndpoint {
         }
         responses = this.#session.handleInvalidMessage(event.identity);
       } else {
+        let appliedOperation: AppliedBlockOperation | undefined;
         try {
           responses = this.#session.handle(event.message);
+          if (responses.length === 0 && isBlockOperation(event.message)) {
+            appliedOperation = structuredClone(event.message);
+          }
         } catch (error: unknown) {
           if (!(error instanceof ProtocolSessionError)) {
             throw error;
           }
           diagnostics.push({ layer: "session", reason: error.message });
           continue;
+        }
+        if (appliedOperation !== undefined) {
+          this.#onOperationApplied?.(appliedOperation);
         }
       }
 
@@ -115,4 +134,12 @@ export class TerminalProtocolEndpoint {
 
 function emptyResult(): EndpointResult {
   return { responseFrames: [], diagnostics: [] };
+}
+
+function isBlockOperation(message: Message): message is AppliedBlockOperation {
+  return (
+    message.kind === "block.append" ||
+    message.kind === "block.update" ||
+    message.kind === "block.seal"
+  );
 }

@@ -125,6 +125,16 @@ composition. The terminal may scroll while tail following to keep current
 input visible, but physical layout changes do not move the logical input
 position.
 
+## Experimental Evidence
+
+The [xterm Protocol Endpoint Integration
+Prototype](../../prototypes/integration/xterm-protocol-endpoint/README.md)
+composes the current OSC codec, Session semantics, and a private xterm.js
+history implementation. Its tested earlier-Block growth and shrink preserve a
+later history-reading position, while its tested tail-following viewport stays
+at the new tail. The prototype's private APIs and untested interaction paths
+bound this evidence; they are not a required implementation design.
+
 ## Current Scope
 
 This draft defines initial correctness boundaries for reading, reflow,

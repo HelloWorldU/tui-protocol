@@ -10,6 +10,7 @@ import {
 import {
   ProtocolEndpointError,
   TerminalProtocolEndpoint,
+  type AppliedBlockOperation,
   type EndpointResult,
 } from "./endpoint.ts";
 
@@ -149,6 +150,75 @@ test("Context and Block Operation bytes update Session state, while a rejected U
     endpoint.context(contextId)?.blocks[0]?.content.data,
     "complete",
   );
+});
+
+test("successful Block Operations reach the host in byte-stream order, while a rejected Update does not", () => {
+  const applied: AppliedBlockOperation[] = [];
+  const endpoint = new TerminalProtocolEndpoint({
+    completeBaselineSupported: true,
+    onOperationApplied: (operation) => applied.push(operation),
+  });
+  const contextId = openContext(endpoint);
+  const operations: readonly Message[] = [
+    {
+      version: 1,
+      kind: "block.append",
+      operation_id: "host-1",
+      context_id: contextId,
+      body: {
+        block_id: "thinking",
+        lifecycle: "mutable",
+        content: { type: "text/plain", data: "draft" },
+      },
+    },
+    {
+      version: 1,
+      kind: "block.update",
+      operation_id: "host-2",
+      context_id: contextId,
+      body: {
+        block_id: "thinking",
+        content: { type: "text/plain", data: "final" },
+      },
+    },
+    {
+      version: 1,
+      kind: "block.seal",
+      operation_id: "host-3",
+      context_id: contextId,
+      body: { block_id: "thinking" },
+    },
+    {
+      version: 1,
+      kind: "block.update",
+      operation_id: "host-4",
+      context_id: contextId,
+      body: {
+        block_id: "thinking",
+        content: { type: "text/plain", data: "too late" },
+      },
+    },
+  ];
+
+  const result = endpoint.push(
+    concatenate(
+      operations.map((message, index) => encodeInput(message, index + 30)),
+    ),
+  );
+
+  assert.deepEqual(
+    applied.map((operation) => operation.kind),
+    ["block.append", "block.update", "block.seal"],
+  );
+  assert.deepEqual(decodeResponses(result), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "host-4",
+      context_id: contextId,
+      body: { code: "block_sealed" },
+    },
+  ]);
 });
 
 test("after malformed framing reports a diagnostic, later valid query bytes still produce a response", () => {

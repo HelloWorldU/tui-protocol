@@ -30,7 +30,8 @@ protocol.
   reliable identities.
 - **2026-08-13:** Defined the initial terminal-native behavior for reading
   anchors, reflow, selection, search, content metadata, and active input across
-  Block changes and scrollback-capacity trimming.
+  Block changes and scrollback-capacity trimming, then connected protocol bytes
+  to mutable xterm.js history in the first end-to-end reading-anchor experiment.
 
 ## Documentation
 
