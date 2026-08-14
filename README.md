@@ -32,6 +32,8 @@ protocol.
   anchors, reflow, selection, search, content metadata, and active input across
   Block changes and scrollback-capacity trimming, then connected protocol bytes
   to mutable xterm.js history in the first end-to-end reading-anchor experiment.
+- **2026-08-14:** Extended the xterm.js integration experiment to preserve its
+  tested history-reading and tail-following states across resize and reflow.
 
 ## Documentation
 

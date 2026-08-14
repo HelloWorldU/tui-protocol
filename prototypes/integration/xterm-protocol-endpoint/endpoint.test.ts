@@ -127,6 +127,11 @@ test("OSC Message bytes keep the xterm viewport following the tail when an earli
   await endpoint.drain();
   assert.equal(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
 
+  xterm.scrollToLine(0);
+  assert.notEqual(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
+  xterm.scrollToBottom();
+  assert.equal(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
+
   endpoint.push(
     encodeInput(
       update(contextId, "3", "thinking", "grown-1\ngrown-2\ngrown-3"),
@@ -137,6 +142,62 @@ test("OSC Message bytes keep the xterm viewport following the tail when an earli
 
   assert.equal(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
   assert.deepEqual(viewportRows(xterm), ["tail-4", "tail-5", ""]);
+
+  xterm.resize(6, 3);
+  assert.equal(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
+test("resizing after OSC Append keeps the later Block being read anchored through a historical Update", async () => {
+  const xterm = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "thinking", "old", "mutable"), 3),
+      encodeInput(append(contextId, "2", "context", "context", "sealed"), 4),
+      encodeInput(
+        append(
+          contextId,
+          "3",
+          "reader",
+          "reader-1\nreader-2\nreader-3",
+          "sealed",
+        ),
+        5,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  xterm.scrollToLine(requiredRange(endpoint, contextId, "reader").start);
+  assert.equal(viewportTopText(xterm), "reader-1");
+
+  xterm.resize(6, 3);
+  const readerStartAfterResize = requiredRange(
+    endpoint,
+    contextId,
+    "reader",
+  ).start;
+  assert.equal(xterm.buffer.active.viewportY, readerStartAfterResize);
+  assert.equal(viewportTopText(xterm), "reader");
+
+  endpoint.push(
+    encodeInput(update(contextId, "4", "thinking", "new-a\nnew-b"), 6),
+  );
+  await endpoint.drain();
+
+  assert.equal(
+    requiredRange(endpoint, contextId, "reader").start,
+    readerStartAfterResize + 1,
+  );
+  assert.equal(xterm.buffer.active.viewportY, readerStartAfterResize + 1);
+  assert.equal(viewportTopText(xterm), "reader");
 
   endpoint.dispose();
   xterm.dispose();

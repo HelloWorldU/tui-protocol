@@ -71,6 +71,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #entries: BlockEntry[] = [];
   readonly #entryIndexes = new Map<BlockId, number>();
   readonly #registrations: IDisposable[] = [];
+  #readingAnchor: PrivateMarker | undefined;
 
   constructor(terminal: Terminal) {
     this.#terminal = terminal;
@@ -84,7 +85,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
     this.#registrations.push(
       terminal.onResize(({ cols, rows }) => {
         this.#model.resize({ width: cols, height: rows });
+        this.#restoreReadingAnchor();
       }),
+      terminal.onScroll((position) => this.#captureReadingAnchor(position)),
     );
   }
 
@@ -120,6 +123,8 @@ export class PrivateCoreBlockHistory implements IDisposable {
     for (const registration of this.#registrations.splice(0)) {
       registration.dispose();
     }
+    this.#readingAnchor?.dispose();
+    this.#readingAnchor = undefined;
     for (const entry of this.#entries) {
       entry.marker.dispose();
     }
@@ -221,6 +226,30 @@ export class PrivateCoreBlockHistory implements IDisposable {
       return lines;
     } finally {
       scratch.dispose();
+    }
+  }
+
+  #captureReadingAnchor(position: number): void {
+    this.#readingAnchor?.dispose();
+    this.#readingAnchor = undefined;
+
+    const buffer = this.#bufferService.buffer;
+    if (position !== buffer.ybase) {
+      this.#readingAnchor = buffer.addMarker(position);
+    }
+  }
+
+  #restoreReadingAnchor(): void {
+    const anchor = this.#readingAnchor;
+    if (anchor === undefined || anchor.isDisposed) {
+      return;
+    }
+
+    const buffer = this.#bufferService.buffer;
+    const position = Math.min(buffer.ybase, Math.max(0, anchor.line));
+    if (position !== buffer.ydisp) {
+      buffer.ydisp = position;
+      this.#bufferService._onScroll.fire(position);
     }
   }
 }

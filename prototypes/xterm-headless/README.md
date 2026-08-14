@@ -22,8 +22,9 @@ carrier and Base64 framing.
   xterm.js `BufferLine` range.
 - When an earlier Block grows or shrinks, a later reading position and marker
   can remain attached to the same content without duplicating history.
-- Marker-backed Block boundaries survive terminal resize reflow and still
-  identify the correct history range for a later Update.
+- Marker-backed Block boundaries and a tested history-reading position survive
+  terminal resize reflow and still identify the correct history range for a
+  later Update.
 - The experimental OSC transport and private-core mutation path work together:
   an in-band Update can replace real xterm.js history end to end.
 

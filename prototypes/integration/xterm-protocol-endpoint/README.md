@@ -25,8 +25,11 @@ queue. Tests await `drain()` before observing the resulting xterm.js history.
 - Growing and shrinking an earlier mutable Block keeps a later logical history
   row at the same viewport-relative position without duplicated or missing
   rows.
+- Resizing the tested Terminal reflows Block ranges while keeping the later
+  history row being read at the viewport top; a subsequent earlier-Block
+  Update preserves that position.
 - When the viewport is already following the tail, growing an earlier Block
-  keeps it following the new tail.
+  and a tested resize keep it following the new tail.
 - A tested Update rejected because its Block is sealed returns correlated
   `protocol.error` bytes and does not change rendered history.
 
@@ -50,8 +53,10 @@ Behavior](../../../docs/protocol/terminal-native-behavior.md).
   later Operations remain enforced by the Session.
 - Scrollback-capacity trimming and Update of the Block containing the reading
   anchor remain unsupported by the private history spike.
-- Resize/reflow, selection, search, content metadata, active input, browser
-  rendering, and real user interaction are not exercised here.
+- Selection, search, content metadata, active input, browser rendering, and
+  real user interaction are not exercised here. Resize/reflow evidence is
+  limited to the tested dimensions, plain-text content, and viewport-top
+  anchor.
 
 ## Run
 
