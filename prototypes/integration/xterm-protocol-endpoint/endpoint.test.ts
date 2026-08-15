@@ -237,6 +237,59 @@ test("a sealed-Block Update returns protocol.error bytes and leaves rendered xte
   xterm.dispose();
 });
 
+test("when xterm cannot grow history within its capacity, drain reports failure after the Session accepts the Update", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 3,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "thinking", "old", "mutable"), 3),
+      encodeInput(
+        append(contextId, "2", "tail", "tail-1\ntail-2\ntail-3", "sealed"),
+        4,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+  const renderedBeforeUpdate = bufferRows(xterm);
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        update(
+          contextId,
+          "3",
+          "thinking",
+          "new-1\nnew-2\nnew-3\nnew-4",
+        ),
+        5,
+      ),
+    ),
+    emptyResult(),
+  );
+
+  await assert.rejects(
+    endpoint.drain(),
+    /does not yet handle scrollback capacity trimming/,
+  );
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "new-1\nnew-2\nnew-3\nnew-4",
+  );
+  assert.deepEqual(bufferRows(xterm), renderedBeforeUpdate);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 function createTerminal(): InstanceType<typeof Terminal> {
   return new Terminal({
     allowProposedApi: true,

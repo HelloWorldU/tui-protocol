@@ -37,6 +37,19 @@ These results provide experimental evidence for the reading-anchor and
 tail-following requirements in [Terminal-Native
 Behavior](../../../docs/protocol/terminal-native-behavior.md).
 
+## Observed Failure Boundary
+
+One capacity-limited test deliberately grows a Block beyond what the private
+xterm.js history spike can materialize. The Session accepts the Update and
+stores its new snapshot, then `drain()` reports the renderer failure while the
+xterm.js Buffer retains its old rows.
+
+This result demonstrates that the current composition is not failure-atomic
+across Session state and rendering. It is a characterized prototype gap, not
+selected protocol behavior. A later design must either make acceptance and
+materialization one transaction or define a recovery path that restores a
+consistent rendered projection.
+
 ## Experimental Boundaries
 
 - xterm.js history replacement still uses private core fields and is not a
@@ -45,18 +58,19 @@ Behavior](../../../docs/protocol/terminal-native-behavior.md).
   data, a real terminal parser, PTY, multiplexer, and remote transport are not
   part of this experiment.
 - Session acceptance occurs before asynchronous rendering. The prototype does
-  not prove failure atomicity between Session state and renderer failures,
-  backpressure, partial rendering, or recovery.
+  not provide failure atomicity, recovery, backpressure, or partial-rendering
+  handling; the capacity-limited test above exposes the resulting split state.
 - Context and Block IDs are combined into an internal rendering key. The key
   is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
   later Operations remain enforced by the Session.
 - Scrollback-capacity trimming and Update of the Block containing the reading
   anchor remain unsupported by the private history spike.
-- Selection, search, content metadata, active input, browser rendering, and
-  real user interaction are not exercised here. Resize/reflow evidence is
-  limited to the tested dimensions, plain-text content, and viewport-top
-  anchor.
+- `@xterm/headless` 6.0.0 exposes no selection service or selection API, so
+  selection and copying require a future browser-host experiment. Search,
+  content metadata, active input, browser rendering, and real user interaction
+  are also not exercised here. Resize/reflow evidence is limited to the tested
+  dimensions, plain-text content, and viewport-top anchor.
 
 ## Run
 

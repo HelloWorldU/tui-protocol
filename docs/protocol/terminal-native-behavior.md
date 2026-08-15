@@ -133,8 +133,10 @@ composes the current OSC codec, Session semantics, and a private xterm.js
 history implementation. Its tested earlier-Block growth and shrink preserve a
 later history-reading position, including across a tested resize and reflow,
 while its tested tail-following viewport stays at the new tail. The
-prototype's private APIs and untested interaction paths bound this evidence;
-they are not a required implementation design.
+prototype's capacity-limited case also demonstrates that its Session and
+renderer are not yet failure-atomic, so the positive behavior evidence applies
+only when rendering succeeds. Its private APIs and untested interaction paths
+further bound this evidence; they are not a required implementation design.
 
 ## Current Scope
 
