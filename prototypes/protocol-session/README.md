@@ -26,6 +26,13 @@ It exercises the current drafts for:
   identity, order, content, and one-way lifecycle rules.
 - The tested semantic failures leave Block state unchanged, and a used
   Operation ID cannot be reused even when its first Operation failed.
+- A tested valid Update can be prepared without changing Block state, then
+  committed or rejected with `resource_exhausted`; rejection leaves the Block
+  unchanged while consuming the Operation ID.
+- While one tested Operation is prepared, later Messages are refused until the
+  host commits or rejects it, preserving the Session's ordered execution
+  boundary. Ending the connection instead discards the prepared Operation,
+  closes its Context, and leaves its uncommitted content change unapplied.
 - Interleaved Contexts maintain independent Block and Operation namespaces.
 
 ## Experimental Boundaries
@@ -44,6 +51,9 @@ It exercises the current drafts for:
 - `handleInvalidMessage()` is a separate experimental integration hook for
   reliable correlation metadata produced when the codec rejects a complete
   Message. It does not parse or accept malformed bytes itself.
+- `prepareOperation()` is an experimental two-phase host seam. It permits one
+  prepared Block Operation at a time and does not itself detect resources,
+  render content, or make an external renderer transactional.
 - `ProtocolSessionError` reports misuse of the local API, such as sending a
   terminal-originated Message into the terminal-side session. It is not a
   wire-level `protocol.error`.
@@ -54,8 +64,9 @@ It exercises the current drafts for:
   multiplexer, or bidirectional PTY.
 - Terminal rendering, scrollback integrity, reflow, or reading-anchor
   preservation.
-- Optional content types, resource exhaustion, internal failures, request
-  cache limits, timeouts, abandoned Contexts, resets, or authentication.
+- Optional content types, real resource detection, renderer integration,
+  recovery from partial rendering, request cache limits, timeouts, abandoned
+  Contexts, resets, or authentication.
 - A stable public API or compatibility with future protocol versions.
 
 ## Run

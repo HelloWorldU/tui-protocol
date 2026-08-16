@@ -127,6 +127,128 @@ test("Append creates a mutable Block, Update replaces its content, and Seal prev
   );
 });
 
+test("preparing an Update leaves its Block unchanged until commit applies the replacement", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "draft"));
+
+  const preparation = session.prepareOperation(
+    update("2", "thinking", "complete"),
+  );
+  assert.equal(preparation.status, "prepared");
+  if (preparation.status !== "prepared") {
+    throw new Error("Expected Update to be prepared.");
+  }
+
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "draft",
+  );
+  assert.deepEqual(preparation.commit(), []);
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "complete",
+  );
+  assert.throws(() => preparation.commit(), ProtocolSessionError);
+  assert.throws(
+    () => preparation.reject("internal_error"),
+    ProtocolSessionError,
+  );
+});
+
+test("rejecting a prepared Update with resource_exhausted leaves its Block unchanged and consumes its Operation ID", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "draft"));
+
+  const preparation = session.prepareOperation(
+    update("2", "thinking", "too large"),
+  );
+  assert.equal(preparation.status, "prepared");
+  if (preparation.status !== "prepared") {
+    throw new Error("Expected Update to be prepared.");
+  }
+
+  assertOperationError(
+    preparation.reject("resource_exhausted"),
+    "2",
+    "resource_exhausted",
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "draft",
+  );
+  assertOperationError(
+    session.handle(update("2", "thinking", "reuse")),
+    "2",
+    "operation_id_reused",
+  );
+  assert.throws(() => preparation.commit(), ProtocolSessionError);
+  assert.throws(
+    () => preparation.reject("internal_error"),
+    ProtocolSessionError,
+  );
+  assert.deepEqual(session.handle(update("3", "thinking", "complete")), []);
+});
+
+test("while an Update is prepared, the Session rejects later Messages until the host settles it", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "draft"));
+
+  const preparation = session.prepareOperation(
+    update("2", "thinking", "complete"),
+  );
+  assert.equal(preparation.status, "prepared");
+  if (preparation.status !== "prepared") {
+    throw new Error("Expected Update to be prepared.");
+  }
+
+  assert.throws(
+    () => session.handle(seal("3", "thinking")),
+    /while an Operation is prepared/,
+  );
+  assertOperationError(
+    preparation.reject("internal_error"),
+    "2",
+    "internal_error",
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "draft",
+  );
+  assert.deepEqual(session.handle(seal("3", "thinking")), []);
+});
+
+test("ending the connection discards a prepared Update and closes its Context without applying it", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "draft"));
+
+  const preparation = session.prepareOperation(
+    update("2", "thinking", "complete"),
+  );
+  assert.equal(preparation.status, "prepared");
+  if (preparation.status !== "prepared") {
+    throw new Error("Expected Update to be prepared.");
+  }
+
+  session.endConnection();
+
+  assert.deepEqual(session.context("context-1"), {
+    id: "context-1",
+    state: "closed",
+    blocks: [
+      {
+        id: "thinking",
+        lifecycle: "sealed",
+        content: { type: "text/plain", data: "draft" },
+      },
+    ],
+  });
+  assert.throws(() => preparation.commit(), ProtocolSessionError);
+  assert.throws(
+    () => preparation.reject("internal_error"),
+    ProtocolSessionError,
+  );
+});
+
 test("a failed Operation leaves Blocks unchanged and its operation ID cannot be reused", () => {
   const session = openSession();
 

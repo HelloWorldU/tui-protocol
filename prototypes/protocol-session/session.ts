@@ -14,7 +14,24 @@ type ControlRequest = Extract<
   { readonly kind: "capability.query" | "context.open" | "context.close" }
 >;
 
-type BlockOperation = BlockAppend | BlockUpdate | BlockSeal;
+export type BlockOperation = BlockAppend | BlockUpdate | BlockSeal;
+
+export type OperationExecutionErrorCode = Extract<
+  OperationErrorCode,
+  "resource_exhausted" | "internal_error"
+>;
+
+export type OperationPreparation =
+  | {
+      readonly status: "rejected";
+      readonly responses: readonly Message[];
+    }
+  | {
+      readonly status: "prepared";
+      readonly operation: BlockOperation;
+      commit(): readonly Message[];
+      reject(code: OperationExecutionErrorCode): readonly Message[];
+    };
 
 interface StoredBlock {
   readonly id: string;
@@ -62,6 +79,7 @@ export class TerminalProtocolSession {
   readonly #contexts = new Map<string, StoredContext>();
   readonly #controlResults = new Map<string, StoredControlResult>();
   readonly #completeBaselineSupported: boolean;
+  #pendingOperation: object | undefined = undefined;
   #nextContextId = 1;
   #ended = false;
 
@@ -70,11 +88,7 @@ export class TerminalProtocolSession {
   }
 
   handle(message: Message): readonly Message[] {
-    if (this.#ended) {
-      throw new ProtocolSessionError(
-        "Terminal session cannot receive Messages after its connection ends.",
-      );
-    }
+    this.#assertCanProcess();
 
     switch (message.kind) {
       case "capability.query":
@@ -83,8 +97,12 @@ export class TerminalProtocolSession {
         return [this.#handleControl(message)];
       case "block.append":
       case "block.update":
-      case "block.seal":
-        return this.#handleOperation(message);
+      case "block.seal": {
+        const preparation = this.#prepareOperation(message);
+        return preparation.status === "rejected"
+          ? preparation.responses
+          : preparation.commit();
+      }
       case "capability.response":
       case "context.open.response":
       case "context.close.response":
@@ -98,14 +116,15 @@ export class TerminalProtocolSession {
   }
 
   handleInvalidMessage(identity: InvalidMessageIdentity): readonly Message[] {
-    if (this.#ended) {
-      throw new ProtocolSessionError(
-        "Terminal session cannot receive Messages after its connection ends.",
-      );
-    }
+    this.#assertCanProcess();
     return identity.category === "control"
       ? [this.#handleInvalidControl(identity)]
       : [this.#handleInvalidOperation(identity)];
+  }
+
+  prepareOperation(operation: BlockOperation): OperationPreparation {
+    this.#assertCanProcess();
+    return this.#prepareOperation(operation);
   }
 
   context(id: string): SessionContextSnapshot | undefined {
@@ -121,6 +140,10 @@ export class TerminalProtocolSession {
     if (this.#ended) {
       return;
     }
+    // A disconnected peer cannot receive a result for an uncommitted
+    // Operation. Discard it before closing the Contexts so its preparation
+    // cannot mutate state afterward.
+    this.#pendingOperation = undefined;
     for (const context of this.#contexts.values()) {
       closeStoredContext(context);
     }
@@ -237,24 +260,65 @@ export class TerminalProtocolSession {
     };
   }
 
-  #handleOperation(operation: BlockOperation): readonly Message[] {
-    const context = this.#contexts.get(operation.context_id);
+  #prepareOperation(operation: BlockOperation): OperationPreparation {
+    const snapshot = cloneOperation(operation);
+    const context = this.#contexts.get(snapshot.context_id);
     if (context === undefined || context.state !== "open") {
-      return [operationError(operation, "context_not_open")];
+      return rejectedPreparation(snapshot, "context_not_open");
     }
-    if (context.operationIds.has(operation.operation_id)) {
-      return [operationError(operation, "operation_id_reused")];
+    if (context.operationIds.has(snapshot.operation_id)) {
+      return rejectedPreparation(snapshot, "operation_id_reused");
     }
 
     // Operation identity is consumed even when semantic evaluation rejects the
     // operation. A corrected operation must use a fresh identity.
-    context.operationIds.add(operation.operation_id);
+    context.operationIds.add(snapshot.operation_id);
 
-    const error = this.#executeOperation(context, operation);
-    return error === undefined ? [] : [operationError(operation, error)];
+    const error = this.#validateOperation(context, snapshot);
+    if (error !== undefined) {
+      return rejectedPreparation(snapshot, error);
+    }
+
+    const token = {};
+    this.#pendingOperation = token;
+    let settled = false;
+    const assertPending = (): void => {
+      if (settled || this.#pendingOperation !== token) {
+        throw new ProtocolSessionError(
+          "Prepared Operation is no longer active.",
+        );
+      }
+    };
+    const settle = (): void => {
+      assertPending();
+      settled = true;
+      this.#pendingOperation = undefined;
+    };
+
+    return {
+      status: "prepared",
+      operation: cloneOperation(snapshot),
+      commit: () => {
+        assertPending();
+        try {
+          const committed = this.#buildCommittedContext(context, snapshot);
+          this.#contexts.set(context.id, committed);
+          return [];
+        } catch {
+          return [operationError(snapshot, "internal_error")];
+        } finally {
+          settled = true;
+          this.#pendingOperation = undefined;
+        }
+      },
+      reject: (code) => {
+        settle();
+        return [operationError(snapshot, code)];
+      },
+    };
   }
 
-  #executeOperation(
+  #validateOperation(
     context: StoredContext,
     operation: BlockOperation,
   ): OperationErrorCode | undefined {
@@ -263,12 +327,6 @@ export class TerminalProtocolSession {
         if (context.blockIds.has(operation.body.block_id)) {
           return "block_id_reused";
         }
-        context.blockIds.add(operation.body.block_id);
-        context.blocks.push({
-          id: operation.body.block_id,
-          lifecycle: operation.body.lifecycle,
-          content: cloneContent(operation.body.content),
-        });
         return undefined;
       case "block.update": {
         const block = findBlock(context, operation.body.block_id);
@@ -278,7 +336,6 @@ export class TerminalProtocolSession {
         if (block.lifecycle === "sealed") {
           return "block_sealed";
         }
-        block.content = cloneContent(operation.body.content);
         return undefined;
       }
       case "block.seal": {
@@ -289,11 +346,67 @@ export class TerminalProtocolSession {
         if (block.lifecycle === "sealed") {
           return "block_sealed";
         }
-        block.lifecycle = "sealed";
         return undefined;
       }
       default:
         return assertNever(operation);
+    }
+  }
+
+  #buildCommittedContext(
+    context: StoredContext,
+    operation: BlockOperation,
+  ): StoredContext {
+    let blocks: StoredBlock[];
+    const blockIds = new Set(context.blockIds);
+
+    switch (operation.kind) {
+      case "block.append":
+        blocks = [
+          ...context.blocks,
+          {
+            id: operation.body.block_id,
+            lifecycle: operation.body.lifecycle,
+            content: cloneContent(operation.body.content),
+          },
+        ];
+        blockIds.add(operation.body.block_id);
+        break;
+      case "block.update":
+        blocks = replaceBlock(context, operation.body.block_id, (block) => ({
+          ...block,
+          content: cloneContent(operation.body.content),
+        }));
+        break;
+      case "block.seal":
+        blocks = replaceBlock(context, operation.body.block_id, (block) => ({
+          ...block,
+          lifecycle: "sealed",
+        }));
+        break;
+      default:
+        return assertNever(operation);
+    }
+
+    return {
+      id: context.id,
+      state: context.state,
+      blocks,
+      blockIds,
+      operationIds: new Set(context.operationIds),
+    };
+  }
+
+  #assertCanProcess(): void {
+    if (this.#ended) {
+      throw new ProtocolSessionError(
+        "Terminal session cannot receive Messages after its connection ends.",
+      );
+    }
+    if (this.#pendingOperation !== undefined) {
+      throw new ProtocolSessionError(
+        "Terminal session cannot process another Message while an Operation is prepared.",
+      );
     }
   }
 }
@@ -396,11 +509,42 @@ function operationError(
   };
 }
 
+function rejectedPreparation(
+  operation: BlockOperation,
+  code: OperationErrorCode,
+): OperationPreparation {
+  return {
+    status: "rejected",
+    responses: [operationError(operation, code)],
+  };
+}
+
 function findBlock(
   context: StoredContext,
   blockId: string,
 ): StoredBlock | undefined {
   return context.blocks.find((block) => block.id === blockId);
+}
+
+function replaceBlock(
+  context: StoredContext,
+  blockId: string,
+  replacement: (block: StoredBlock) => StoredBlock,
+): StoredBlock[] {
+  let replaced = false;
+  const blocks = context.blocks.map((block) => {
+    if (block.id !== blockId) {
+      return block;
+    }
+    replaced = true;
+    return replacement(block);
+  });
+  if (!replaced) {
+    throw new ProtocolSessionError(
+      `Prepared Block ${JSON.stringify(blockId)} no longer exists.`,
+    );
+  }
+  return blocks;
 }
 
 function closeStoredContext(context: StoredContext): void {
@@ -427,6 +571,10 @@ function snapshotContext(context: StoredContext): SessionContextSnapshot {
 
 function cloneContent(content: PlainTextSnapshot): PlainTextSnapshot {
   return { type: "text/plain", data: content.data };
+}
+
+function cloneOperation(operation: BlockOperation): BlockOperation {
+  return structuredClone(operation);
 }
 
 function cloneMessage(message: Message): Message {
