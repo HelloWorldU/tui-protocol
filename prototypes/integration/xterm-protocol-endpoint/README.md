@@ -22,6 +22,8 @@ queue. Tests await `drain()` before observing the resulting xterm.js history.
   path before Block Operations are sent.
 - Tested OSC `9002` Append and Update Message bytes materialize `text/plain`
   Blocks in real xterm.js Buffer lines.
+- Tested Append and Update Messages decoded from one input chunk retain their
+  order while rendering is queued and materialize the updated Block.
 - Growing and shrinking an earlier mutable Block keeps a later logical history
   row at the same viewport-relative position without duplicated or missing
   rows.
@@ -32,23 +34,26 @@ queue. Tests await `drain()` before observing the resulting xterm.js history.
   and a tested resize keep it following the new tail.
 - A tested Update rejected because its Block is sealed returns correlated
   `protocol.error` bytes and does not change rendered history.
+- When a tested Update would grow xterm.js history beyond its available
+  capacity, it returns correlated `resource_exhausted` bytes before changing
+  either Session state or rendered history; a later fitting Update still
+  succeeds.
 
 These results provide experimental evidence for the reading-anchor and
 tail-following requirements in [Terminal-Native
 Behavior](../../../docs/protocol/terminal-native-behavior.md).
 
-## Observed Failure Boundary
+## Capacity Boundary
 
 One capacity-limited test deliberately grows a Block beyond what the private
-xterm.js history spike can materialize. The Session accepts the Update and
-stores its new snapshot, then `drain()` reports the renderer failure while the
-xterm.js Buffer retains its old rows.
+xterm.js history spike can materialize. The integration now checks this known
+limit while the Operation is prepared, rejects it with `resource_exhausted`,
+and leaves both Session state and xterm.js Buffer rows unchanged.
 
-This result demonstrates that the current composition is not failure-atomic
-across Session state and rendering. It is a characterized prototype gap, not
-selected protocol behavior. A later design must either make acceptance and
-materialization one transaction or define a recovery path that restores a
-consistent rendered projection.
+The check uses the current plain-text Block layout model to predict the row
+growth before Session commit. It closes the previously observed split-state
+case for the tested ASCII content and dimensions; it is not evidence that all
+renderer failures are detected before commit.
 
 ## Experimental Boundaries
 
@@ -57,15 +62,17 @@ consistent rendered projection.
 - Incoming bytes go directly to the protocol-only endpoint. Ordinary terminal
   data, a real terminal parser, PTY, multiplexer, and remote transport are not
   part of this experiment.
-- Session acceptance occurs before asynchronous rendering. The prototype does
-  not provide failure atomicity, recovery, backpressure, or partial-rendering
-  handling; the capacity-limited test above exposes the resulting split state.
+- Known Update capacity exhaustion is checked before Session commit, but
+  accepted Operations still render asynchronously afterward. The prototype
+  does not provide general failure atomicity, recovery, backpressure, or
+  partial-rendering handling for other renderer failures.
 - Context and Block IDs are combined into an internal rendering key. The key
   is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
   later Operations remain enforced by the Session.
 - Scrollback-capacity trimming and Update of the Block containing the reading
-  anchor remain unsupported by the private history spike.
+  anchor remain unsupported by the private history spike. The integration
+  rejects only the tested capacity-overflow case instead of trimming.
 - `@xterm/headless` 6.0.0 exposes no selection service or selection API, so
   selection and copying require a future browser-host experiment. Search,
   content metadata, active input, browser rendering, and real user interaction

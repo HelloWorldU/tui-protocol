@@ -34,6 +34,9 @@ protocol.
   to mutable xterm.js history in the first end-to-end reading-anchor experiment.
 - **2026-08-14:** Extended the xterm.js integration experiment to preserve its
   tested history-reading and tail-following states across resize and reflow.
+- **2026-08-17:** Connected prepared Operations to an xterm.js capacity check,
+  so the tested oversized historical Update returns `resource_exhausted`
+  without splitting Session state from rendered history.
 
 ## Documentation
 

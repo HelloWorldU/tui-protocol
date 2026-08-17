@@ -3,6 +3,7 @@ import type { IDisposable, Terminal } from "@xterm/headless";
 
 import {
   TerminalPrototype,
+  layoutBlocks,
   type Block,
   type BlockId,
   type Operation,
@@ -68,6 +69,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #terminal: Terminal;
   readonly #bufferService: PrivateBufferService;
   readonly #model: TerminalPrototype;
+  readonly #plannedModel: TerminalPrototype;
   readonly #entries: BlockEntry[] = [];
   readonly #entryIndexes = new Map<BlockId, number>();
   readonly #registrations: IDisposable[] = [];
@@ -82,9 +84,14 @@ export class PrivateCoreBlockHistory implements IDisposable {
       width: terminal.cols,
       height: terminal.rows,
     });
+    this.#plannedModel = new TerminalPrototype({
+      width: terminal.cols,
+      height: terminal.rows,
+    });
     this.#registrations.push(
       terminal.onResize(({ cols, rows }) => {
         this.#model.resize({ width: cols, height: rows });
+        this.#plannedModel.resize({ width: cols, height: rows });
         this.#restoreReadingAnchor();
       }),
       terminal.onScroll((position) => this.#captureReadingAnchor(position)),
@@ -92,6 +99,17 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   async apply(operation: Operation): Promise<void> {
+    this.accept(operation);
+    await this.renderAccepted(operation);
+  }
+
+  /** Records an accepted Operation in the projection used by preflight. */
+  accept(operation: Operation): void {
+    this.#plannedModel.apply(operation);
+  }
+
+  /** Materializes an Operation that was already recorded by accept(). */
+  async renderAccepted(operation: Operation): Promise<void> {
     switch (operation.type) {
       case "append":
         await this.#append(operation.block);
@@ -117,6 +135,43 @@ export class PrivateCoreBlockHistory implements IDisposable {
       return undefined;
     }
     return { ...this.#rangeAt(index) };
+  }
+
+  wouldExceedCapacity(operation: Operation): boolean {
+    if (operation.type !== "update") {
+      return false;
+    }
+
+    const block = this.#plannedModel
+      .blocks()
+      .find((candidate) => candidate.id === operation.id);
+    if (block === undefined) {
+      throw new Error(
+        `Block ${JSON.stringify(operation.id)} has no planned xterm.js content.`,
+      );
+    }
+    const currentLineCount = layoutBlocks(
+      [block],
+      this.#terminal.cols,
+    ).length;
+    const replacementLineCount = layoutBlocks(
+      [
+        {
+          id: operation.id,
+          lifecycle: "mutable",
+          content: operation.content,
+        },
+      ],
+      this.#terminal.cols,
+    ).length;
+    const plannedLineCount =
+      this.#plannedModel.allRows().length -
+      currentLineCount +
+      replacementLineCount;
+    const lines = this.#bufferService.buffer.lines;
+    return (
+      Math.max(this.#terminal.rows, plannedLineCount + 1) > lines.maxLength
+    );
   }
 
   dispose(): void {

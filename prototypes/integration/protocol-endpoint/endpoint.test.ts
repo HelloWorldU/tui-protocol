@@ -221,6 +221,160 @@ test("successful Block Operations reach the host in byte-stream order, while a r
   ]);
 });
 
+test("a host capacity rejection returns resource_exhausted without changing the Block or reporting the Update as applied", () => {
+  const applied: AppliedBlockOperation[] = [];
+  const endpoint = new TerminalProtocolEndpoint({
+    completeBaselineSupported: true,
+    onOperationPrepared: (operation) =>
+      operation.kind === "block.update" ? "resource_exhausted" : undefined,
+    onOperationApplied: (operation) => applied.push(operation),
+  });
+  const contextId = openContext(endpoint);
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        {
+          version: 1,
+          kind: "block.append",
+          operation_id: "capacity-1",
+          context_id: contextId,
+          body: {
+            block_id: "thinking",
+            lifecycle: "mutable",
+            content: { type: "text/plain", data: "draft" },
+          },
+        },
+        40,
+      ),
+    ),
+    emptyResult(),
+  );
+
+  const rejected = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.update",
+        operation_id: "capacity-2",
+        context_id: contextId,
+        body: {
+          block_id: "thinking",
+          content: { type: "text/plain", data: "too large" },
+        },
+      },
+      41,
+    ),
+  );
+
+  assert.deepEqual(rejected.diagnostics, []);
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "capacity-2",
+      context_id: contextId,
+      body: { code: "resource_exhausted" },
+    },
+  ]);
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "draft",
+  );
+  assert.deepEqual(
+    applied.map((operation) => operation.operation_id),
+    ["capacity-1"],
+  );
+});
+
+test("a thrown host preparation failure returns internal_error, leaves the Block unchanged, and does not block the next Operation", () => {
+  const endpoint = new TerminalProtocolEndpoint({
+    completeBaselineSupported: true,
+    onOperationPrepared: (operation) => {
+      if (
+        operation.kind === "block.update" &&
+        operation.body.content.data === "preflight failure"
+      ) {
+        throw new Error("renderer preflight failed");
+      }
+      return undefined;
+    },
+  });
+  const contextId = openContext(endpoint);
+  endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.append",
+        operation_id: "failure-1",
+        context_id: contextId,
+        body: {
+          block_id: "thinking",
+          lifecycle: "mutable",
+          content: { type: "text/plain", data: "draft" },
+        },
+      },
+      50,
+    ),
+  );
+
+  const failed = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.update",
+        operation_id: "failure-2",
+        context_id: contextId,
+        body: {
+          block_id: "thinking",
+          content: { type: "text/plain", data: "preflight failure" },
+        },
+      },
+      51,
+    ),
+  );
+
+  assert.deepEqual(failed.diagnostics, [
+    { layer: "host", reason: "renderer preflight failed" },
+  ]);
+  assert.deepEqual(decodeResponses(failed), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "failure-2",
+      context_id: contextId,
+      body: { code: "internal_error" },
+    },
+  ]);
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "draft",
+  );
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        {
+          version: 1,
+          kind: "block.update",
+          operation_id: "failure-3",
+          context_id: contextId,
+          body: {
+            block_id: "thinking",
+            content: { type: "text/plain", data: "complete" },
+          },
+        },
+        52,
+      ),
+    ),
+    emptyResult(),
+  );
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "complete",
+  );
+});
+
 test("after malformed framing reports a diagnostic, later valid query bytes still produce a response", () => {
   const endpoint = supportedEndpoint();
   const malformed = new TextEncoder().encode(

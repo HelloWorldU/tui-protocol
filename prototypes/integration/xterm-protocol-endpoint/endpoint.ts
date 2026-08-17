@@ -31,6 +31,10 @@ export class XtermProtocolEndpoint implements IDisposable {
     this.#history = new PrivateCoreBlockHistory(terminal);
     this.#endpoint = new TerminalProtocolEndpoint({
       completeBaselineSupported: options.completeBaselineSupported,
+      onOperationPrepared: (operation) =>
+        this.#history.wouldExceedCapacity(toRenderingOperation(operation))
+          ? "resource_exhausted"
+          : undefined,
       onOperationApplied: (operation) => this.#enqueue(operation),
     });
   }
@@ -65,8 +69,9 @@ export class XtermProtocolEndpoint implements IDisposable {
 
   #enqueue(operation: AppliedBlockOperation): void {
     const renderingOperation = toRenderingOperation(operation);
+    this.#history.accept(renderingOperation);
     this.#rendering = this.#rendering.then(() =>
-      this.#history.apply(renderingOperation),
+      this.#history.renderAccepted(renderingOperation),
     );
   }
 }

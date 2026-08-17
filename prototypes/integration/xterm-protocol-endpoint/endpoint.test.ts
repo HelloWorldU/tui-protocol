@@ -102,6 +102,48 @@ test("OSC Message bytes grow and shrink an earlier Block without moving the late
   xterm.dispose();
 });
 
+test("Append and Update bytes in one input chunk are planned in order and render the updated Block", async () => {
+  const xterm = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  const result = endpoint.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "thinking", "draft", "mutable"), 3),
+      encodeInput(
+        append(
+          contextId,
+          "2",
+          "tail",
+          "tail-1\ntail-2\ntail-3",
+          "sealed",
+        ),
+        4,
+      ),
+      encodeInput(update(contextId, "3", "thinking", "complete"), 5),
+    ]),
+  );
+
+  assert.deepEqual(result, emptyResult());
+  await endpoint.drain();
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "complete",
+  );
+  assert.deepEqual(bufferRows(xterm), [
+    "complete",
+    "tail-1",
+    "tail-2",
+    "tail-3",
+    "",
+  ]);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 test("OSC Message bytes keep the xterm viewport following the tail when an earlier Block changes height", async () => {
   const xterm = createTerminal();
   const endpoint = new XtermProtocolEndpoint(xterm, {
@@ -237,7 +279,7 @@ test("a sealed-Block Update returns protocol.error bytes and leaves rendered xte
   xterm.dispose();
 });
 
-test("when xterm cannot grow history within its capacity, drain reports failure after the Session accepts the Update", async () => {
+test("when xterm cannot grow history within its capacity, the rejected Update changes nothing and a later fitting Update still renders", async () => {
   const xterm = new Terminal({
     allowProposedApi: true,
     cols: 10,
@@ -261,30 +303,50 @@ test("when xterm cannot grow history within its capacity, drain reports failure 
   await endpoint.drain();
   const renderedBeforeUpdate = bufferRows(xterm);
 
+  const rejected = endpoint.push(
+    encodeInput(
+      update(
+        contextId,
+        "3",
+        "thinking",
+        "new-1\nnew-2\nnew-3\nnew-4",
+      ),
+      5,
+    ),
+  );
+
+  assert.deepEqual(rejected.diagnostics, []);
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "3",
+      context_id: contextId,
+      body: { code: "resource_exhausted" },
+    },
+  ]);
+  await endpoint.drain();
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "old",
+  );
+  assert.deepEqual(bufferRows(xterm), renderedBeforeUpdate);
+
   assert.deepEqual(
     endpoint.push(
-      encodeInput(
-        update(
-          contextId,
-          "3",
-          "thinking",
-          "new-1\nnew-2\nnew-3\nnew-4",
-        ),
-        5,
-      ),
+      encodeInput(update(contextId, "4", "thinking", "fit"), 6),
     ),
     emptyResult(),
   );
-
-  await assert.rejects(
-    endpoint.drain(),
-    /does not yet handle scrollback capacity trimming/,
-  );
+  await endpoint.drain();
   assert.equal(
     endpoint.context(contextId)?.blocks[0]?.content.data,
-    "new-1\nnew-2\nnew-3\nnew-4",
+    "fit",
   );
-  assert.deepEqual(bufferRows(xterm), renderedBeforeUpdate);
+  assert.deepEqual(bufferRows(xterm), [
+    "fit",
+    ...renderedBeforeUpdate.slice(1),
+  ]);
 
   endpoint.dispose();
   xterm.dispose();

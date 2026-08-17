@@ -7,6 +7,7 @@ import {
 import {
   ProtocolSessionError,
   TerminalProtocolSession,
+  type OperationExecutionErrorCode,
   type SessionContextSnapshot,
 } from "../../protocol-session/index.ts";
 
@@ -21,11 +22,14 @@ export type AppliedBlockOperation = Extract<
 
 export interface TerminalProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
+  readonly onOperationPrepared?: (
+    operation: AppliedBlockOperation,
+  ) => OperationExecutionErrorCode | undefined;
   readonly onOperationApplied?: (operation: AppliedBlockOperation) => void;
 }
 
 export interface EndpointDiagnostic {
-  readonly layer: "framing" | "message" | "session";
+  readonly layer: "framing" | "message" | "session" | "host";
   readonly reason: string;
 }
 
@@ -44,14 +48,16 @@ export class ProtocolEndpointError extends Error {
 export class TerminalProtocolEndpoint {
   readonly #decoder = new ProtocolStreamDecoder();
   readonly #session: TerminalProtocolSession;
+  readonly #onOperationPrepared:
+    TerminalProtocolEndpointOptions["onOperationPrepared"];
   readonly #onOperationApplied:
-    | ((operation: AppliedBlockOperation) => void)
-    | undefined;
+    TerminalProtocolEndpointOptions["onOperationApplied"];
   #nextResponseFrameId = 1;
   #ended = false;
 
   constructor(options: TerminalProtocolEndpointOptions) {
     this.#session = new TerminalProtocolSession(options);
+    this.#onOperationPrepared = options.onOperationPrepared;
     this.#onOperationApplied = options.onOperationApplied;
   }
 
@@ -98,9 +104,33 @@ export class TerminalProtocolEndpoint {
       } else {
         let appliedOperation: AppliedBlockOperation | undefined;
         try {
-          responses = this.#session.handle(event.message);
-          if (responses.length === 0 && isBlockOperation(event.message)) {
-            appliedOperation = structuredClone(event.message);
+          if (isBlockOperation(event.message)) {
+            const preparation = this.#session.prepareOperation(event.message);
+            if (preparation.status === "rejected") {
+              responses = preparation.responses;
+            } else {
+              let executionError: OperationExecutionErrorCode | undefined;
+              try {
+                executionError = this.#onOperationPrepared?.(
+                  structuredClone(preparation.operation),
+                );
+              } catch (error: unknown) {
+                diagnostics.push({
+                  layer: "host",
+                  reason: errorReason(error),
+                });
+                executionError = "internal_error";
+              }
+              responses =
+                executionError === undefined
+                  ? preparation.commit()
+                  : preparation.reject(executionError);
+              if (responses.length === 0) {
+                appliedOperation = structuredClone(preparation.operation);
+              }
+            }
+          } else {
+            responses = this.#session.handle(event.message);
           }
         } catch (error: unknown) {
           if (!(error instanceof ProtocolSessionError)) {
@@ -130,6 +160,10 @@ export class TerminalProtocolEndpoint {
       frameId === MAX_FRAME_ID ? 1 : frameId + 1;
     return frameId;
   }
+}
+
+function errorReason(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function emptyResult(): EndpointResult {
