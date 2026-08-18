@@ -16,6 +16,7 @@ development and does not define a wire encoding.
 |---|---|
 | [Append](#append) | Initial semantics defined |
 | [Update](#update) | Initial semantics defined |
+| [Tail extension](#tail-extension-working-semantics) | Working semantics defined; final name and wire schema open |
 | [Seal](#seal) | Initial semantics defined |
 
 ## Shared Semantics
@@ -38,6 +39,19 @@ The [Logical Wire Message Model](wire-format.md) assigns every Block Operation
 a correlation ID, reports rejected Operations without acknowledging successful
 ones, and leaves later messages eligible for ordered processing. Block
 Operation retransmission is not supported in the initial model.
+
+## Content-State Identity
+
+Each Block's current logical content state is identified by the Operation ID
+of the last successful Operation that established or changed its content.
+Append establishes the initial content state. A successful Update or
+incremental content Operation advances it to that Operation's ID, including
+when the resulting content happens to equal the previous content.
+
+A failed Operation does not advance the content state. Seal does not advance
+it because Seal changes lifecycle rather than content. The identifier is an
+opaque causal token, not a content hash, byte count, integrity check, or
+permission to reuse an Operation ID.
 
 ## Append
 
@@ -62,6 +76,9 @@ lifecycle boundary, and non-reuse rules.
 Append carries a complete initial content snapshot and declares the Block's
 initial lifecycle as mutable or sealed. Dynamic content may begin mutable and
 later receive Update and Seal Operations. Static content may begin sealed.
+
+On success, the Append Operation's ID identifies the Block's initial content
+state.
 
 Lifecycle is explicit at the semantic level even if a future wire encoding
 offers shorthand or defaults.
@@ -100,8 +117,10 @@ target retains its Block ID, lifecycle, and position in append order while the
 terminal replaces its content and reflows its presentation.
 
 The terminal may optimize how it realizes an Update, but the observable result
-must remain equivalent to complete replacement. A future suffix-only Operation
-may optimize streaming without changing these semantics.
+must remain equivalent to complete replacement. Update has no content-state
+precondition, and its Operation ID becomes the Block's current content-state
+identifier on success. It is therefore the initial model's resynchronization
+path after an incremental content chain can no longer continue.
 
 ### 3. History Integrity
 
@@ -132,6 +151,63 @@ does not prevent the terminal from processing subsequent input. The rejection
 is reported by the logical wire error mechanism; application-side recovery
 remains TUI-owned.
 
+## Tail Extension (Working Semantics)
+
+This section defines the first incremental content scenario. Its final
+Operation name, Message kind, field names, serialization, and error-code
+spelling remain open.
+
+### 1. Target and Effect
+
+A tail extension targets an existing mutable Block, carries a content fragment,
+and identifies the exact content state on which that fragment depends. On
+success, the fragment is appended once at the logical end of the Block. No
+existing content is deleted, replaced, or reinterpreted.
+
+The completed result must be equivalent to concatenating the previous logical
+content and the supplied fragment. The terminal may choose its rendering
+strategy but does not infer a diff from two complete snapshots.
+
+### 2. Content-State Precondition
+
+The declared base must equal the target Block's current content-state
+Operation ID. A mismatch rejects the entire Operation without changing Block
+content or content state. This prevents a later fragment from being applied
+after an earlier fragment on which it depended was rejected.
+
+On success, the tail-extension Operation's own ID becomes the Block's new
+content-state identifier.
+
+### 3. Reading and Rendering
+
+Logical positions in the Block's pre-existing content remain unchanged by a
+tail extension. Layout, reflow, reading-anchor preservation, and tail-following
+remain terminal-owned and follow [Terminal-Native
+Behavior](terminal-native-behavior.md).
+
+### 4. Failure and Recovery
+
+Successful tail extensions are silent and rejected ones use the correlated
+error path defined by the logical wire model. Reusing the failed Operation ID
+is invalid. A later extension that names the failed Operation as its base is
+rejected by the same content-state check; the protocol does not enter a
+separate desynchronized mode. The normal absence of a success response does
+not itself trigger a retry.
+
+The initial protocol does not blindly retry incremental Operations. An SDK may
+issue a new Operation ID with the same base after an explicitly retryable
+transient failure, but resource exhaustion does not promise that the same
+fragment can succeed unchanged. A content-state mismatch requires the TUI to
+resynchronize with a complete Update before extending again. Connection loss
+still requires a new Context and reconstruction of application-owned state.
+
+### 5. Deliberate Scope
+
+This scenario does not define suffix deletion or replacement, arbitrary range
+editing, offset units, Unicode boundary rules, concurrent writers, or a
+general patch language. Those concerns are not implied by tail extension and
+remain future design work.
+
 ## Seal
 
 ### 1. Lifecycle Transition
@@ -150,8 +226,10 @@ Seal is valid only when the target Block exists and remains mutable. A Seal
 targeting an unknown or already sealed Block is invalid. Seal is therefore not
 idempotent in the initial semantics.
 
-The Operation ID defined by the logical wire model is only an error-correlation
-value. It does not make Seal idempotent or permit its retransmission.
+The Operation ID defined by the logical wire model correlates errors but does
+not make Seal idempotent or permit its retransmission. Because Seal does not
+change content, its Operation ID does not replace the Block's content-state
+identifier.
 
 ### 3. Content Invariance
 

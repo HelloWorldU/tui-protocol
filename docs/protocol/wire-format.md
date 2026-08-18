@@ -99,6 +99,13 @@ the terminal echoes its Operation ID in `protocol.error`. The initial model
 does not support retransmitting Block Operations: repeating an Operation ID is
 invalid, and the ID does not make Append, Update, or Seal idempotent.
 
+The [Operation Semantics](operations.md#content-state-identity) draft also uses
+the ID of the last successful content-changing Operation as an opaque
+content-state identifier for the working tail-extension design. This does not
+change its uniqueness or retransmission rules. The concrete tail-extension
+Message kind, base field, and body schema are not yet part of this logical
+wire model.
+
 ## 5. Explicit Context Scope
 
 Every message that acts within an existing Protocol Context explicitly carries

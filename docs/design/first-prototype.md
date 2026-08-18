@@ -68,15 +68,17 @@ The first prototype deliberately uses complete snapshots as the correctness
 baseline. A streaming TUI may batch incoming tokens and send the latest
 snapshot at its render cadence rather than sending one Operation per token.
 
-If measurement shows that repeated snapshots are too expensive, Update may
-later be split into two Operations:
+Later design work has defined the initial semantics of a
+[tail-extension Operation](../protocol/operations.md#tail-extension-working-semantics).
+It adds only at the logical end of a mutable Block and names the exact prior
+content state on which it depends. This preserves causal ordering between
+streamed fragments without turning Update into a character-level patch.
 
-- `Extend`, which appends content only at the end of a mutable Block;
-- `Replace`, which retains the complete-snapshot semantics defined above.
-
-The initial optimization would be suffix-only. Arbitrary character-range
-patches are out of scope until their offset, Unicode, revision, and recovery
-semantics are understood.
+The prototype described here still implements complete snapshots. Update
+remains the resynchronization path, while the final incremental Operation name
+and wire schema remain open. Arbitrary character-range patches are outside
+this scenario until their offset, Unicode, revision, and recovery semantics
+are understood.
 
 #### Seal
 
@@ -110,7 +112,7 @@ internally to preserve a reading anchor.
 - The wire encoding for capability negotiation; unsupported-terminal fallback
   is application-owned.
 - How to map a reading anchor when its own Block is replaced.
-- Whether measured streaming costs justify splitting Update into Extend and
-  Replace.
+- How to prototype and evaluate the agreed tail-extension semantics without
+  weakening complete Update as the recovery path.
 - Whether removal or an Operation beyond Append, Update, and Seal is needed.
 - The wire encoding and whether common Operation sequences should be combined.

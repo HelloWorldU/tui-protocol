@@ -37,6 +37,9 @@ protocol.
 - **2026-08-17:** Connected prepared Operations to an xterm.js capacity check,
   so the tested oversized historical Update returns `resource_exhausted`
   without splitting Session state from rendered history.
+- **2026-08-18:** Defined the first incremental tail-extension semantics,
+  using the last successful content Operation ID as its causal base and a
+  complete Update as the recovery path.
 
 ## Documentation
 
