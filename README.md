@@ -15,31 +15,14 @@ protocol.
 
 ## Milestones
 
-- **2026-07-31:** Initialized the repository and documented the protocol's
-  motivation and goals.
-- **2026-08-01:** Defined the initial Block and Operation model and added its
-  first executable prototype.
-- **2026-08-04:** Connected experimental OSC Operations to mutable xterm
-  history end to end.
-- **2026-08-09:** Documented the initial logical Message model, JSON
-  serialization, and OSC framing.
-- **2026-08-10:** Added the first TypeScript reference codec and an in-memory
-  terminal-side protocol session for deterministic Message execution.
-- **2026-08-12:** Connected the codec and session into a terminal-side byte
-  path, including correlated responses for schema-invalid Messages with
-  reliable identities.
-- **2026-08-13:** Defined the initial terminal-native behavior for reading
-  anchors, reflow, selection, search, content metadata, and active input across
-  Block changes and scrollback-capacity trimming, then connected protocol bytes
-  to mutable xterm.js history in the first end-to-end reading-anchor experiment.
-- **2026-08-14:** Extended the xterm.js integration experiment to preserve its
-  tested history-reading and tail-following states across resize and reflow.
-- **2026-08-17:** Connected prepared Operations to an xterm.js capacity check,
-  so the tested oversized historical Update returns `resource_exhausted`
-  without splitting Session state from rendered history.
-- **2026-08-18:** Defined the first incremental tail-extension semantics,
-  using the last successful content Operation ID as its causal base and a
-  complete Update as the recovery path.
+- **2026-08-01 - Protocol primitives:** Defined the initial Block and Operation
+  primitives for mutable, identifiable terminal content.
+- **2026-08-12 - Executable protocol path:** Established the first complete
+  terminal-side path from framed Messages through codec and Session execution
+  to deterministic state changes and correlated responses.
+- **2026-08-14 - End-to-end validation:** Validated protocol-driven mutation of
+  xterm.js-owned history while preserving the tested reading-anchor and
+  tail-following behavior across resize and reflow.
 
 ## Documentation
 
