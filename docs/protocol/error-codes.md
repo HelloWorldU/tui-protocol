@@ -127,3 +127,5 @@ state left by earlier successful Operations.
 ## Open Design Choices
 
 - Whether future protocol versions introduce more specific recovery guidance.
+- Exact codes for an incremental content-state mismatch and an invalid
+  retained-prefix boundary.

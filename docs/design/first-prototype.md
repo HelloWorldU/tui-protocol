@@ -25,8 +25,8 @@ Entering scrollback is a presentation event, not a block lifecycle event.
 
 The first prototype guarantees reading-anchor stability when Operations change
 a different Block, including a mutable Block above the user's reading
-position. Mapping an anchor through replacement of its own Block is explicitly
-undefined at this stage.
+position. Mapping an anchor through a complete Update of its own Block is
+explicitly undefined at this stage.
 
 ## Working Model
 
@@ -80,6 +80,12 @@ and wire schema remain open. Arbitrary character-range patches are outside
 this scenario until their offset, Unicode, revision, and recovery semantics
 are understood.
 
+The second incremental scenario now has working
+[tail-replacement semantics](../protocol/operations.md#tail-replacement-working-semantics).
+It replaces a non-empty suffix of `text/plain` content using a Unicode-scalar
+retained-prefix boundary. The first prototype does not yet implement this
+Operation either.
+
 #### Seal
 
 `Seal` changes an existing Block from `mutable` to `sealed`. Afterward, the
@@ -111,8 +117,8 @@ internally to preserve a reading anchor.
 - Error reporting for invalid Operations.
 - The wire encoding for capability negotiation; unsupported-terminal fallback
   is application-owned.
-- How to map a reading anchor when its own Block is replaced.
-- How to prototype and evaluate the agreed tail-extension semantics without
+- How to map a reading anchor when its own Block receives a complete Update.
+- How to prototype and evaluate the agreed incremental tail Operations without
   weakening complete Update as the recovery path.
 - Whether removal or an Operation beyond Append, Update, and Seal is needed.
 - The wire encoding and whether common Operation sequences should be combined.

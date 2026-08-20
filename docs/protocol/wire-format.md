@@ -101,10 +101,10 @@ invalid, and the ID does not make Append, Update, or Seal idempotent.
 
 The [Operation Semantics](operations.md#content-state-identity) draft also uses
 the ID of the last successful content-changing Operation as an opaque
-content-state identifier for the working tail-extension design. This does not
-change its uniqueness or retransmission rules. The concrete tail-extension
-Message kind, base field, and body schema are not yet part of this logical
-wire model.
+content-state identifier for the working tail-extension and tail-replacement
+designs. This does not change its uniqueness or retransmission rules. Their
+concrete Message kinds, base fields, and body schemas are not yet part of this
+logical wire model.
 
 ## 5. Explicit Context Scope
 

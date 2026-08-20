@@ -17,6 +17,7 @@ development and does not define a wire encoding.
 | [Append](#append) | Initial semantics defined |
 | [Update](#update) | Initial semantics defined |
 | [Tail extension](#tail-extension-working-semantics) | Working semantics defined; final name and wire schema open |
+| [Tail replacement](#tail-replacement-working-semantics) | Working semantics defined; final name and wire schema open |
 | [Seal](#seal) | Initial semantics defined |
 
 ## Shared Semantics
@@ -52,6 +53,11 @@ A failed Operation does not advance the content state. Seal does not advance
 it because Seal changes lifecycle rather than content. The identifier is an
 opaque causal token, not a content hash, byte count, integrity check, or
 permission to reuse an Operation ID.
+
+Every incremental content Operation declares the content-state Operation ID
+on which it depends. The declared base must equal the target Block's current
+content-state identifier. A mismatch rejects the entire Operation without
+changing Block content or content state.
 
 ## Append
 
@@ -170,10 +176,9 @@ strategy but does not infer a diff from two complete snapshots.
 
 ### 2. Content-State Precondition
 
-The declared base must equal the target Block's current content-state
-Operation ID. A mismatch rejects the entire Operation without changing Block
-content or content state. This prevents a later fragment from being applied
-after an earlier fragment on which it depended was rejected.
+The tail extension uses the shared content-state precondition. This prevents a
+later fragment from being applied after an earlier fragment on which it
+depended was rejected.
 
 On success, the tail-extension Operation's own ID becomes the Block's new
 content-state identifier.
@@ -203,10 +208,68 @@ still requires a new Context and reconstruction of application-owned state.
 
 ### 5. Deliberate Scope
 
-This scenario does not define suffix deletion or replacement, arbitrary range
-editing, offset units, Unicode boundary rules, concurrent writers, or a
-general patch language. Those concerns are not implied by tail extension and
-remain future design work.
+This scenario does not itself define suffix deletion or replacement; those
+belong to the separate [tail-replacement](#tail-replacement-working-semantics)
+scenario. Arbitrary range editing, concurrent writers, and a general patch
+language remain future design work.
+
+## Tail Replacement (Working Semantics)
+
+This section defines the second incremental content scenario. Its final
+Operation name, Message kind, field names, serialization, and error-code
+spellings remain open.
+
+### 1. Target and Effect
+
+A tail replacement targets an existing mutable `text/plain` Block. It carries
+the shared content-state base, a retained-prefix length, and replacement text.
+Its result is the first retained-prefix-length Unicode scalar values of the
+current content followed by the replacement text. The position unit is defined
+by [Content Representation](content-representation.md#5-incremental-text-operations).
+
+The retained-prefix length must be an integer from zero up to, but not
+including, the current scalar-value length. The Operation therefore removes at
+least one existing scalar value. Replacement text may be empty, allowing the
+Operation to delete a suffix without inserting new content. Retaining the
+complete current length would be an append and uses tail extension instead.
+
+### 2. Content-State Precondition
+
+The tail replacement uses the shared content-state precondition. On success,
+its own Operation ID becomes the Block's new content-state identifier, even if
+the resulting text equals the prior text.
+
+### 3. Reading and Rendering
+
+A reading anchor in the retained prefix remains attached to the same logical
+position. An anchor in the removed suffix moves to the replacement boundary:
+the beginning of the new replacement text, or the end of the retained prefix
+when the replacement is empty. A user following the tail continues to follow
+the new tail.
+
+Layout, reflow, selection, search, and viewport-relative anchor preservation
+remain terminal-owned and follow [Terminal-Native
+Behavior](terminal-native-behavior.md).
+
+### 4. Failure and Recovery
+
+A content-state mismatch and an invalid retained-prefix boundary are distinct
+failure categories because they require different recovery. A mismatch means
+the incremental chain cannot continue and requires a complete Update to
+resynchronize. An invalid boundary is a TUI error and does not become valid
+through retry or automatic resynchronization. Their exact ErrorCode spellings
+remain wire-level design choices.
+
+Other target, lifecycle, atomicity, correlation, and retry behavior is
+inherited from the shared Operation semantics and tail-extension recovery
+model.
+
+### 5. Deliberate Scope
+
+Tail replacement does not address an arbitrary middle range, define positions
+for optional content types, or introduce a general patch language. Optional
+content types continue to use complete Update unless their own future
+definition explicitly adopts incremental editing.
 
 ## Seal
 

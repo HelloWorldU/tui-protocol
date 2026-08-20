@@ -52,6 +52,11 @@ The Update still follows the normal Block replacement and history-integrity
 semantics. This exception does not permit corruption, duplication, or loss of
 unaffected Blocks.
 
+The working tail-replacement semantics provide a narrower mapping for an
+anchor in their target Block. An anchor in the retained prefix remains at its
+logical position. An anchor in the removed suffix moves to the replacement
+boundary, while a tail-following reader continues to follow the new tail.
+
 ## 5. Scrollback Capacity
 
 The anchor guarantee applies while the anchored logical position remains in
@@ -84,9 +89,11 @@ and Seal do not clear an otherwise valid selection.
 
 If an Update replaces any Block intersected by the selection, the terminal
 clears the complete selection. The initial complete-snapshot model provides
-no mapping from selected positions in the old content to the replacement.
-Scrollback-capacity trimming that removes any selected content has the same
-effect.
+no mapping from selected positions in the old content to the replacement. A
+tail replacement preserves a selection entirely within its retained prefix
+and clears a selection that intersects its removed suffix. Tail extension does
+not invalidate a selection of pre-existing content. Scrollback-capacity
+trimming that removes any selected content has the same effect.
 
 Clearing a selection removes its highlight and copy target; it does not remove
 Block content. Copying returns only the content of a current valid selection,
@@ -95,10 +102,10 @@ never content retained from a replaced snapshot.
 ## 8. Search
 
 Terminal-native search operates on the current searchable text projection of
-each retained Block. After an Update, matches from the replaced snapshot are
-no longer results, and matches from the new snapshot are eligible results.
-Matches in unaffected Blocks remain attached to the same logical content even
-if their physical rows move.
+each retained Block. After an Update or incremental content Operation, matches
+that no longer exist are no longer results, and matches in the resulting
+content are eligible results. Matches in unaffected content remain attached to
+the same logical content even if their physical rows move.
 
 If the current match disappears, the terminal does not retain a match that
 points to old or unrelated content. Whether its local search interface moves

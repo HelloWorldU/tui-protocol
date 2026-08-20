@@ -53,7 +53,23 @@ The terminal does not convert between content types. A replacement whose new
 type is unsupported or whose data is invalid fails as a whole, leaving the
 Block's previous content unchanged.
 
-## 5. Terminal-Native Projection
+## 5. Incremental Text Operations
+
+The initial incremental content Operations apply only to `text/plain`.
+Optional content representations continue to use complete snapshots unless
+their own future definitions explicitly add incremental editing semantics.
+
+A tail-replacement position counts Unicode scalar values from the beginning of
+the current logical text. It is not a UTF-8 byte offset, UTF-16 code-unit
+offset, terminal cell, rendered column, or grapheme-cluster count. A visual
+character such as an emoji may therefore contain more than one counted scalar
+value. The text remains a sequence of valid Unicode scalar values before and
+after the Operation.
+
+This position is interpreted only against the exact content state declared by
+the incremental Operation. Resize and reflow do not change it.
+
+## 6. Terminal-Native Projection
 
 Each content type defines the logical semantics that terminal-native
 capabilities operate on, including layout and reflow, selection and copying,
