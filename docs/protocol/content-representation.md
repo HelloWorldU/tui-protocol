@@ -55,9 +55,11 @@ Block's previous content unchanged.
 
 ## 5. Incremental Text Operations
 
-The initial incremental content Operations apply only to `text/plain`.
-Optional content representations continue to use complete snapshots unless
-their own future definitions explicitly add incremental editing semantics.
+The initial Extend Operation applies only to `text/plain`. Other incremental
+content Operations in this draft likewise apply only to `text/plain` until
+their wire schemas are defined. Optional content representations continue to
+use complete snapshots unless their own future definitions explicitly add
+incremental editing semantics.
 
 A tail-replacement position counts Unicode scalar values from the beginning of
 the current logical text. It is not a UTF-8 byte offset, UTF-16 code-unit

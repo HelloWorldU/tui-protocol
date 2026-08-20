@@ -63,9 +63,10 @@ resulting Context ID.
 
 ## 5. Explicit Operation Addressing
 
-Every Append, Update, and Seal explicitly carries the exact Context ID returned
-for its open Context. The protocol has no ambient "current Context." This lets
-messages for different Contexts interleave without changing their targets.
+Every Append, Update, Extend, and Seal explicitly carries the exact Context ID
+returned for its open Context. The protocol has no ambient "current Context."
+This lets messages for different Contexts interleave without changing their
+targets.
 
 An Operation with an unknown, closed, cross-connection, or otherwise incorrect
 Context ID is invalid. Existing Operation and wire failure-isolation semantics

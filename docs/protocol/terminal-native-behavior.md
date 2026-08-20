@@ -91,8 +91,8 @@ If an Update replaces any Block intersected by the selection, the terminal
 clears the complete selection. The initial complete-snapshot model provides
 no mapping from selected positions in the old content to the replacement. A
 tail replacement preserves a selection entirely within its retained prefix
-and clears a selection that intersects its removed suffix. Tail extension does
-not invalidate a selection of pre-existing content. Scrollback-capacity
+and clears a selection that intersects its removed suffix. Extend does not
+invalidate a selection of pre-existing content. Scrollback-capacity
 trimming that removes any selected content has the same effect.
 
 Clearing a selection removes its highlight and copy target; it does not remove

@@ -24,10 +24,11 @@ requires a protocol version whose schema defines it.
 | `context_not_open` | yes | yes | The addressed Context is not an open Context on this connection. |
 | `operation_id_reused` | no | yes | An Operation ID was already used in the addressed Context. |
 | `block_id_reused` | no | yes | Append used a Block ID that was already used in the addressed Context. |
-| `block_not_found` | no | yes | Update or Seal addressed no Block in the open Context. |
-| `block_sealed` | no | yes | Update or Seal addressed a Block whose lifecycle is already sealed. |
-| `unsupported_content_type` | no | yes | A snapshot declared a content type not confirmed for this connection and version. |
+| `block_not_found` | no | yes | Update, Extend, or Seal addressed no Block in the open Context. |
+| `block_sealed` | no | yes | Update, Extend, or Seal addressed a Block whose lifecycle is already sealed. |
+| `unsupported_content_type` | no | yes | A snapshot declares an unavailable type, or the target type does not support the requested content Operation. |
 | `invalid_content` | no | yes | Snapshot data violates the schema or validity rules of its supported content type. |
+| `content_state_mismatch` | no | yes | An incremental Operation's base ID does not equal the Block's current content-state Operation ID. |
 | `resource_exhausted` | yes | yes | The receiver cannot complete the request or Operation within an enforced resource limit. |
 | `internal_error` | yes | yes | The receiver failed to complete an otherwise valid action for an implementation-internal reason. |
 
@@ -80,20 +81,29 @@ successful idempotent result. `context_not_open` applies when the requested
 Context never belonged to a valid closure lifecycle on the current
 connection.
 
-`block_id_reused` is specific to Append. `block_not_found` applies to Update
-and Seal when no target exists. `block_sealed` applies when the target exists
-but its lifecycle forbids the requested transition. Keeping these conditions
-separate lets a TUI distinguish identity bugs from lifecycle bugs.
+`block_id_reused` is specific to Append. `block_not_found` applies to Update,
+Extend, and Seal when no target exists. `block_sealed` applies when the target
+exists but its lifecycle forbids the requested transition. Keeping these
+conditions separate lets a TUI distinguish identity bugs from lifecycle bugs.
 
-## 5. Content Failure
+## 5. Content State and Representation Failure
 
 `unsupported_content_type` means the declared type is not available under the
 positive Capability result for the selected protocol version and connection.
-It includes unknown and known-but-unnegotiated optional types.
+It includes unknown and known-but-unnegotiated optional types. It also applies
+when an incremental content Operation targets a representation for which that
+Operation is not defined; the initial Extend semantics therefore reject a
+non-`text/plain` target with this code.
 
 `invalid_content` means the type is supported but its data is invalid under
 that type's defined schema or validity rules. Neither code permits the
 terminal to infer another type, repair the snapshot, or partially apply it.
+
+`content_state_mismatch` means the incremental Operation was structurally
+valid but named an Operation ID other than the target Block's current
+content-state identifier. The TUI does not retry that incremental chain. It
+uses a complete Update to establish known content before sending another
+incremental Operation.
 
 ## 6. Resource and Internal Failure
 
@@ -127,5 +137,4 @@ state left by earlier successful Operations.
 ## Open Design Choices
 
 - Whether future protocol versions introduce more specific recovery guidance.
-- Exact codes for an incremental content-state mismatch and an invalid
-  retained-prefix boundary.
+- Exact code for an invalid retained-prefix boundary.

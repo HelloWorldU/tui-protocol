@@ -51,6 +51,7 @@ Initial protocol values use these JSON representations:
 | Response outcome | exact string defined by that response schema |
 | Error code | exact string from the version's `ErrorCode` set |
 | Content type | exact string identifier; baseline is `"text/plain"` |
+| Extend fragment | non-empty string containing `text/plain` data |
 | Human diagnostic | string |
 
 The bounded version range is exactly representable by common integer and JSON
@@ -108,6 +109,27 @@ A complete serialized Update may therefore be written as:
   }
 }
 ```
+
+A serialized Extend names the exact prior content Operation and carries only
+the non-empty text fragment:
+
+```json
+{
+  "version": 1,
+  "kind": "block.extend",
+  "operation_id": "43",
+  "context_id": "ctx-1",
+  "body": {
+    "block_id": "thinking-1",
+    "base_operation_id": "42",
+    "fragment": " additional text"
+  }
+}
+```
+
+`base_operation_id` follows the same non-empty string mapping as every other
+Operation ID. An empty `fragment` violates the closed `block.extend` body
+schema and produces `invalid_message` when correlation identity is reliable.
 
 ## 5. Field Names and Closed Schemas
 

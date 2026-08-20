@@ -16,7 +16,7 @@ development and does not define a wire encoding.
 |---|---|
 | [Append](#append) | Initial semantics defined |
 | [Update](#update) | Initial semantics defined |
-| [Tail extension](#tail-extension-working-semantics) | Working semantics defined; final name and wire schema open |
+| [Extend](#extend) | Initial semantics defined |
 | [Tail replacement](#tail-replacement-working-semantics) | Working semantics defined; final name and wire schema open |
 | [Seal](#seal) | Initial semantics defined |
 
@@ -157,18 +157,17 @@ does not prevent the terminal from processing subsequent input. The rejection
 is reported by the logical wire error mechanism; application-side recovery
 remains TUI-owned.
 
-## Tail Extension (Working Semantics)
+## Extend
 
-This section defines the first incremental content scenario. Its final
-Operation name, Message kind, field names, serialization, and error-code
-spelling remain open.
+`Extend` is the first incremental content Operation. Its logical Message kind
+is `block.extend`.
 
 ### 1. Target and Effect
 
-A tail extension targets an existing mutable Block, carries a content fragment,
-and identifies the exact content state on which that fragment depends. On
-success, the fragment is appended once at the logical end of the Block. No
-existing content is deleted, replaced, or reinterpreted.
+Extend targets an existing mutable `text/plain` Block, carries a non-empty
+text fragment, and identifies the exact content state on which that fragment
+depends. On success, the fragment is appended once at the logical end of the
+Block. No existing content is deleted, replaced, or reinterpreted.
 
 The completed result must be equivalent to concatenating the previous logical
 content and the supplied fragment. The terminal may choose its rendering
@@ -176,25 +175,25 @@ strategy but does not infer a diff from two complete snapshots.
 
 ### 2. Content-State Precondition
 
-The tail extension uses the shared content-state precondition. This prevents a
+Extend uses the shared content-state precondition. This prevents a
 later fragment from being applied after an earlier fragment on which it
 depended was rejected.
 
-On success, the tail-extension Operation's own ID becomes the Block's new
-content-state identifier.
+On success, Extend's own Operation ID becomes the Block's new content-state
+identifier.
 
 ### 3. Reading and Rendering
 
-Logical positions in the Block's pre-existing content remain unchanged by a
-tail extension. Layout, reflow, reading-anchor preservation, and tail-following
+Logical positions in the Block's pre-existing content remain unchanged by
+Extend. Layout, reflow, reading-anchor preservation, and tail-following
 remain terminal-owned and follow [Terminal-Native
 Behavior](terminal-native-behavior.md).
 
 ### 4. Failure and Recovery
 
-Successful tail extensions are silent and rejected ones use the correlated
+Successful Extend Operations are silent and rejected ones use the correlated
 error path defined by the logical wire model. Reusing the failed Operation ID
-is invalid. A later extension that names the failed Operation as its base is
+is invalid. A later Extend that names the failed Operation as its base is
 rejected by the same content-state check; the protocol does not enter a
 separate desynchronized mode. The normal absence of a success response does
 not itself trigger a retry.
@@ -203,12 +202,13 @@ The initial protocol does not blindly retry incremental Operations. An SDK may
 issue a new Operation ID with the same base after an explicitly retryable
 transient failure, but resource exhaustion does not promise that the same
 fragment can succeed unchanged. A content-state mismatch requires the TUI to
-resynchronize with a complete Update before extending again. Connection loss
-still requires a new Context and reconstruction of application-owned state.
+resynchronize with a complete Update before sending Extend again. Connection
+loss still requires a new Context and reconstruction of application-owned
+state.
 
 ### 5. Deliberate Scope
 
-This scenario does not itself define suffix deletion or replacement; those
+Extend does not itself define suffix deletion or replacement; those
 belong to the separate [tail-replacement](#tail-replacement-working-semantics)
 scenario. Arbitrary range editing, concurrent writers, and a general patch
 language remain future design work.
@@ -216,8 +216,8 @@ language remain future design work.
 ## Tail Replacement (Working Semantics)
 
 This section defines the second incremental content scenario. Its final
-Operation name, Message kind, field names, serialization, and error-code
-spellings remain open.
+Operation name, Message kind, field names, serialization, and invalid-boundary
+ErrorCode remain open.
 
 ### 1. Target and Effect
 
@@ -231,7 +231,7 @@ The retained-prefix length must be an integer from zero up to, but not
 including, the current scalar-value length. The Operation therefore removes at
 least one existing scalar value. Replacement text may be empty, allowing the
 Operation to delete a suffix without inserting new content. Retaining the
-complete current length would be an append and uses tail extension instead.
+complete current length would be an append and uses Extend instead.
 
 ### 2. Content-State Precondition
 
@@ -254,15 +254,14 @@ Behavior](terminal-native-behavior.md).
 ### 4. Failure and Recovery
 
 A content-state mismatch and an invalid retained-prefix boundary are distinct
-failure categories because they require different recovery. A mismatch means
-the incremental chain cannot continue and requires a complete Update to
-resynchronize. An invalid boundary is a TUI error and does not become valid
-through retry or automatic resynchronization. Their exact ErrorCode spellings
-remain wire-level design choices.
+failure categories because they require different recovery. A mismatch
+reports `content_state_mismatch`: the incremental chain cannot continue and
+requires a complete Update to resynchronize. An invalid boundary is a TUI
+error and does not become valid through retry or automatic resynchronization;
+its exact ErrorCode remains a wire-level design choice.
 
 Other target, lifecycle, atomicity, correlation, and retry behavior is
-inherited from the shared Operation semantics and tail-extension recovery
-model.
+inherited from the shared Operation semantics and Extend recovery model.
 
 ### 5. Deliberate Scope
 

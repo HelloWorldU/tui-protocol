@@ -24,6 +24,8 @@ ContentSnapshot {
   data: ContentData
 }
 
+NonEmptyText = one or more Unicode scalar values
+
 Failure {
   code: ErrorCode
   message?: DiagnosticText
@@ -57,6 +59,7 @@ envelope fields are permitted only as follows:
 | `context.close.response` | required | absent | required |
 | `block.append` | absent | required | required |
 | `block.update` | absent | required | required |
+| `block.extend` | absent | required | required |
 | `block.seal` | absent | required | required |
 | `protocol.error` | absent | required | required |
 
@@ -161,6 +164,22 @@ block.update body {
 }
 ```
 
+Extend adds a non-empty `text/plain` fragment to the current logical tail and
+names the exact content state on which it depends:
+
+```text
+block.extend body {
+  block_id: BlockId
+  base_operation_id: OperationId
+  fragment: NonEmptyText
+}
+```
+
+The target Block must already use `text/plain`; Extend does not carry or change
+its Content Type. An empty fragment violates this body schema. A valid base
+field whose value does not equal the Block's current content-state Operation
+ID is a semantic `content_state_mismatch`, not a structural failure.
+
 Seal changes only the lifecycle of its target:
 
 ```text
@@ -196,7 +215,8 @@ fields belonging to another outcome are unknown fields and invalidate the
 complete Message.
 
 Schema validity does not imply semantic validity. For example, a structurally
-valid `block.update` can still fail because its Block is unknown or sealed.
+valid `block.update` can still fail because its Block is unknown or sealed,
+and a structurally valid `block.extend` can name a stale content state.
 Structural and semantic failures both leave protocol state unchanged and use
 the correlated failure behavior defined by the logical wire model.
 

@@ -68,17 +68,16 @@ The first prototype deliberately uses complete snapshots as the correctness
 baseline. A streaming TUI may batch incoming tokens and send the latest
 snapshot at its render cadence rather than sending one Operation per token.
 
-Later design work has defined the initial semantics of a
-[tail-extension Operation](../protocol/operations.md#tail-extension-working-semantics).
-It adds only at the logical end of a mutable Block and names the exact prior
-content state on which it depends. This preserves causal ordering between
-streamed fragments without turning Update into a character-level patch.
+Later design work has defined the initial semantics and wire schema of
+[Extend](../protocol/operations.md#extend). It adds only at the logical end of
+a mutable `text/plain` Block and names the exact prior content state on which
+it depends. This preserves causal ordering between streamed fragments without
+turning Update into a character-level patch.
 
 The prototype described here still implements complete snapshots. Update
-remains the resynchronization path, while the final incremental Operation name
-and wire schema remain open. Arbitrary character-range patches are outside
-this scenario until their offset, Unicode, revision, and recovery semantics
-are understood.
+remains the resynchronization path, and the prototype does not yet implement
+Extend. Arbitrary character-range patches are outside this scenario until
+their offset, Unicode, revision, and recovery semantics are understood.
 
 The second incremental scenario now has working
 [tail-replacement semantics](../protocol/operations.md#tail-replacement-working-semantics).
@@ -114,11 +113,12 @@ internally to preserve a reading anchor.
 - Concrete optional content types and their terminal-native projections; the
   shared requirements are now defined in
   [Content Representation](../protocol/content-representation.md).
-- Error reporting for invalid Operations.
+- ErrorCode and wire-schema details for an invalid tail-replacement boundary.
 - The wire encoding for capability negotiation; unsupported-terminal fallback
   is application-owned.
 - How to map a reading anchor when its own Block receives a complete Update.
 - How to prototype and evaluate the agreed incremental tail Operations without
   weakening complete Update as the recovery path.
-- Whether removal or an Operation beyond Append, Update, and Seal is needed.
+- Whether removal or an Operation beyond Append, Update, Extend, and Seal is
+  needed.
 - The wire encoding and whether common Operation sequences should be combined.
