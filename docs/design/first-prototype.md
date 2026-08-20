@@ -79,11 +79,10 @@ remains the resynchronization path, and the prototype does not yet implement
 Extend. Arbitrary character-range patches are outside this scenario until
 their offset, Unicode, revision, and recovery semantics are understood.
 
-The second incremental scenario now has working
-[tail-replacement semantics](../protocol/operations.md#tail-replacement-working-semantics).
-It replaces a non-empty suffix of `text/plain` content using a Unicode-scalar
-retained-prefix boundary. The first prototype does not yet implement this
-Operation either.
+The second incremental Operation is
+[ReplaceSuffix](../protocol/operations.md#replacesuffix). It replaces a
+non-empty suffix of `text/plain` content using a Unicode-scalar retained-prefix
+boundary. The first prototype does not yet implement this Operation either.
 
 #### Seal
 
@@ -113,12 +112,11 @@ internally to preserve a reading anchor.
 - Concrete optional content types and their terminal-native projections; the
   shared requirements are now defined in
   [Content Representation](../protocol/content-representation.md).
-- ErrorCode and wire-schema details for an invalid tail-replacement boundary.
 - The wire encoding for capability negotiation; unsupported-terminal fallback
   is application-owned.
 - How to map a reading anchor when its own Block receives a complete Update.
 - How to prototype and evaluate the agreed incremental tail Operations without
   weakening complete Update as the recovery path.
-- Whether removal or an Operation beyond Append, Update, Extend, and Seal is
-  needed.
+- Whether removal or an Operation beyond Append, Update, Extend,
+  ReplaceSuffix, and Seal is needed.
 - The wire encoding and whether common Operation sequences should be combined.

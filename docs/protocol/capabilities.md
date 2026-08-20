@@ -27,7 +27,7 @@ fallback strategy.
 The terminal confirms support only if it implements the complete baseline for
 the queried version. For the initial version, that baseline includes:
 
-- Append, Update, Extend, and Seal;
+- Append, Update, Extend, ReplaceSuffix, and Seal;
 - the defined Block lifecycle rules;
 - Protocol Context establishment, addressing, and closure;
 - the baseline `text/plain` content representation;
@@ -65,9 +65,10 @@ Recognizing a type identifier or partially rendering its data is not
 sufficient to advertise support.
 
 Complete support means all semantics defined for that Content Type, not that
-every baseline content Operation applies to it. The initial Extend Operation
-is defined only for `text/plain`; optional types use complete snapshots unless
-their own definitions explicitly add incremental editing semantics.
+every baseline content Operation applies to it. The initial Extend and
+ReplaceSuffix Operations are defined only for `text/plain`; optional types use
+complete snapshots unless their own definitions explicitly add incremental
+editing semantics.
 
 ## 5. Version Binding
 

@@ -52,20 +52,27 @@ Initial protocol values use these JSON representations:
 | Error code | exact string from the version's `ErrorCode` set |
 | Content type | exact string identifier; baseline is `"text/plain"` |
 | Extend fragment | non-empty string containing `text/plain` data |
+| ReplaceSuffix retained-prefix count | integer from `0` through `9007199254740991` |
+| ReplaceSuffix replacement | string containing `text/plain` data; may be empty |
 | Human diagnostic | string |
 
 The bounded version range is exactly representable by common integer and JSON
 implementations and leaves version comparison independent of floating-point
 or arbitrary-precision behavior.
 
+The ReplaceSuffix count limit is the largest integer represented exactly by
+common JSON number implementations. It is a serialization ceiling, not a
+promise that a terminal accepts Blocks of that size; ordinary resource limits
+still apply.
+
 IDs are compared as exact decoded strings. Implementations do not perform
 Unicode normalization, case folding, numeric parsing, or interpretation of
 an ID's internal form. A decimal counter or UUID may be used by its owner, but
 that structure has no protocol meaning.
 
-The initial envelope and baseline message bodies use no JSON booleans, `null`,
-or numeric values other than `version`. An optional field is omitted when
-absent; it is not represented by `null`.
+The initial envelope and baseline message bodies use no JSON booleans or
+`null`. Their only numeric values are `version` and ReplaceSuffix's `retain`.
+An optional field is omitted when absent; it is not represented by `null`.
 
 ## 4. Structures and Content
 
@@ -130,6 +137,29 @@ the non-empty text fragment:
 `base_operation_id` follows the same non-empty string mapping as every other
 Operation ID. An empty `fragment` violates the closed `block.extend` body
 schema and produces `invalid_message` when correlation identity is reliable.
+
+A serialized ReplaceSuffix carries a safe integer boundary and replacement
+text that may be empty:
+
+```json
+{
+  "version": 1,
+  "kind": "block.replace_suffix",
+  "operation_id": "44",
+  "context_id": "ctx-1",
+  "body": {
+    "block_id": "thinking-1",
+    "base_operation_id": "43",
+    "retain": 12,
+    "replacement": "revised ending"
+  }
+}
+```
+
+A negative, fractional, or greater-than-`9007199254740991` `retain` value
+violates the closed body schema and produces `invalid_message` when correlation
+identity is reliable. A structurally valid value that is not below the current
+text's scalar-value length instead produces `invalid_content_boundary`.
 
 ## 5. Field Names and Closed Schemas
 

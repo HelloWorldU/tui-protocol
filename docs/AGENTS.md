@@ -24,8 +24,9 @@ also provides a convenient human-readable index.
   representation, and implementation findings. Do not present an
   implementation finding as a protocol requirement unless the relevant
   protocol document adopts it.
-- Use the terms `Block`, `Operation`, `Append`, `Update`, `Extend`, `Seal`,
-  `Context`, and `Message` consistently with the protocol drafts.
+- Use the terms `Block`, `Operation`, `Append`, `Update`, `Extend`,
+  `ReplaceSuffix`, `Seal`, `Context`, and `Message` consistently with the
+  protocol drafts.
 - Update `docs/README.md` and any relevant local index when documents or their
   status change. Preserve accepted and superseded RFCs; propose substantial
   changes to accepted decisions in a new RFC.

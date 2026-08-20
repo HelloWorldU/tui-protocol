@@ -17,7 +17,7 @@ development and does not define a wire encoding.
 | [Append](#append) | Initial semantics defined |
 | [Update](#update) | Initial semantics defined |
 | [Extend](#extend) | Initial semantics defined |
-| [Tail replacement](#tail-replacement-working-semantics) | Working semantics defined; final name and wire schema open |
+| [ReplaceSuffix](#replacesuffix) | Initial semantics defined |
 | [Seal](#seal) | Initial semantics defined |
 
 ## Shared Semantics
@@ -209,35 +209,34 @@ state.
 ### 5. Deliberate Scope
 
 Extend does not itself define suffix deletion or replacement; those
-belong to the separate [tail-replacement](#tail-replacement-working-semantics)
-scenario. Arbitrary range editing, concurrent writers, and a general patch
-language remain future design work.
+belong to the separate [ReplaceSuffix](#replacesuffix) Operation. Arbitrary
+range editing, concurrent writers, and a general patch language remain future
+design work.
 
-## Tail Replacement (Working Semantics)
+## ReplaceSuffix
 
-This section defines the second incremental content scenario. Its final
-Operation name, Message kind, field names, serialization, and invalid-boundary
-ErrorCode remain open.
+`ReplaceSuffix` is the second incremental content Operation. Its logical
+Message kind is `block.replace_suffix`.
 
 ### 1. Target and Effect
 
-A tail replacement targets an existing mutable `text/plain` Block. It carries
-the shared content-state base, a retained-prefix length, and replacement text.
-Its result is the first retained-prefix-length Unicode scalar values of the
-current content followed by the replacement text. The position unit is defined
-by [Content Representation](content-representation.md#5-incremental-text-operations).
+ReplaceSuffix targets an existing mutable `text/plain` Block. It carries the
+shared content-state base, a retained-prefix count, and replacement text. Its
+result is the first `retain` Unicode scalar values of the current content
+followed by `replacement`. The position unit is defined by [Content
+Representation](content-representation.md#5-incremental-text-operations).
 
-The retained-prefix length must be an integer from zero up to, but not
-including, the current scalar-value length. The Operation therefore removes at
-least one existing scalar value. Replacement text may be empty, allowing the
-Operation to delete a suffix without inserting new content. Retaining the
-complete current length would be an append and uses Extend instead.
+`retain` must be a non-negative safe JSON integer and must be less than the
+current scalar-value length. ReplaceSuffix therefore removes at least one
+existing scalar value. `replacement` may be empty, allowing the Operation to
+delete a suffix without inserting new content. Retaining the complete current
+length would be an append and uses Extend instead.
 
 ### 2. Content-State Precondition
 
-The tail replacement uses the shared content-state precondition. On success,
-its own Operation ID becomes the Block's new content-state identifier, even if
-the resulting text equals the prior text.
+ReplaceSuffix uses the shared content-state precondition. On success, its own
+Operation ID becomes the Block's new content-state identifier, even if the
+resulting text equals the prior text.
 
 ### 3. Reading and Rendering
 
@@ -256,17 +255,18 @@ Behavior](terminal-native-behavior.md).
 A content-state mismatch and an invalid retained-prefix boundary are distinct
 failure categories because they require different recovery. A mismatch
 reports `content_state_mismatch`: the incremental chain cannot continue and
-requires a complete Update to resynchronize. An invalid boundary is a TUI
-error and does not become valid through retry or automatic resynchronization;
-its exact ErrorCode remains a wire-level design choice.
+requires a complete Update to resynchronize. A `retain` value that is
+structurally valid but not below the current scalar-value length reports
+`invalid_content_boundary`. It is a TUI error and does not become valid through
+retry or automatic resynchronization.
 
 Other target, lifecycle, atomicity, correlation, and retry behavior is
 inherited from the shared Operation semantics and Extend recovery model.
 
 ### 5. Deliberate Scope
 
-Tail replacement does not address an arbitrary middle range, define positions
-for optional content types, or introduce a general patch language. Optional
+ReplaceSuffix does not address an arbitrary middle range, define positions for
+optional content types, or introduce a general patch language. Optional
 content types continue to use complete Update unless their own future
 definition explicitly adopts incremental editing.
 

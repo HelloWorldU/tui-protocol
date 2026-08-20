@@ -25,6 +25,8 @@ ContentSnapshot {
 }
 
 NonEmptyText = one or more Unicode scalar values
+Text = zero or more Unicode scalar values
+ScalarCount = integer from 0 through 9007199254740991
 
 Failure {
   code: ErrorCode
@@ -60,6 +62,7 @@ envelope fields are permitted only as follows:
 | `block.append` | absent | required | required |
 | `block.update` | absent | required | required |
 | `block.extend` | absent | required | required |
+| `block.replace_suffix` | absent | required | required |
 | `block.seal` | absent | required | required |
 | `protocol.error` | absent | required | required |
 
@@ -180,6 +183,25 @@ its Content Type. An empty fragment violates this body schema. A valid base
 field whose value does not equal the Block's current content-state Operation
 ID is a semantic `content_state_mismatch`, not a structural failure.
 
+ReplaceSuffix removes a non-empty suffix and replaces it with text that may be
+empty:
+
+```text
+block.replace_suffix body {
+  block_id: BlockId
+  base_operation_id: OperationId
+  retain: ScalarCount
+  replacement: Text
+}
+```
+
+`retain` counts Unicode scalar values from the beginning of the current
+`text/plain` content. The target Block must already use `text/plain`;
+ReplaceSuffix does not carry or change its Content Type. The body is
+structurally valid when `retain` is a `ScalarCount`; semantic evaluation
+additionally requires it to be less than the current scalar-value length.
+Otherwise, the Operation reports `invalid_content_boundary`.
+
 Seal changes only the lifecycle of its target:
 
 ```text
@@ -216,7 +238,8 @@ complete Message.
 
 Schema validity does not imply semantic validity. For example, a structurally
 valid `block.update` can still fail because its Block is unknown or sealed,
-and a structurally valid `block.extend` can name a stale content state.
+and a structurally valid `block.extend` or `block.replace_suffix` can name a
+stale content state.
 Structural and semantic failures both leave protocol state unchanged and use
 the correlated failure behavior defined by the logical wire model.
 

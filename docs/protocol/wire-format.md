@@ -52,6 +52,7 @@ Block Operations
   block.append
   block.update
   block.extend
+  block.replace_suffix
   block.seal
 
 Error reporting
@@ -98,14 +99,14 @@ implementation, but byte-stream order remains the protocol ordering rule.
 A successful Block Operation has no response. If the Operation is rejected,
 the terminal echoes its Operation ID in `protocol.error`. The initial model
 does not support retransmitting Block Operations: repeating an Operation ID is
-invalid, and the ID does not make Append, Update, Extend, or Seal idempotent.
+invalid, and the ID does not make Append, Update, Extend, ReplaceSuffix, or
+Seal idempotent.
 
 The [Operation Semantics](operations.md#content-state-identity) draft also uses
 the ID of the last successful content-changing Operation as an opaque
-content-state identifier. Extend's concrete Message kind, base field, and body
-schema are part of the current logical model. Tail replacement remains a
-working design whose concrete wire schema is not yet defined. Neither changes
-the uniqueness or retransmission rules of Operation IDs.
+content-state identifier. Extend and ReplaceSuffix have concrete Message kinds,
+base fields, and body schemas in the current logical model. This state role
+does not change the uniqueness or retransmission rules of Operation IDs.
 
 ## 5. Explicit Context Scope
 

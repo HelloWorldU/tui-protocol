@@ -52,10 +52,10 @@ The Update still follows the normal Block replacement and history-integrity
 semantics. This exception does not permit corruption, duplication, or loss of
 unaffected Blocks.
 
-The working tail-replacement semantics provide a narrower mapping for an
-anchor in their target Block. An anchor in the retained prefix remains at its
-logical position. An anchor in the removed suffix moves to the replacement
-boundary, while a tail-following reader continues to follow the new tail.
+ReplaceSuffix provides a narrower mapping for an anchor in its target Block.
+An anchor in the retained prefix remains at its logical position. An anchor in
+the removed suffix moves to the replacement boundary, while a tail-following
+reader continues to follow the new tail.
 
 ## 5. Scrollback Capacity
 
@@ -89,9 +89,9 @@ and Seal do not clear an otherwise valid selection.
 
 If an Update replaces any Block intersected by the selection, the terminal
 clears the complete selection. The initial complete-snapshot model provides
-no mapping from selected positions in the old content to the replacement. A
-tail replacement preserves a selection entirely within its retained prefix
-and clears a selection that intersects its removed suffix. Extend does not
+no mapping from selected positions in the old content to the replacement.
+ReplaceSuffix preserves a selection entirely within its retained prefix and
+clears a selection that intersects its removed suffix. Extend does not
 invalidate a selection of pre-existing content. Scrollback-capacity
 trimming that removes any selected content has the same effect.
 
