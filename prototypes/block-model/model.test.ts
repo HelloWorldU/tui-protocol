@@ -7,7 +7,7 @@ import {
   type Operation,
 } from "./model.ts";
 
-test("Append creates Blocks, Update and Extend change mutable content, and Seal prevents later changes", () => {
+test("Append creates Blocks, content Operations change mutable content, and Seal prevents later changes", () => {
   const terminal = new TerminalPrototype({ width: 20, height: 4 });
 
   terminal.apply(
@@ -42,12 +42,37 @@ test("Append creates Blocks, Update and Extend change mutable content, and Seal 
     "BLOCK_SEALED",
   );
   assertProtocolError(
+    () => terminal.apply(replaceSuffix("thinking", 0, "too late")),
+    "BLOCK_SEALED",
+  );
+  assertProtocolError(
     () => terminal.apply(update("missing", "Unknown")),
     "UNKNOWN_BLOCK",
   );
   assertProtocolError(
     () => terminal.apply(append("static", "Duplicate", "sealed")),
     "DUPLICATE_BLOCK",
+  );
+});
+
+test("ReplaceSuffix preserves an anchor in the retained prefix and moves a removed-suffix anchor to the boundary", () => {
+  const terminal = new TerminalPrototype({ width: 6, height: 3 });
+  terminal.apply(append("thinking", "prefix-old-tail", "mutable"));
+  terminal.apply(append("after", "later content", "sealed"));
+
+  terminal.scrollTo({ blockId: "thinking", offset: 2 });
+  terminal.apply(replaceSuffix("thinking", 6, "new"));
+  assert.deepEqual(terminal.anchor(), { blockId: "thinking", offset: 2 });
+  assert.equal(terminal.blocks()[0]?.content, "prefixnew");
+
+  terminal.scrollTo({ blockId: "thinking", offset: 7 });
+  terminal.apply(replaceSuffix("thinking", 6, "end"));
+  assert.deepEqual(terminal.anchor(), { blockId: "thinking", offset: 6 });
+  assert.equal(terminal.blocks()[0]?.content, "prefixend");
+
+  assertProtocolError(
+    () => terminal.apply(replaceSuffix("thinking", 9, "invalid")),
+    "INVALID_CONTENT_BOUNDARY",
   );
 });
 
@@ -124,6 +149,14 @@ function update(id: string, content: string): Operation {
 
 function extend(id: string, fragment: string): Operation {
   return { type: "extend", id, fragment };
+}
+
+function replaceSuffix(
+  id: string,
+  retain: number,
+  replacement: string,
+): Operation {
+  return { type: "replaceSuffix", id, retain, replacement };
 }
 
 function seal(id: string): Operation {

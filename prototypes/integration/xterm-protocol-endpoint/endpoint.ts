@@ -92,6 +92,13 @@ function toRenderingOperation(operation: AppliedBlockOperation): Operation {
       return { type: "update", id, content: operation.body.content.data };
     case "block.extend":
       return { type: "extend", id, fragment: operation.body.fragment };
+    case "block.replace_suffix":
+      return {
+        type: "replaceSuffix",
+        id,
+        retain: operation.body.retain,
+        replacement: operation.body.replacement,
+      };
     case "block.seal":
       return { type: "seal", id };
     default:

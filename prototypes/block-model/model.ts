@@ -25,6 +25,13 @@ export interface ExtendOperation {
   readonly fragment: string;
 }
 
+export interface ReplaceSuffixOperation {
+  readonly type: "replaceSuffix";
+  readonly id: BlockId;
+  readonly retain: number;
+  readonly replacement: string;
+}
+
 export interface SealOperation {
   readonly type: "seal";
   readonly id: BlockId;
@@ -34,6 +41,7 @@ export type Operation =
   | AppendOperation
   | UpdateOperation
   | ExtendOperation
+  | ReplaceSuffixOperation
   | SealOperation;
 
 export type ProtocolErrorCode =
@@ -42,6 +50,7 @@ export type ProtocolErrorCode =
   | "DUPLICATE_BLOCK"
   | "INVALID_ANCHOR"
   | "INVALID_BLOCK_ID"
+  | "INVALID_CONTENT_BOUNDARY"
   | "INVALID_DIMENSIONS"
   | "UNKNOWN_BLOCK";
 
@@ -93,6 +102,13 @@ export class TerminalPrototype {
         return;
       case "extend":
         this.#extend(operation.id, operation.fragment);
+        return;
+      case "replaceSuffix":
+        this.#replaceSuffix(
+          operation.id,
+          operation.retain,
+          operation.replacement,
+        );
         return;
       case "seal":
         this.#seal(operation.id);
@@ -195,6 +211,37 @@ export class TerminalPrototype {
     }
 
     this.#blocks[index] = { ...block, content: `${block.content}${fragment}` };
+  }
+
+  #replaceSuffix(id: BlockId, retain: number, replacement: string): void {
+    const index = this.#requireBlockIndex(id);
+    const block = this.#blocks[index];
+    if (block.lifecycle === "sealed") {
+      throw new ProtocolError(
+        "BLOCK_SEALED",
+        `Block ${JSON.stringify(id)} is sealed.`,
+      );
+    }
+
+    const scalars = Array.from(block.content);
+    if (
+      !Number.isSafeInteger(retain) ||
+      retain < 0 ||
+      retain >= scalars.length
+    ) {
+      throw new ProtocolError(
+        "INVALID_CONTENT_BOUNDARY",
+        `Retained prefix ${retain} does not remove a suffix from Block ${JSON.stringify(id)}.`,
+      );
+    }
+
+    this.#blocks[index] = {
+      ...block,
+      content: `${scalars.slice(0, retain).join("")}${replacement}`,
+    };
+    if (this.#anchor?.blockId === id && this.#anchor.offset >= retain) {
+      this.#anchor = { blockId: id, offset: retain };
+    }
   }
 
   #seal(id: BlockId): void {

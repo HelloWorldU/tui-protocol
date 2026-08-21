@@ -553,6 +553,224 @@ test("when Extend would exceed xterm history capacity, it changes neither Sessio
   xterm.dispose();
 });
 
+test("ReplaceSuffix bytes change an earlier Block without moving the later history row being read, while an invalid boundary renders nothing", async () => {
+  const xterm = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(
+        append(contextId, "1", "thinking", "keep\nold-2\nold-3", "mutable"),
+        3,
+      ),
+      encodeInput(
+        append(
+          contextId,
+          "2",
+          "reader",
+          "reader-1\nreader-2\nreader-3",
+          "sealed",
+        ),
+        4,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  const readerStart = requiredRange(endpoint, contextId, "reader").start;
+  xterm.scrollToLine(readerStart);
+  assert.equal(viewportTopText(xterm), "reader-1");
+
+  const replacement = "keep\nnew-2\nnew-3\nnew-4";
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        replaceSuffix(contextId, "3", "thinking", "1", 5, "new-2\nnew-3\nnew-4"),
+        5,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  const movedReaderStart = requiredRange(endpoint, contextId, "reader").start;
+  assert.equal(movedReaderStart, readerStart + 1);
+  assert.equal(xterm.buffer.active.viewportY, movedReaderStart);
+  assert.equal(viewportTopText(xterm), "reader-1");
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    replacement,
+  );
+
+  const beforeInvalidBoundary = bufferRows(xterm);
+  const rejected = endpoint.push(
+    encodeInput(
+      replaceSuffix(
+        contextId,
+        "4",
+        "thinking",
+        "3",
+        Array.from(replacement).length,
+        "invalid",
+      ),
+      6,
+    ),
+  );
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "4",
+      context_id: contextId,
+      body: { code: "invalid_content_boundary" },
+    },
+  ]);
+  await endpoint.drain();
+  assert.deepEqual(bufferRows(xterm), beforeInvalidBoundary);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
+test("ReplaceSuffix keeps a retained-prefix row in place and moves a removed-suffix row to the replacement boundary", async () => {
+  const xterm = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(
+        append(
+          contextId,
+          "1",
+          "thinking",
+          "keep-1\nkeep-2\nremove-1\nremove-2\nremove-3",
+          "mutable",
+        ),
+        3,
+      ),
+      encodeInput(
+        append(contextId, "2", "tail", "tail-1\ntail-2\ntail-3", "sealed"),
+        4,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  const retain = Array.from("keep-1\nkeep-2\n").length;
+  xterm.scrollToLine(1);
+  assert.equal(viewportTopText(xterm), "keep-2");
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        replaceSuffix(
+          contextId,
+          "3",
+          "thinking",
+          "1",
+          retain,
+          "new-1\nnew-2",
+        ),
+        5,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+  assert.equal(xterm.buffer.active.viewportY, 1);
+  assert.equal(viewportTopText(xterm), "keep-2");
+
+  xterm.scrollToLine(3);
+  assert.equal(viewportTopText(xterm), "new-2");
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        replaceSuffix(contextId, "4", "thinking", "3", retain, "final"),
+        6,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+  assert.equal(xterm.buffer.active.viewportY, 2);
+  assert.equal(viewportTopText(xterm), "final");
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
+test("when ReplaceSuffix would exceed xterm history capacity, it changes neither Session content nor rendered history and the prior base remains usable", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 3,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "thinking", "old-tail", "mutable"), 3),
+      encodeInput(
+        append(contextId, "2", "tail", "tail-1\ntail-2\ntail-3", "sealed"),
+        4,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+  const before = bufferRows(xterm);
+
+  const rejected = endpoint.push(
+    encodeInput(
+      replaceSuffix(
+        contextId,
+        "3",
+        "thinking",
+        "1",
+        3,
+        "\nnew-2\nnew-3\nnew-4",
+      ),
+      5,
+    ),
+  );
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "3",
+      context_id: contextId,
+      body: { code: "resource_exhausted" },
+    },
+  ]);
+  await endpoint.drain();
+  assert.equal(endpoint.context(contextId)?.blocks[0]?.content.data, "old-tail");
+  assert.deepEqual(bufferRows(xterm), before);
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        replaceSuffix(contextId, "4", "thinking", "1", 3, "-fit"),
+        6,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+  assert.equal(endpoint.context(contextId)?.blocks[0]?.content.data, "old-fit");
+  assert.deepEqual(bufferRows(xterm), ["old-fit", ...before.slice(1)]);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 function createTerminal(): InstanceType<typeof Terminal> {
   return new Terminal({
     allowProposedApi: true,
@@ -656,6 +874,28 @@ function extend(
       block_id: blockId,
       base_operation_id: baseOperationId,
       fragment,
+    },
+  };
+}
+
+function replaceSuffix(
+  contextId: string,
+  operationId: string,
+  blockId: string,
+  baseOperationId: string,
+  retain: number,
+  replacement: string,
+): Message {
+  return {
+    version: 1,
+    kind: "block.replace_suffix",
+    operation_id: operationId,
+    context_id: contextId,
+    body: {
+      block_id: blockId,
+      base_operation_id: baseOperationId,
+      retain,
+      replacement,
     },
   };
 }

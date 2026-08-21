@@ -49,6 +49,7 @@ export type Message =
   | BlockAppend
   | BlockUpdate
   | BlockExtend
+  | BlockReplaceSuffix
   | BlockSeal
   | ProtocolErrorMessage;
 
@@ -147,6 +148,16 @@ export interface BlockExtend extends BlockOperationEnvelope {
   };
 }
 
+export interface BlockReplaceSuffix extends BlockOperationEnvelope {
+  readonly kind: "block.replace_suffix";
+  readonly body: {
+    readonly block_id: string;
+    readonly base_operation_id: string;
+    readonly retain: number;
+    readonly replacement: string;
+  };
+}
+
 export interface BlockSeal extends BlockOperationEnvelope {
   readonly kind: "block.seal";
   readonly body: { readonly block_id: string };
@@ -177,6 +188,7 @@ export type InvalidMessageIdentity =
         | "block.append"
         | "block.update"
         | "block.extend"
+        | "block.replace_suffix"
         | "block.seal";
       readonly operation_id: string;
       readonly context_id: string;
@@ -358,6 +370,22 @@ function validateMessageInner(value: unknown): Message {
       );
       requireNonEmptyString(body.fragment, "Message.body.fragment");
       break;
+    case "block.replace_suffix":
+      validateOperationEnvelope(envelope);
+      requireExactKeys(body, [
+        "block_id",
+        "base_operation_id",
+        "retain",
+        "replacement",
+      ]);
+      requireId(body.block_id, "Message.body.block_id");
+      requireId(
+        body.base_operation_id,
+        "Message.body.base_operation_id",
+      );
+      requireSafeNonNegativeInteger(body.retain, "Message.body.retain");
+      requireScalarString(body.replacement, "Message.body.replacement");
+      break;
     case "block.seal":
       validateOperationEnvelope(envelope);
       requireExactKeys(body, ["block_id"]);
@@ -509,6 +537,16 @@ function requireNonEmptyString(value: unknown, context: string): string {
   return id;
 }
 
+function requireSafeNonNegativeInteger(
+  value: unknown,
+  context: string,
+): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    invalid(`${context} must be an integer from 0 through 9007199254740991.`);
+  }
+  return value as number;
+}
+
 function requireScalarString(value: unknown, context: string): string {
   if (typeof value !== "string") {
     invalid(`${context} must be a string.`);
@@ -596,6 +634,7 @@ function identifyInvalidMessage(
     case "block.append":
     case "block.update":
     case "block.extend":
+    case "block.replace_suffix":
     case "block.seal": {
       const operationId = reliableId(value.operation_id);
       const contextId = reliableId(value.context_id);

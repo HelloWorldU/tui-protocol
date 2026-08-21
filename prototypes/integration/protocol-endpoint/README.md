@@ -19,12 +19,15 @@ It composes:
   response Message.
 - A tested host that does not claim complete version 1 support produces
   response bytes that decode to the expected unsupported outcome.
-- Tested Context-open, Append, complete Update, Extend, and Seal Messages
-  encoded as incoming bytes produce the expected Session state without success
-  responses.
+- Tested Context-open, Append, complete Update, Extend, ReplaceSuffix, and Seal
+  Messages encoded as incoming bytes produce the expected Session state
+  without success responses.
 - A tested Extend chain accepts the exact current base, returns correlated
   `content_state_mismatch` for a stale base, and continues from a complete
   Update without reporting rejected fragments as applied to the host.
+- A tested ReplaceSuffix byte sequence counts an emoji as one Unicode scalar,
+  reports an out-of-range retained prefix as `invalid_content_boundary`, and
+  does not report the rejected Operation as applied to the host.
 - Successful tested Block Operations are reported to an optional host hook in
   byte-stream order; rejected Operations are not reported as applied.
 - A tested synchronous host preparation hook can reject an otherwise valid
@@ -60,8 +63,6 @@ It composes:
   application-level meaning.
 - `completeBaselineSupported` remains a host assertion; this prototype does
   not determine whether a real Terminal satisfies the complete baseline.
-- ReplaceSuffix is not implemented yet, so the positive Capability fixture is
-  not evidence that this endpoint implements the complete current baseline.
 - Endpoint diagnostics are local observations and are not wire-level protocol
   responses.
 - Incoming bytes are fed directly to the protocol-only decoder. Ordinary

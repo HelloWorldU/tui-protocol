@@ -14,8 +14,8 @@ It implements the current drafts for:
 
 - A fixed Capability query matches independently recorded JSON and OSC wire
   bytes.
-- Every currently implemented Message kind, including `block.extend`, can
-  round-trip through JSON and OSC framing.
+- Every baseline Message kind, including `block.extend` and
+  `block.replace_suffix`, can round-trip through JSON and OSC framing.
 - A Message larger than one frame is split, independently Base64 encoded,
   reassembled, and decoded when every byte arrives in a separate write.
 - A complete Message is accepted at the `1048576`-byte framing limit and
@@ -28,6 +28,9 @@ It implements the current drafts for:
   request or Operation IDs are valid.
 - A tested `block.extend` with an empty fragment is rejected while retaining
   its valid correlation identity.
+- Tested negative, fractional, and unsafe `retain` values in
+  `block.replace_suffix` are rejected while retaining valid correlation
+  identity; an empty replacement remains valid.
 - A framing failure discards only its incomplete Message and parsing resumes
   at a later valid protocol frame.
 
@@ -38,8 +41,6 @@ It implements the current drafts for:
 - Node.js `Buffer` is used for Base64 as a prototype implementation detail.
 - Only the baseline `text/plain` content schema is implemented because no
   optional content type schema has been selected.
-- `block.replace_suffix` is not implemented yet, so this prototype is not
-  evidence that every Message kind in the current baseline is supported.
 - Decoder error events are local diagnostics; they are not wire-level
   `protocol.error` Messages.
 - A reported invalid-Message identity is only a correlation hint for a higher

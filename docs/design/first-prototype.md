@@ -45,7 +45,7 @@ regardless of whether its rendered rows are visible or in scrollback.
 
 ### Operations
 
-The prototype implements the three initial Operations.
+The executable prototypes implement the five current baseline Operations.
 
 #### Append
 
@@ -85,7 +85,8 @@ semantics are understood.
 The second incremental Operation is
 [ReplaceSuffix](../protocol/operations.md#replacesuffix). It replaces a
 non-empty suffix of `text/plain` content using a Unicode-scalar retained-prefix
-boundary. The first prototype does not yet implement this Operation either.
+boundary. The same executable path now implements and tests it, including its
+reading-anchor mapping and capacity-rejection boundary.
 
 #### Seal
 
@@ -118,9 +119,9 @@ internally to preserve a reading anchor.
 - The wire encoding for capability negotiation; unsupported-terminal fallback
   is application-owned.
 - How to map a reading anchor when its own Block receives a complete Update.
-- How to prototype and evaluate ReplaceSuffix, and how far to extend the
-  current Extend evidence, without weakening complete Update as the recovery
-  path.
+- How far to extend the current incremental-Operation evidence beyond the
+  tested plain-text, headless-xterm scenarios without weakening complete
+  Update as the recovery path.
 - Whether removal or an Operation beyond Append, Update, Extend,
   ReplaceSuffix, and Seal is needed.
 - The wire encoding and whether common Operation sequences should be combined.

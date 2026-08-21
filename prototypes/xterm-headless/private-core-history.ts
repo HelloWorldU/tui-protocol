@@ -26,6 +26,11 @@ interface BlockEntry {
   marker: PrivateMarker;
 }
 
+type TargetAnchorMapping =
+  | "reject"
+  | "preserve"
+  | { readonly retainedLineCount: number };
+
 interface PrivateBufferLine {
   readonly isWrapped: boolean;
   copyFrom(line: PrivateBufferLine): void;
@@ -120,6 +125,13 @@ export class PrivateCoreBlockHistory implements IDisposable {
       case "extend":
         await this.#extend(operation.id, operation.fragment);
         return;
+      case "replaceSuffix":
+        await this.#replaceSuffix(
+          operation.id,
+          operation.retain,
+          operation.replacement,
+        );
+        return;
       case "seal":
         this.#model.apply(operation);
         return;
@@ -141,7 +153,11 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   wouldExceedCapacity(operation: Operation): boolean {
-    if (operation.type !== "update" && operation.type !== "extend") {
+    if (
+      operation.type !== "update" &&
+      operation.type !== "extend" &&
+      operation.type !== "replaceSuffix"
+    ) {
       return false;
     }
 
@@ -157,10 +173,22 @@ export class PrivateCoreBlockHistory implements IDisposable {
       [block],
       this.#terminal.cols,
     ).length;
-    const replacementContent =
-      operation.type === "update"
-        ? operation.content
-        : `${block.content}${operation.fragment}`;
+    let replacementContent: string;
+    switch (operation.type) {
+      case "update":
+        replacementContent = operation.content;
+        break;
+      case "extend":
+        replacementContent = `${block.content}${operation.fragment}`;
+        break;
+      case "replaceSuffix":
+        replacementContent = replaceSuffixText(
+          block.content,
+          operation.retain,
+          operation.replacement,
+        );
+        break;
+    }
     const replacementLineCount = layoutBlocks(
       [
         {
@@ -213,7 +241,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   async #update(
     id: BlockId,
     content: string,
-    preserveTargetAnchor = false,
+    targetAnchorMapping: TargetAnchorMapping = "reject",
   ): Promise<void> {
     const replacement = await this.#materialize(content);
     const entryIndex = this.#entryIndexes.get(id);
@@ -232,9 +260,10 @@ export class PrivateCoreBlockHistory implements IDisposable {
       !wasFollowingTail && oldYdisp >= range.start && oldYdisp < oldEnd
         ? oldYdisp - range.start
         : undefined;
-    if (targetAnchorOffset !== undefined && !preserveTargetAnchor) {
-      throw new Error("Updating the Block containing the viewport anchor is undefined.");
-    }
+    const mappedTargetAnchorOffset =
+      targetAnchorOffset === undefined
+        ? undefined
+        : mapTargetAnchor(targetAnchorOffset, targetAnchorMapping);
 
     const delta = replacement.length - range.lineCount;
     if (delta > 0 && buffer.lines.length + delta > buffer.lines.maxLength) {
@@ -248,10 +277,10 @@ export class PrivateCoreBlockHistory implements IDisposable {
 
     if (wasFollowingTail) {
       buffer.ydisp = buffer.ybase;
-    } else if (targetAnchorOffset !== undefined) {
+    } else if (mappedTargetAnchorOffset !== undefined) {
       buffer.ydisp = Math.min(
         buffer.ybase,
-        range.start + targetAnchorOffset,
+        range.start + mappedTargetAnchorOffset,
       );
     } else if (oldYdisp >= oldEnd) {
       buffer.ydisp = Math.max(0, oldYdisp + delta);
@@ -269,7 +298,29 @@ export class PrivateCoreBlockHistory implements IDisposable {
     if (block === undefined) {
       throw new Error(`Block ${JSON.stringify(id)} has no rendered content.`);
     }
-    await this.#update(id, `${block.content}${fragment}`, true);
+    await this.#update(id, `${block.content}${fragment}`, "preserve");
+  }
+
+  async #replaceSuffix(
+    id: BlockId,
+    retain: number,
+    replacement: string,
+  ): Promise<void> {
+    const block = this.#model
+      .blocks()
+      .find((candidate) => candidate.id === id);
+    if (block === undefined) {
+      throw new Error(`Block ${JSON.stringify(id)} has no rendered content.`);
+    }
+    const retainedPrefix = Array.from(block.content)
+      .slice(0, retain)
+      .join("");
+    const retainedLines = await this.#materialize(retainedPrefix);
+    await this.#update(
+      id,
+      `${retainedPrefix}${replacement}`,
+      { retainedLineCount: retainedLines.length },
+    );
   }
 
   #rangeAt(index: number): BlockRange {
@@ -349,6 +400,29 @@ function toTerminalText(content: string): string {
 
 function write(terminal: Terminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
+}
+
+function replaceSuffixText(
+  content: string,
+  retain: number,
+  replacement: string,
+): string {
+  return `${Array.from(content).slice(0, retain).join("")}${replacement}`;
+}
+
+function mapTargetAnchor(
+  rowOffset: number,
+  mapping: TargetAnchorMapping,
+): number {
+  if (mapping === "reject") {
+    throw new Error(
+      "Updating the Block containing the viewport anchor is undefined.",
+    );
+  }
+  if (mapping === "preserve") {
+    return rowOffset;
+  }
+  return Math.min(rowOffset, Math.max(0, mapping.retainedLineCount - 1));
 }
 
 function assertNever(value: never): never {

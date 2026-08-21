@@ -20,6 +20,7 @@ export type AppliedBlockOperation = Extract<
       | "block.append"
       | "block.update"
       | "block.extend"
+      | "block.replace_suffix"
       | "block.seal";
   }
 >;
@@ -179,6 +180,7 @@ function isBlockOperation(message: Message): message is AppliedBlockOperation {
     message.kind === "block.append" ||
     message.kind === "block.update" ||
     message.kind === "block.extend" ||
+    message.kind === "block.replace_suffix" ||
     message.kind === "block.seal"
   );
 }

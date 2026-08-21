@@ -37,7 +37,8 @@ It therefore does not render Block content into the xterm buffer.
 `private-core-history.ts` separately reaches through xterm.js private fields to
 test the missing mutation. This is intentional prototype scaffolding, not an
 API recommendation. It uses xterm.js markers as a resize-aware Block range
-index. Its internal Extend projection is exercised by the separate
+index. Its internal Extend and ReplaceSuffix projections are exercised by the
+separate
 [xterm protocol endpoint integration](../integration/xterm-protocol-endpoint/README.md)
 and currently materializes the resulting complete Block range.
 `private-core-osc-addon.ts` connects the older temporary OSC transport through
@@ -84,7 +85,9 @@ can be designed.
   control exchanges or Context IDs on Operations.
 - Plain text only; terminal control sequences are not part of the experiment.
 - A dedicated terminal owns all writes while Block ranges are tracked.
-- Updating the Block containing the viewport anchor remains undefined.
+- Complete Update of the Block containing the viewport anchor remains
+  undefined; the xterm integration separately exercises ReplaceSuffix's
+  narrower mapping.
 - Scrollback-capacity trimming is not yet supported by the private range index.
 - Browser rendering and selection behavior are not exercised by headless
   tests.

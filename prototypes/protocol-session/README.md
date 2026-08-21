@@ -27,6 +27,9 @@ It exercises the current drafts for:
 - Tested Extend chains append only on the latest content Operation ID. A stale
   base leaves content unchanged, dependent fragments are rejected, and a
   complete Update establishes a new base from which Extend can continue.
+- Tested ReplaceSuffix Operations count Unicode scalar values, replace or
+  delete a non-empty suffix, advance content state, and distinguish a stale
+  base from an invalid retained-prefix boundary without partial mutation.
 - The tested semantic failures leave Block state unchanged, and a used
   Operation ID cannot be reused even when its first Operation failed.
 - A tested valid Update can be prepared without changing Block state, then
@@ -48,9 +51,6 @@ It exercises the current drafts for:
 - `completeBaselineSupported` is a host-supplied assertion used to exercise
   both Capability outcomes. This prototype does not determine whether a real
   terminal satisfies the complete baseline.
-- ReplaceSuffix is not implemented yet. Until it is, the tested positive
-  Capability assertion is a control-path fixture rather than evidence that
-  this Session implements the complete current baseline.
 - `endConnection()` is an experimental host hook; it does not detect the end
   of a real byte stream by itself.
 - The exported TypeScript API and its in-memory snapshots are experimental,

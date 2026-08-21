@@ -9,6 +9,7 @@ The model provides:
 - append-only Block order;
 - full-snapshot updates to mutable Blocks;
 - tail extension of mutable Blocks;
+- Unicode-scalar suffix replacement of mutable Blocks;
 - explicit lifecycle sealing;
 - terminal-owned text layout and reflow;
 - a semantic viewport anchor expressed as a Block ID and content offset.
@@ -33,6 +34,7 @@ pnpm typecheck
   display width.
 - The model does not parse escape sequences, render images, or drive a real
   terminal emulator.
-- The reading-anchor test updates a Block above the anchored Block. Mapping an
-  anchor through changes to its own Block remains undefined.
+- Complete Update of the Block containing the reading anchor remains
+  undefined. ReplaceSuffix separately tests its defined retained-prefix and
+  removed-suffix mappings.
 - Operations are in-memory TypeScript values; no wire encoding is defined.

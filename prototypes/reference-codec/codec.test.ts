@@ -121,15 +121,27 @@ const messages: readonly Message[] = [
   },
   {
     version: 1,
-    kind: "block.seal",
+    kind: "block.replace_suffix",
     operation_id: "4",
+    context_id: "context-1",
+    body: {
+      block_id: "thinking",
+      base_operation_id: "3",
+      retain: 7,
+      replacement: "",
+    },
+  },
+  {
+    version: 1,
+    kind: "block.seal",
+    operation_id: "5",
     context_id: "context-1",
     body: { block_id: "thinking" },
   },
   {
     version: 1,
     kind: "protocol.error",
-    operation_id: "5",
+    operation_id: "6",
     context_id: "context-1",
     body: { code: "block_sealed", message: "Block is already sealed." },
   },
@@ -176,6 +188,23 @@ const goldenExtendJson =
   '{"version":1,"kind":"block.extend","operation_id":"43",' +
   '"context_id":"ctx-1","body":{"block_id":"thinking-1",' +
   '"base_operation_id":"42","fragment":" additional text"}}';
+const goldenReplaceSuffix: Message = {
+  version: 1,
+  kind: "block.replace_suffix",
+  operation_id: "44",
+  context_id: "ctx-1",
+  body: {
+    block_id: "thinking-1",
+    base_operation_id: "43",
+    retain: 12,
+    replacement: "revised ending",
+  },
+};
+const goldenReplaceSuffixJson =
+  '{"version":1,"kind":"block.replace_suffix","operation_id":"44",' +
+  '"context_id":"ctx-1","body":{"block_id":"thinking-1",' +
+  '"base_operation_id":"43","retain":12,' +
+  '"replacement":"revised ending"}}';
 
 test("fixed JSON and OSC fixtures match the draft wire format", () => {
   assert.equal(
@@ -210,6 +239,14 @@ test("fixed JSON and OSC fixtures match the draft wire format", () => {
     deserializeMessage(new TextEncoder().encode(goldenExtendJson)),
     goldenExtend,
   );
+  assert.equal(
+    new TextDecoder().decode(serializeMessage(goldenReplaceSuffix)),
+    goldenReplaceSuffixJson,
+  );
+  assert.deepEqual(
+    deserializeMessage(new TextEncoder().encode(goldenReplaceSuffixJson)),
+    goldenReplaceSuffix,
+  );
 });
 
 test("serialization snapshots data instead of invoking inherited toJSON", () => {
@@ -221,7 +258,7 @@ test("serialization snapshots data instead of invoking inherited toJSON", () => 
   assert.equal(new TextDecoder().decode(serializeMessage(input)), goldenJson);
 });
 
-test("every implemented Message schema, including Extend, round-trips through OSC framing", () => {
+test("every baseline Message schema round-trips through OSC framing", () => {
   const decoder = new ProtocolStreamDecoder();
 
   for (const [index, message] of messages.entries()) {
@@ -374,6 +411,22 @@ test("an Extend with an empty fragment is rejected with its valid Operation iden
     operation_id: "extend-empty",
     context_id: "ctx",
   });
+});
+
+test("ReplaceSuffix rejects negative, fractional, and unsafe retain values with its valid Operation identity", () => {
+  for (const retain of ["-1", "1.5", "9007199254740992"]) {
+    const error = captureMessageError(
+      `{"version":1,"kind":"block.replace_suffix","operation_id":"replace-invalid","context_id":"ctx","body":{"block_id":"thinking","base_operation_id":"1","retain":${retain},"replacement":"fixed"}}`,
+    );
+
+    assert.equal(error.code, "invalid_schema");
+    assert.deepEqual(error.identity, {
+      category: "operation",
+      kind: "block.replace_suffix",
+      operation_id: "replace-invalid",
+      context_id: "ctx",
+    });
+  }
 });
 
 test("the same invalid control request gets the same fingerprint when its JSON fields are reordered", () => {

@@ -273,6 +273,91 @@ test("Extend bytes append only on the named content state, and Update restores a
   );
 });
 
+test("ReplaceSuffix bytes replace a Unicode-scalar suffix, while an out-of-range boundary changes nothing", () => {
+  const applied: AppliedBlockOperation[] = [];
+  const endpoint = new TerminalProtocolEndpoint({
+    completeBaselineSupported: true,
+    onOperationApplied: (operation) => applied.push(operation),
+  });
+  const contextId = openContext(endpoint);
+
+  assert.deepEqual(
+    endpoint.push(
+      concatenate([
+        encodeInput(
+          {
+            version: 1,
+            kind: "block.append",
+            operation_id: "replace-1",
+            context_id: contextId,
+            body: {
+              block_id: "thinking",
+              lifecycle: "mutable",
+              content: { type: "text/plain", data: "A🙂 old" },
+            },
+          },
+          65,
+        ),
+        encodeInput(
+          {
+            version: 1,
+            kind: "block.replace_suffix",
+            operation_id: "replace-2",
+            context_id: contextId,
+            body: {
+              block_id: "thinking",
+              base_operation_id: "replace-1",
+              retain: 2,
+              replacement: " new",
+            },
+          },
+          66,
+        ),
+      ]),
+    ),
+    emptyResult(),
+  );
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "A🙂 new",
+  );
+
+  const rejected = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.replace_suffix",
+        operation_id: "replace-3",
+        context_id: contextId,
+        body: {
+          block_id: "thinking",
+          base_operation_id: "replace-2",
+          retain: 6,
+          replacement: " invalid",
+        },
+      },
+      67,
+    ),
+  );
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "replace-3",
+      context_id: contextId,
+      body: { code: "invalid_content_boundary" },
+    },
+  ]);
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "A🙂 new",
+  );
+  assert.deepEqual(
+    applied.map((operation) => operation.operation_id),
+    ["replace-1", "replace-2"],
+  );
+});
+
 test("successful Block Operations reach the host in byte-stream order, while a rejected Update does not", () => {
   const applied: AppliedBlockOperation[] = [];
   const endpoint = new TerminalProtocolEndpoint({

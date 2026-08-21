@@ -1,6 +1,7 @@
 import type {
   BlockAppend,
   BlockExtend,
+  BlockReplaceSuffix,
   BlockSeal,
   BlockUpdate,
   ContextClose,
@@ -19,6 +20,7 @@ export type BlockOperation =
   | BlockAppend
   | BlockUpdate
   | BlockExtend
+  | BlockReplaceSuffix
   | BlockSeal;
 
 export type OperationExecutionErrorCode = Extract<
@@ -104,6 +106,7 @@ export class TerminalProtocolSession {
       case "block.append":
       case "block.update":
       case "block.extend":
+      case "block.replace_suffix":
       case "block.seal": {
         const preparation = this.#prepareOperation(message);
         return preparation.status === "rejected"
@@ -358,6 +361,22 @@ export class TerminalProtocolSession {
         }
         return undefined;
       }
+      case "block.replace_suffix": {
+        const block = findBlock(context, operation.body.block_id);
+        if (block === undefined) {
+          return "block_not_found";
+        }
+        if (block.lifecycle === "sealed") {
+          return "block_sealed";
+        }
+        if (block.contentOperationId !== operation.body.base_operation_id) {
+          return "content_state_mismatch";
+        }
+        if (operation.body.retain >= unicodeScalarLength(block.content.data)) {
+          return "invalid_content_boundary";
+        }
+        return undefined;
+      }
       case "block.seal": {
         const block = findBlock(context, operation.body.block_id);
         if (block === undefined) {
@@ -406,6 +425,20 @@ export class TerminalProtocolSession {
           content: {
             type: "text/plain",
             data: `${block.content.data}${operation.body.fragment}`,
+          },
+          contentOperationId: operation.operation_id,
+        }));
+        break;
+      case "block.replace_suffix":
+        blocks = replaceBlock(context, operation.body.block_id, (block) => ({
+          ...block,
+          content: {
+            type: "text/plain",
+            data: replaceSuffix(
+              block.content.data,
+              operation.body.retain,
+              operation.body.replacement,
+            ),
           },
           contentOperationId: operation.operation_id,
         }));
@@ -603,6 +636,18 @@ function snapshotContext(context: StoredContext): SessionContextSnapshot {
 
 function cloneContent(content: PlainTextSnapshot): PlainTextSnapshot {
   return { type: "text/plain", data: content.data };
+}
+
+function unicodeScalarLength(value: string): number {
+  return Array.from(value).length;
+}
+
+function replaceSuffix(
+  value: string,
+  retain: number,
+  replacement: string,
+): string {
+  return `${Array.from(value).slice(0, retain).join("")}${replacement}`;
 }
 
 function cloneOperation(operation: BlockOperation): BlockOperation {

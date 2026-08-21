@@ -4,6 +4,7 @@ import test from "node:test";
 import type {
   BlockAppend,
   BlockExtend,
+  BlockReplaceSuffix,
   BlockSeal,
   BlockUpdate,
   Message,
@@ -218,6 +219,134 @@ test("Extend rejects unknown and sealed Blocks without changing their content", 
   session.handle(append("2", "sealed", "done", "sealed"));
   assertOperationError(
     session.handle(extend("3", "sealed", "2", " late")),
+    "3",
+    "block_sealed",
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "done",
+  );
+});
+
+test("ReplaceSuffix counts Unicode scalars and can replace or delete a non-empty suffix", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "A🙂e\u0301tail"));
+
+  assert.deepEqual(
+    session.handle(replaceSuffix("2", "thinking", "1", 4, "done")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "A🙂e\u0301done",
+  );
+
+  assert.deepEqual(
+    session.handle(replaceSuffix("3", "thinking", "2", 4, "")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "A🙂e\u0301",
+  );
+});
+
+test("ReplaceSuffix rejects a retain at or beyond the current scalar length and leaves the prior base usable", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "A🙂"));
+
+  assertOperationError(
+    session.handle(replaceSuffix("2", "thinking", "1", 2, "same")),
+    "2",
+    "invalid_content_boundary",
+  );
+  assertOperationError(
+    session.handle(replaceSuffix("3", "thinking", "1", 3, "past")),
+    "3",
+    "invalid_content_boundary",
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "A🙂",
+  );
+
+  assert.deepEqual(
+    session.handle(replaceSuffix("4", "thinking", "1", 1, " fixed")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "A fixed",
+  );
+
+  assert.deepEqual(session.handle(update("5", "thinking", "")), []);
+  assertOperationError(
+    session.handle(replaceSuffix("6", "thinking", "5", 0, "still invalid")),
+    "6",
+    "invalid_content_boundary",
+  );
+});
+
+test("ReplaceSuffix advances the content base even when its replacement reproduces the same text", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "same"));
+
+  assert.deepEqual(
+    session.handle(replaceSuffix("2", "thinking", "1", 0, "same")),
+    [],
+  );
+  assertOperationError(
+    session.handle(extend("3", "thinking", "1", " stale")),
+    "3",
+    "content_state_mismatch",
+  );
+  assert.deepEqual(
+    session.handle(extend("4", "thinking", "2", " current")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "same current",
+  );
+});
+
+test("ReplaceSuffix rejects a stale base until a complete Update establishes a new one", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "draft tail"));
+
+  assertOperationError(
+    session.handle(replaceSuffix("2", "thinking", "missing", 6, "ending")),
+    "2",
+    "content_state_mismatch",
+  );
+  assertOperationError(
+    session.handle(replaceSuffix("3", "thinking", "2", 6, "dependent")),
+    "3",
+    "content_state_mismatch",
+  );
+
+  assert.deepEqual(session.handle(update("4", "thinking", "known tail")), []);
+  assert.deepEqual(
+    session.handle(replaceSuffix("5", "thinking", "4", 6, "ending")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "known ending",
+  );
+});
+
+test("ReplaceSuffix rejects unknown and sealed Blocks without changing content", () => {
+  const session = openSession();
+
+  assertOperationError(
+    session.handle(replaceSuffix("1", "missing", "base", 0, "replacement")),
+    "1",
+    "block_not_found",
+  );
+  session.handle(append("2", "sealed", "done", "sealed"));
+  assertOperationError(
+    session.handle(replaceSuffix("3", "sealed", "2", 0, "late")),
     "3",
     "block_sealed",
   );
@@ -658,6 +787,27 @@ function extend(
       block_id: blockId,
       base_operation_id: baseOperationId,
       fragment,
+    },
+  };
+}
+
+function replaceSuffix(
+  operationId: string,
+  blockId: string,
+  baseOperationId: string,
+  retain: number,
+  replacement: string,
+): BlockReplaceSuffix {
+  return {
+    version: 1,
+    kind: "block.replace_suffix",
+    operation_id: operationId,
+    context_id: "context-1",
+    body: {
+      block_id: blockId,
+      base_operation_id: baseOperationId,
+      retain,
+      replacement,
     },
   };
 }
