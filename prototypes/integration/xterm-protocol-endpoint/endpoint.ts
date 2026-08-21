@@ -90,6 +90,8 @@ function toRenderingOperation(operation: AppliedBlockOperation): Operation {
       };
     case "block.update":
       return { type: "update", id, content: operation.body.content.data };
+    case "block.extend":
+      return { type: "extend", id, fragment: operation.body.fragment };
     case "block.seal":
       return { type: "seal", id };
     default:

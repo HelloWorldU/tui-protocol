@@ -110,15 +110,26 @@ const messages: readonly Message[] = [
   },
   {
     version: 1,
-    kind: "block.seal",
+    kind: "block.extend",
     operation_id: "3",
+    context_id: "context-1",
+    body: {
+      block_id: "thinking",
+      base_operation_id: "2",
+      fragment: " More detail.",
+    },
+  },
+  {
+    version: 1,
+    kind: "block.seal",
+    operation_id: "4",
     context_id: "context-1",
     body: { block_id: "thinking" },
   },
   {
     version: 1,
     kind: "protocol.error",
-    operation_id: "4",
+    operation_id: "5",
     context_id: "context-1",
     body: { code: "block_sealed", message: "Block is already sealed." },
   },
@@ -150,6 +161,21 @@ const goldenUpdateJson =
   '{"version":1,"kind":"block.update","operation_id":"42",' +
   '"context_id":"ctx-1","body":{"block_id":"thinking-1",' +
   '"content":{"type":"text/plain","data":"complete replacement text"}}}';
+const goldenExtend: Message = {
+  version: 1,
+  kind: "block.extend",
+  operation_id: "43",
+  context_id: "ctx-1",
+  body: {
+    block_id: "thinking-1",
+    base_operation_id: "42",
+    fragment: " additional text",
+  },
+};
+const goldenExtendJson =
+  '{"version":1,"kind":"block.extend","operation_id":"43",' +
+  '"context_id":"ctx-1","body":{"block_id":"thinking-1",' +
+  '"base_operation_id":"42","fragment":" additional text"}}';
 
 test("fixed JSON and OSC fixtures match the draft wire format", () => {
   assert.equal(
@@ -176,6 +202,14 @@ test("fixed JSON and OSC fixtures match the draft wire format", () => {
     deserializeMessage(new TextEncoder().encode(goldenUpdateJson)),
     goldenUpdate,
   );
+  assert.equal(
+    new TextDecoder().decode(serializeMessage(goldenExtend)),
+    goldenExtendJson,
+  );
+  assert.deepEqual(
+    deserializeMessage(new TextEncoder().encode(goldenExtendJson)),
+    goldenExtend,
+  );
 });
 
 test("serialization snapshots data instead of invoking inherited toJSON", () => {
@@ -187,7 +221,7 @@ test("serialization snapshots data instead of invoking inherited toJSON", () => 
   assert.equal(new TextDecoder().decode(serializeMessage(input)), goldenJson);
 });
 
-test("every baseline Message schema round-trips through OSC framing", () => {
+test("every implemented Message schema, including Extend, round-trips through OSC framing", () => {
   const decoder = new ProtocolStreamDecoder();
 
   for (const [index, message] of messages.entries()) {
@@ -326,6 +360,20 @@ test("an unrecognized version or Message kind exposes no request identity", () =
 
   assert.equal(unknownVersion.identity, undefined);
   assert.equal(unknownKind.identity, undefined);
+});
+
+test("an Extend with an empty fragment is rejected with its valid Operation identity", () => {
+  const error = captureMessageError(
+    '{"version":1,"kind":"block.extend","operation_id":"extend-empty","context_id":"ctx","body":{"block_id":"thinking","base_operation_id":"1","fragment":""}}',
+  );
+
+  assert.equal(error.code, "invalid_schema");
+  assert.deepEqual(error.identity, {
+    category: "operation",
+    kind: "block.extend",
+    operation_id: "extend-empty",
+    context_id: "ctx",
+  });
 });
 
 test("the same invalid control request gets the same fingerprint when its JSON fields are reordered", () => {

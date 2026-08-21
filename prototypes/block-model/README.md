@@ -8,6 +8,7 @@ The model provides:
 
 - append-only Block order;
 - full-snapshot updates to mutable Blocks;
+- tail extension of mutable Blocks;
 - explicit lifecycle sealing;
 - terminal-owned text layout and reflow;
 - a semantic viewport anchor expressed as a Block ID and content offset.

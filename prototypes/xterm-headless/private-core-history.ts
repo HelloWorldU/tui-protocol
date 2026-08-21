@@ -117,6 +117,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
       case "update":
         await this.#update(operation.id, operation.content);
         return;
+      case "extend":
+        await this.#extend(operation.id, operation.fragment);
+        return;
       case "seal":
         this.#model.apply(operation);
         return;
@@ -138,7 +141,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   wouldExceedCapacity(operation: Operation): boolean {
-    if (operation.type !== "update") {
+    if (operation.type !== "update" && operation.type !== "extend") {
       return false;
     }
 
@@ -154,12 +157,16 @@ export class PrivateCoreBlockHistory implements IDisposable {
       [block],
       this.#terminal.cols,
     ).length;
+    const replacementContent =
+      operation.type === "update"
+        ? operation.content
+        : `${block.content}${operation.fragment}`;
     const replacementLineCount = layoutBlocks(
       [
         {
           id: operation.id,
           lifecycle: "mutable",
-          content: operation.content,
+          content: replacementContent,
         },
       ],
       this.#terminal.cols,
@@ -203,7 +210,11 @@ export class PrivateCoreBlockHistory implements IDisposable {
     this.#entries.push({ id: block.id, marker });
   }
 
-  async #update(id: BlockId, content: string): Promise<void> {
+  async #update(
+    id: BlockId,
+    content: string,
+    preserveTargetAnchor = false,
+  ): Promise<void> {
     const replacement = await this.#materialize(content);
     const entryIndex = this.#entryIndexes.get(id);
     if (entryIndex === undefined) {
@@ -214,7 +225,14 @@ export class PrivateCoreBlockHistory implements IDisposable {
 
     const buffer = this.#bufferService.buffer;
     const oldEnd = range.start + range.lineCount;
-    if (buffer.ydisp >= range.start && buffer.ydisp < oldEnd) {
+    const oldYbase = buffer.ybase;
+    const oldYdisp = buffer.ydisp;
+    const wasFollowingTail = oldYdisp === oldYbase;
+    const targetAnchorOffset =
+      !wasFollowingTail && oldYdisp >= range.start && oldYdisp < oldEnd
+        ? oldYdisp - range.start
+        : undefined;
+    if (targetAnchorOffset !== undefined && !preserveTargetAnchor) {
       throw new Error("Updating the Block containing the viewport anchor is undefined.");
     }
 
@@ -225,14 +243,16 @@ export class PrivateCoreBlockHistory implements IDisposable {
 
     this.#model.apply({ type: "update", id, content });
 
-    const oldYbase = buffer.ybase;
-    const oldYdisp = buffer.ydisp;
-    const wasFollowingTail = oldYdisp === oldYbase;
     buffer.lines.splice(range.start, range.lineCount, ...replacement);
     buffer.ybase = Math.max(0, oldYbase + delta);
 
     if (wasFollowingTail) {
       buffer.ydisp = buffer.ybase;
+    } else if (targetAnchorOffset !== undefined) {
+      buffer.ydisp = Math.min(
+        buffer.ybase,
+        range.start + targetAnchorOffset,
+      );
     } else if (oldYdisp >= oldEnd) {
       buffer.ydisp = Math.max(0, oldYdisp + delta);
     }
@@ -240,6 +260,16 @@ export class PrivateCoreBlockHistory implements IDisposable {
     entry.marker = buffer.addMarker(range.start);
 
     this.#bufferService._onScroll.fire(buffer.ydisp);
+  }
+
+  async #extend(id: BlockId, fragment: string): Promise<void> {
+    const block = this.#model
+      .blocks()
+      .find((candidate) => candidate.id === id);
+    if (block === undefined) {
+      throw new Error(`Block ${JSON.stringify(id)} has no rendered content.`);
+    }
+    await this.#update(id, `${block.content}${fragment}`, true);
   }
 
   #rangeAt(index: number): BlockRange {

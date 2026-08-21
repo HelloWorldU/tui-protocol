@@ -152,6 +152,127 @@ test("Context and Block Operation bytes update Session state, while a rejected U
   );
 });
 
+test("Extend bytes append only on the named content state, and Update restores a broken chain", () => {
+  const applied: AppliedBlockOperation[] = [];
+  const endpoint = new TerminalProtocolEndpoint({
+    completeBaselineSupported: true,
+    onOperationApplied: (operation) => applied.push(operation),
+  });
+  const contextId = openContext(endpoint);
+
+  const successful = endpoint.push(
+    concatenate([
+      encodeInput(
+        {
+          version: 1,
+          kind: "block.append",
+          operation_id: "extend-1",
+          context_id: contextId,
+          body: {
+            block_id: "thinking",
+            lifecycle: "mutable",
+            content: { type: "text/plain", data: "Start" },
+          },
+        },
+        60,
+      ),
+      encodeInput(
+        {
+          version: 1,
+          kind: "block.extend",
+          operation_id: "extend-2",
+          context_id: contextId,
+          body: {
+            block_id: "thinking",
+            base_operation_id: "extend-1",
+            fragment: "🙂",
+          },
+        },
+        61,
+      ),
+    ]),
+  );
+
+  assert.deepEqual(successful, emptyResult());
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "Start🙂",
+  );
+
+  const mismatch = endpoint.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "block.extend",
+        operation_id: "extend-3",
+        context_id: contextId,
+        body: {
+          block_id: "thinking",
+          base_operation_id: "extend-1",
+          fragment: " stale",
+        },
+      },
+      62,
+    ),
+  );
+  assert.deepEqual(decodeResponses(mismatch), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "extend-3",
+      context_id: contextId,
+      body: { code: "content_state_mismatch" },
+    },
+  ]);
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "Start🙂",
+  );
+
+  assert.deepEqual(
+    endpoint.push(
+      concatenate([
+        encodeInput(
+          {
+            version: 1,
+            kind: "block.update",
+            operation_id: "extend-4",
+            context_id: contextId,
+            body: {
+              block_id: "thinking",
+              content: { type: "text/plain", data: "Recovered" },
+            },
+          },
+          63,
+        ),
+        encodeInput(
+          {
+            version: 1,
+            kind: "block.extend",
+            operation_id: "extend-5",
+            context_id: contextId,
+            body: {
+              block_id: "thinking",
+              base_operation_id: "extend-4",
+              fragment: " safely",
+            },
+          },
+          64,
+        ),
+      ]),
+    ),
+    emptyResult(),
+  );
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "Recovered safely",
+  );
+  assert.deepEqual(
+    applied.map((operation) => operation.operation_id),
+    ["extend-1", "extend-2", "extend-4", "extend-5"],
+  );
+});
+
 test("successful Block Operations reach the host in byte-stream order, while a rejected Update does not", () => {
   const applied: AppliedBlockOperation[] = [];
   const endpoint = new TerminalProtocolEndpoint({

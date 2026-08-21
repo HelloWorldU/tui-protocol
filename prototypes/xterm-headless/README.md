@@ -37,8 +37,11 @@ It therefore does not render Block content into the xterm buffer.
 `private-core-history.ts` separately reaches through xterm.js private fields to
 test the missing mutation. This is intentional prototype scaffolding, not an
 API recommendation. It uses xterm.js markers as a resize-aware Block range
-index. `private-core-osc-addon.ts` connects it to the temporary OSC transport
-through a deferred Operation queue.
+index. Its internal Extend projection is exercised by the separate
+[xterm protocol endpoint integration](../integration/xterm-protocol-endpoint/README.md)
+and currently materializes the resulting complete Block range.
+`private-core-osc-addon.ts` connects the older temporary OSC transport through
+a deferred Operation queue.
 
 The parser hook is also gated by `allowProposedApi` in xterm.js 6.0.0, so the
 integration is suitable for a spike but not yet a stable compatibility layer.

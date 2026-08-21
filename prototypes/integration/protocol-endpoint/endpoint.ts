@@ -16,7 +16,11 @@ const MAX_FRAME_ID = 2_147_483_647;
 export type AppliedBlockOperation = Extract<
   Message,
   {
-    readonly kind: "block.append" | "block.update" | "block.seal";
+    readonly kind:
+      | "block.append"
+      | "block.update"
+      | "block.extend"
+      | "block.seal";
   }
 >;
 
@@ -174,6 +178,7 @@ function isBlockOperation(message: Message): message is AppliedBlockOperation {
   return (
     message.kind === "block.append" ||
     message.kind === "block.update" ||
+    message.kind === "block.extend" ||
     message.kind === "block.seal"
   );
 }

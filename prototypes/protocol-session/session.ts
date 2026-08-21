@@ -1,5 +1,6 @@
 import type {
   BlockAppend,
+  BlockExtend,
   BlockSeal,
   BlockUpdate,
   ContextClose,
@@ -14,7 +15,11 @@ type ControlRequest = Extract<
   { readonly kind: "capability.query" | "context.open" | "context.close" }
 >;
 
-export type BlockOperation = BlockAppend | BlockUpdate | BlockSeal;
+export type BlockOperation =
+  | BlockAppend
+  | BlockUpdate
+  | BlockExtend
+  | BlockSeal;
 
 export type OperationExecutionErrorCode = Extract<
   OperationErrorCode,
@@ -37,6 +42,7 @@ interface StoredBlock {
   readonly id: string;
   lifecycle: "mutable" | "sealed";
   content: PlainTextSnapshot;
+  contentOperationId: string;
 }
 
 interface StoredContext {
@@ -97,6 +103,7 @@ export class TerminalProtocolSession {
         return [this.#handleControl(message)];
       case "block.append":
       case "block.update":
+      case "block.extend":
       case "block.seal": {
         const preparation = this.#prepareOperation(message);
         return preparation.status === "rejected"
@@ -338,6 +345,19 @@ export class TerminalProtocolSession {
         }
         return undefined;
       }
+      case "block.extend": {
+        const block = findBlock(context, operation.body.block_id);
+        if (block === undefined) {
+          return "block_not_found";
+        }
+        if (block.lifecycle === "sealed") {
+          return "block_sealed";
+        }
+        if (block.contentOperationId !== operation.body.base_operation_id) {
+          return "content_state_mismatch";
+        }
+        return undefined;
+      }
       case "block.seal": {
         const block = findBlock(context, operation.body.block_id);
         if (block === undefined) {
@@ -368,6 +388,7 @@ export class TerminalProtocolSession {
             id: operation.body.block_id,
             lifecycle: operation.body.lifecycle,
             content: cloneContent(operation.body.content),
+            contentOperationId: operation.operation_id,
           },
         ];
         blockIds.add(operation.body.block_id);
@@ -376,6 +397,17 @@ export class TerminalProtocolSession {
         blocks = replaceBlock(context, operation.body.block_id, (block) => ({
           ...block,
           content: cloneContent(operation.body.content),
+          contentOperationId: operation.operation_id,
+        }));
+        break;
+      case "block.extend":
+        blocks = replaceBlock(context, operation.body.block_id, (block) => ({
+          ...block,
+          content: {
+            type: "text/plain",
+            data: `${block.content.data}${operation.body.fragment}`,
+          },
+          contentOperationId: operation.operation_id,
         }));
         break;
       case "block.seal":

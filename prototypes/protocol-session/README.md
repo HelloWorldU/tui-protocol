@@ -24,11 +24,17 @@ It exercises the current drafts for:
   seals its mutable Blocks in the tested session.
 - The tested Append, complete Update, and Seal sequence preserves Block
   identity, order, content, and one-way lifecycle rules.
+- Tested Extend chains append only on the latest content Operation ID. A stale
+  base leaves content unchanged, dependent fragments are rejected, and a
+  complete Update establishes a new base from which Extend can continue.
 - The tested semantic failures leave Block state unchanged, and a used
   Operation ID cannot be reused even when its first Operation failed.
 - A tested valid Update can be prepared without changing Block state, then
   committed or rejected with `resource_exhausted`; rejection leaves the Block
   unchanged while consuming the Operation ID.
+- A tested prepared Extend rejected with `resource_exhausted` leaves its
+  fragment unapplied and leaves the prior successful content base usable by a
+  new Extend Operation ID.
 - While one tested Operation is prepared, later Messages are refused until the
   host commits or rejects it, preserving the Session's ordered execution
   boundary. Ending the connection instead discards the prepared Operation,
@@ -42,6 +48,9 @@ It exercises the current drafts for:
 - `completeBaselineSupported` is a host-supplied assertion used to exercise
   both Capability outcomes. This prototype does not determine whether a real
   terminal satisfies the complete baseline.
+- ReplaceSuffix is not implemented yet. Until it is, the tested positive
+  Capability assertion is a control-path fixture rather than evidence that
+  this Session implements the complete current baseline.
 - `endConnection()` is an experimental host hook; it does not detect the end
   of a real byte stream by itself.
 - The exported TypeScript API and its in-memory snapshots are experimental,

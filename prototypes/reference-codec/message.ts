@@ -12,6 +12,8 @@ export const ERROR_CODES = [
   "block_sealed",
   "unsupported_content_type",
   "invalid_content",
+  "content_state_mismatch",
+  "invalid_content_boundary",
   "resource_exhausted",
   "internal_error",
 ] as const;
@@ -46,6 +48,7 @@ export type Message =
   | ContextCloseResponse
   | BlockAppend
   | BlockUpdate
+  | BlockExtend
   | BlockSeal
   | ProtocolErrorMessage;
 
@@ -135,6 +138,15 @@ export interface BlockUpdate extends BlockOperationEnvelope {
   };
 }
 
+export interface BlockExtend extends BlockOperationEnvelope {
+  readonly kind: "block.extend";
+  readonly body: {
+    readonly block_id: string;
+    readonly base_operation_id: string;
+    readonly fragment: string;
+  };
+}
+
 export interface BlockSeal extends BlockOperationEnvelope {
   readonly kind: "block.seal";
   readonly body: { readonly block_id: string };
@@ -161,7 +173,11 @@ export type InvalidMessageIdentity =
     }
   | {
       readonly category: "operation";
-      readonly kind: "block.append" | "block.update" | "block.seal";
+      readonly kind:
+        | "block.append"
+        | "block.update"
+        | "block.extend"
+        | "block.seal";
       readonly operation_id: string;
       readonly context_id: string;
     };
@@ -332,6 +348,16 @@ function validateMessageInner(value: unknown): Message {
       requireId(body.block_id, "Message.body.block_id");
       validatePlainTextSnapshot(body.content, "Message.body.content");
       break;
+    case "block.extend":
+      validateOperationEnvelope(envelope);
+      requireExactKeys(body, ["block_id", "base_operation_id", "fragment"]);
+      requireId(body.block_id, "Message.body.block_id");
+      requireId(
+        body.base_operation_id,
+        "Message.body.base_operation_id",
+      );
+      requireNonEmptyString(body.fragment, "Message.body.fragment");
+      break;
     case "block.seal":
       validateOperationEnvelope(envelope);
       requireExactKeys(body, ["block_id"]);
@@ -472,6 +498,10 @@ function requireVersion(value: unknown): void {
 }
 
 function requireId(value: unknown, context: string): string {
+  return requireNonEmptyString(value, context);
+}
+
+function requireNonEmptyString(value: unknown, context: string): string {
   const id = requireScalarString(value, context);
   if (id.length === 0) {
     invalid(`${context} must not be empty.`);
@@ -565,6 +595,7 @@ function identifyInvalidMessage(
     }
     case "block.append":
     case "block.update":
+    case "block.extend":
     case "block.seal": {
       const operationId = reliableId(value.operation_id);
       const contextId = reliableId(value.context_id);

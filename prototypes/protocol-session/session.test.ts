@@ -3,6 +3,7 @@ import test from "node:test";
 
 import type {
   BlockAppend,
+  BlockExtend,
   BlockSeal,
   BlockUpdate,
   Message,
@@ -124,6 +125,105 @@ test("Append creates a mutable Block, Update replaces its content, and Seal prev
   assert.equal(
     session.context("context-1")?.blocks[0]?.content.data,
     "complete",
+  );
+});
+
+test("Extend appends each fragment only when it names the Block's latest content Operation", () => {
+  const session = openSession();
+
+  assert.deepEqual(session.handle(append("1", "thinking", "Start")), []);
+  assert.deepEqual(
+    session.handle(extend("2", "thinking", "1", "🙂")),
+    [],
+  );
+  assert.deepEqual(
+    session.handle(extend("3", "thinking", "2", " done")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "Start🙂 done",
+  );
+});
+
+test("a rejected Extend breaks dependent fragments until a complete Update establishes a new base", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "Start"));
+
+  assertOperationError(
+    session.handle(extend("2", "thinking", "missing", " lost")),
+    "2",
+    "content_state_mismatch",
+  );
+  assertOperationError(
+    session.handle(extend("3", "thinking", "2", " dependent")),
+    "3",
+    "content_state_mismatch",
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "Start",
+  );
+
+  assert.deepEqual(session.handle(update("4", "thinking", "Recovered")), []);
+  assert.deepEqual(
+    session.handle(extend("5", "thinking", "4", " safely")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "Recovered safely",
+  );
+});
+
+test("rejecting a prepared Extend leaves its fragment unapplied and its prior base usable", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "Start"));
+
+  const preparation = session.prepareOperation(
+    extend("2", "thinking", "1", " too large"),
+  );
+  assert.equal(preparation.status, "prepared");
+  if (preparation.status !== "prepared") {
+    throw new Error("Expected Extend to be prepared.");
+  }
+
+  assertOperationError(
+    preparation.reject("resource_exhausted"),
+    "2",
+    "resource_exhausted",
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "Start",
+  );
+  assert.deepEqual(
+    session.handle(extend("3", "thinking", "1", " fits")),
+    [],
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "Start fits",
+  );
+});
+
+test("Extend rejects unknown and sealed Blocks without changing their content", () => {
+  const session = openSession();
+
+  assertOperationError(
+    session.handle(extend("1", "missing", "base", " fragment")),
+    "1",
+    "block_not_found",
+  );
+  session.handle(append("2", "sealed", "done", "sealed"));
+  assertOperationError(
+    session.handle(extend("3", "sealed", "2", " late")),
+    "3",
+    "block_sealed",
+  );
+  assert.equal(
+    session.context("context-1")?.blocks[0]?.content.data,
+    "done",
   );
 });
 
@@ -539,6 +639,25 @@ function update(
     body: {
       block_id: blockId,
       content: { type: "text/plain", data },
+    },
+  };
+}
+
+function extend(
+  operationId: string,
+  blockId: string,
+  baseOperationId: string,
+  fragment: string,
+): BlockExtend {
+  return {
+    version: 1,
+    kind: "block.extend",
+    operation_id: operationId,
+    context_id: "context-1",
+    body: {
+      block_id: blockId,
+      base_operation_id: baseOperationId,
+      fragment,
     },
   };
 }

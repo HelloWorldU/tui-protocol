@@ -102,6 +102,144 @@ test("OSC Message bytes grow and shrink an earlier Block without moving the late
   xterm.dispose();
 });
 
+test("Extend bytes grow an earlier Block without moving the later history row being read, while a stale base renders nothing", async () => {
+  const xterm = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "thinking", "first", "mutable"), 3),
+      encodeInput(append(contextId, "2", "context", "context", "sealed"), 4),
+      encodeInput(
+        append(
+          contextId,
+          "3",
+          "reader",
+          "reader-1\nreader-2\nreader-3",
+          "sealed",
+        ),
+        5,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  const readerStart = requiredRange(endpoint, contextId, "reader").start;
+  xterm.scrollToLine(readerStart);
+  assert.equal(viewportTopText(xterm), "reader-1");
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        extend(contextId, "4", "thinking", "1", "\nsecond\nthird"),
+        6,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  const grownReaderStart = requiredRange(endpoint, contextId, "reader").start;
+  assert.equal(grownReaderStart, readerStart + 2);
+  assert.equal(xterm.buffer.active.viewportY, grownReaderStart);
+  assert.equal(viewportTopText(xterm), "reader-1");
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "first\nsecond\nthird",
+  );
+  assert.deepEqual(bufferRows(xterm), [
+    "first",
+    "second",
+    "third",
+    "context",
+    "reader-1",
+    "reader-2",
+    "reader-3",
+    "",
+  ]);
+
+  const renderedBeforeMismatch = bufferRows(xterm);
+  const mismatch = endpoint.push(
+    encodeInput(extend(contextId, "5", "thinking", "1", " stale"), 7),
+  );
+  assert.deepEqual(decodeResponses(mismatch), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "5",
+      context_id: contextId,
+      body: { code: "content_state_mismatch" },
+    },
+  ]);
+  await endpoint.drain();
+  assert.deepEqual(bufferRows(xterm), renderedBeforeMismatch);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
+test("Extend keeps a pre-existing row in its own Block at the same viewport position", async () => {
+  const xterm = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(
+        append(
+          contextId,
+          "1",
+          "thinking",
+          "thinking-1\nthinking-2\nthinking-3\nthinking-4\nthinking-5",
+          "mutable",
+        ),
+        3,
+      ),
+      encodeInput(
+        append(contextId, "2", "tail", "tail-1\ntail-2\ntail-3", "sealed"),
+        4,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  xterm.scrollToLine(1);
+  assert.equal(viewportTopText(xterm), "thinking-2");
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        extend(
+          contextId,
+          "3",
+          "thinking",
+          "1",
+          "\nthinking-6\nthinking-7",
+        ),
+        5,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  assert.equal(xterm.buffer.active.viewportY, 1);
+  assert.equal(viewportTopText(xterm), "thinking-2");
+  assert.equal(
+    endpoint.context(contextId)?.blocks[0]?.content.data,
+    "thinking-1\nthinking-2\nthinking-3\nthinking-4\nthinking-5\n" +
+      "thinking-6\nthinking-7",
+  );
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 test("Append and Update bytes in one input chunk are planned in order and render the updated Block", async () => {
   const xterm = createTerminal();
   const endpoint = new XtermProtocolEndpoint(xterm, {
@@ -352,6 +490,69 @@ test("when xterm cannot grow history within its capacity, the rejected Update ch
   xterm.dispose();
 });
 
+test("when Extend would exceed xterm history capacity, it changes neither Session nor rendered history and the prior base remains usable", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 3,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "thinking", "old", "mutable"), 3),
+      encodeInput(
+        append(contextId, "2", "tail", "tail-1\ntail-2\ntail-3", "sealed"),
+        4,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+  const before = bufferRows(xterm);
+
+  const rejected = endpoint.push(
+    encodeInput(
+      extend(
+        contextId,
+        "3",
+        "thinking",
+        "1",
+        "\nnew-2\nnew-3\nnew-4",
+      ),
+      5,
+    ),
+  );
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "3",
+      context_id: contextId,
+      body: { code: "resource_exhausted" },
+    },
+  ]);
+  await endpoint.drain();
+  assert.equal(endpoint.context(contextId)?.blocks[0]?.content.data, "old");
+  assert.deepEqual(bufferRows(xterm), before);
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(extend(contextId, "4", "thinking", "1", "-fit"), 6),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+  assert.equal(endpoint.context(contextId)?.blocks[0]?.content.data, "old-fit");
+  assert.deepEqual(bufferRows(xterm), ["old-fit", ...before.slice(1)]);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 function createTerminal(): InstanceType<typeof Terminal> {
   return new Terminal({
     allowProposedApi: true,
@@ -435,6 +636,26 @@ function update(
     body: {
       block_id: blockId,
       content: { type: "text/plain", data: content },
+    },
+  };
+}
+
+function extend(
+  contextId: string,
+  operationId: string,
+  blockId: string,
+  baseOperationId: string,
+  fragment: string,
+): Message {
+  return {
+    version: 1,
+    kind: "block.extend",
+    operation_id: operationId,
+    context_id: contextId,
+    body: {
+      block_id: blockId,
+      base_operation_id: baseOperationId,
+      fragment,
     },
   };
 }

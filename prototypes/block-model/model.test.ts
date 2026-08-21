@@ -7,7 +7,7 @@ import {
   type Operation,
 } from "./model.ts";
 
-test("Append creates Blocks, Update changes mutable content, and Seal prevents later Updates", () => {
+test("Append creates Blocks, Update and Extend change mutable content, and Seal prevents later changes", () => {
   const terminal = new TerminalPrototype({ width: 20, height: 4 });
 
   terminal.apply(
@@ -15,6 +15,7 @@ test("Append creates Blocks, Update changes mutable content, and Seal prevents l
   );
   terminal.apply(append("thinking", "Searching…", "mutable"));
   terminal.apply(update("thinking", "Searching repository…"));
+  terminal.apply(extend("thinking", " done"));
 
   assert.deepEqual(terminal.blocks(), [
     {
@@ -24,7 +25,7 @@ test("Append creates Blocks, Update changes mutable content, and Seal prevents l
     },
     {
       id: "thinking",
-      content: "Searching repository…",
+      content: "Searching repository… done",
       lifecycle: "mutable",
     },
   ]);
@@ -34,6 +35,10 @@ test("Append creates Blocks, Update changes mutable content, and Seal prevents l
 
   assertProtocolError(
     () => terminal.apply(update("thinking", "Too late")),
+    "BLOCK_SEALED",
+  );
+  assertProtocolError(
+    () => terminal.apply(extend("thinking", " too late")),
     "BLOCK_SEALED",
   );
   assertProtocolError(
@@ -115,6 +120,10 @@ function append(
 
 function update(id: string, content: string): Operation {
   return { type: "update", id, content };
+}
+
+function extend(id: string, fragment: string): Operation {
+  return { type: "extend", id, fragment };
 }
 
 function seal(id: string): Operation {

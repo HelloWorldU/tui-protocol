@@ -19,12 +19,22 @@ export interface UpdateOperation {
   readonly content: string;
 }
 
+export interface ExtendOperation {
+  readonly type: "extend";
+  readonly id: BlockId;
+  readonly fragment: string;
+}
+
 export interface SealOperation {
   readonly type: "seal";
   readonly id: BlockId;
 }
 
-export type Operation = AppendOperation | UpdateOperation | SealOperation;
+export type Operation =
+  | AppendOperation
+  | UpdateOperation
+  | ExtendOperation
+  | SealOperation;
 
 export type ProtocolErrorCode =
   | "ALREADY_SEALED"
@@ -80,6 +90,9 @@ export class TerminalPrototype {
         return;
       case "update":
         this.#update(operation.id, operation.content);
+        return;
+      case "extend":
+        this.#extend(operation.id, operation.fragment);
         return;
       case "seal":
         this.#seal(operation.id);
@@ -169,6 +182,19 @@ export class TerminalPrototype {
     }
 
     this.#blocks[index] = { ...block, content };
+  }
+
+  #extend(id: BlockId, fragment: string): void {
+    const index = this.#requireBlockIndex(id);
+    const block = this.#blocks[index];
+    if (block.lifecycle === "sealed") {
+      throw new ProtocolError(
+        "BLOCK_SEALED",
+        `Block ${JSON.stringify(id)} is sealed.`,
+      );
+    }
+
+    this.#blocks[index] = { ...block, content: `${block.content}${fragment}` };
   }
 
   #seal(id: BlockId): void {
