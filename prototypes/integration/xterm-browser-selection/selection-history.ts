@@ -12,7 +12,8 @@ interface SelectionSnapshot {
 
 /**
  * A browser-only experiment around the private xterm history renderer. It is
- * deliberately limited to complete Update selection behavior.
+ * deliberately limited to tested complete Update and single-line ASCII
+ * ReplaceSuffix selection behavior.
  */
 export class BrowserSelectionHistory {
   readonly #terminal: Terminal;
@@ -31,7 +32,10 @@ export class BrowserSelectionHistory {
   }
 
   async #apply(operation: Operation): Promise<void> {
-    if (operation.type !== "update" || !this.#terminal.hasSelection()) {
+    if (
+      (operation.type !== "update" && operation.type !== "replaceSuffix") ||
+      !this.#terminal.hasSelection()
+    ) {
       await this.#history.apply(operation);
       return;
     }
@@ -50,7 +54,28 @@ export class BrowserSelectionHistory {
     const targetEnd =
       (targetBefore.start + targetBefore.lineCount) * this.#terminal.cols;
 
-    if (selectionStart < targetEnd && selectionEnd > targetStart) {
+    const intersectsTarget =
+      selectionStart < targetEnd && selectionEnd > targetStart;
+    if (intersectsTarget) {
+      if (
+        operation.type === "replaceSuffix" &&
+        this.#selectionIsInsideRetainedPrefix(
+          operation.id,
+          operation.retain,
+          selectionStart,
+          selectionEnd,
+          targetStart,
+        )
+      ) {
+        await this.#history.apply(operation);
+        this.#terminal.select(
+          selection.column,
+          selection.row,
+          selection.length,
+        );
+        return;
+      }
+
       this.#terminal.clearSelection();
       await this.#history.apply(operation);
       return;
@@ -68,6 +93,32 @@ export class BrowserSelectionHistory {
       ? selection.row + rowDelta
       : selection.row;
     this.#terminal.select(selection.column, row, selection.length);
+  }
+
+  #selectionIsInsideRetainedPrefix(
+    id: string,
+    retain: number,
+    selectionStart: number,
+    selectionEnd: number,
+    targetStart: number,
+  ): boolean {
+    const block = this.#history
+      .blocks()
+      .find((candidate) => candidate.id === id);
+    if (block === undefined) {
+      return false;
+    }
+    if (
+      !/^[\x20-\x7e]*$/.test(block.content) ||
+      Array.from(block.content).length > this.#terminal.cols
+    ) {
+      throw new Error(
+        "ReplaceSuffix selection mapping is limited to one unwrapped ASCII line.",
+      );
+    }
+
+    const retainedEnd = targetStart + retain;
+    return selectionStart >= targetStart && selectionEnd <= retainedEnd;
   }
 
   range(id: string): Readonly<{ start: number; lineCount: number }> | undefined {

@@ -96,9 +96,9 @@ can be designed.
   the logical snapshot after this private range index drops rendered rows.
 - Browser rendering and selection behavior are not exercised by headless
   tests. The separate [browser selection
-  experiment](../integration/xterm-browser-selection/README.md) exercises two
-  initial complete-Update scenarios for that boundary in browser-hosted
-  xterm.js.
+  experiment](../integration/xterm-browser-selection/README.md) exercises
+  complete-Update and single-line ASCII ReplaceSuffix scenarios for that
+  boundary in browser-hosted xterm.js.
 
 ## Run
 

@@ -116,10 +116,11 @@ implementation.
 - `@xterm/headless` 6.0.0 exposes no selection service or selection API, so
   selection and copying are not exercised by this endpoint integration. A
   separate [browser-host experiment](../xterm-browser-selection/README.md)
-  exercises two complete-Update selection cases without composing this
-  endpoint. Search, content metadata, active input, mouse selection, and other
-  real user interaction remain untested. Resize/reflow evidence is limited to
-  the tested dimensions, plain-text content, and viewport-top anchor.
+  exercises complete-Update and single-line ASCII ReplaceSuffix selection
+  cases without composing this endpoint. Search, content metadata, active
+  input, mouse selection, and other real user interaction remain untested.
+  Resize/reflow evidence is limited to the tested dimensions, plain-text
+  content, and viewport-top anchor.
 
 ## Run
 

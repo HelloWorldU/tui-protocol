@@ -92,11 +92,75 @@ async function runScenarios(): Promise<ScenarioResult[]> {
   assertEqual(terminal.getSelection(), "", "copy source after target Update");
   assertEqual(copySelection(), undefined, "copy event after target Update");
 
+  await history.apply({
+    type: "append",
+    block: {
+      id: "suffix",
+      lifecycle: "mutable",
+      content: "alpha-beta",
+    },
+  });
+
+  const suffixRange = requiredRange("suffix");
+  terminal.select(0, suffixRange.start, "alpha".length);
+  await history.apply({
+    type: "replaceSuffix",
+    id: "suffix",
+    retain: "alpha".length,
+    replacement: "-new",
+  });
+  assertEqual(
+    terminal.getSelection(),
+    "alpha",
+    "selection inside retained prefix",
+  );
+  assertEqual(copySelection(), "alpha", "retained-prefix copy event");
+
+  terminal.select("alpha-".length, suffixRange.start, "new".length);
+  await history.apply({
+    type: "replaceSuffix",
+    id: "suffix",
+    retain: "alpha".length,
+    replacement: "-next",
+  });
+  assertEqual(
+    terminal.hasSelection(),
+    false,
+    "selection inside removed suffix",
+  );
+  assertEqual(copySelection(), undefined, "removed-suffix copy event");
+
+  terminal.select(3, suffixRange.start, 5);
+  await history.apply({
+    type: "replaceSuffix",
+    id: "suffix",
+    retain: "alpha".length,
+    replacement: "-last",
+  });
+  assertEqual(
+    terminal.hasSelection(),
+    false,
+    "selection crossing retained-prefix boundary",
+  );
+  assertEqual(copySelection(), undefined, "cross-boundary copy event");
+
   return [
     preserved,
     {
       name: "Selected Block Update",
       detail: "the selection and copy source were cleared",
+    },
+    {
+      name: "ReplaceSuffix Retained Prefix",
+      detail: "the prefix selection and copied text remained unchanged",
+    },
+    {
+      name: "ReplaceSuffix Removed Suffix",
+      detail: "a suffix selection and its copy source were cleared",
+    },
+    {
+      name: "ReplaceSuffix Boundary",
+      detail: "a selection crossing the replacement boundary was cleared",
     },
   ];
 }

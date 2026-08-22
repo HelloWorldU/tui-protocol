@@ -155,9 +155,13 @@ are not a required implementation design. A separate [browser selection
 prototype](../../prototypes/integration/xterm-browser-selection/README.md)
 demonstrates two complete-Update cases: an unaffected later selection and its
 copy text survive earlier-Block growth, while updating the selected Block
-clears both the selection and its subsequent copy source. It does not yet
-cover mouse selection, the operating-system clipboard, incremental Operations,
-reflow, or capacity eviction.
+clears both the selection and its subsequent copy source. The same browser run
+demonstrates three single-line ASCII ReplaceSuffix cases: a selection entirely
+inside the retained prefix survives, while a selection inside the replaced old
+suffix or crossing the retained-prefix boundary is cleared. Each case inserts
+a non-empty replacement suffix. The experiment does not yet cover mouse
+selection, the operating-system clipboard, Extend, reflow, capacity eviction,
+or non-ASCII and wrapped ReplaceSuffix mapping.
 
 ## Current Scope
 
