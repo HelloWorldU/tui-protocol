@@ -51,6 +51,12 @@ queue. Tests await `drain()` before observing the resulting xterm.js history.
   and leaves the prior content base usable by a later fitting Extend.
 - The equivalent tested rejection for ReplaceSuffix leaves both states
   unchanged and leaves the prior content base usable by a fitting replacement.
+- In one tested capacity-aligned Update, the required trim removes exactly one
+  complete oldest Block. A later history row being read stays at the viewport
+  top, and a following Extend from the same input chunk still renders.
+- When the same complete-Block trim removes the Block being read, the tested
+  viewport moves to the next retained Block and remains in history-reading
+  state instead of following the tail.
 
 These results provide experimental evidence for the reading-anchor and
 tail-following requirements in [Terminal-Native
@@ -68,6 +74,14 @@ The check uses the current plain-text Block layout model to predict the row
 growth before Session commit. It closes the previously observed split-state
 case for the tested ASCII content and dimensions; it is not evidence that all
 renderer failures are detected before commit.
+
+A separate tested path permits normal trimming only when the exact required
+row count consists of complete oldest Blocks and the changed Block remains
+retained. The private xterm range index removes those Block ranges, preserves
+a surviving history-reading position, or moves a removed position to the next
+retained Block without following the tail. Later queued rendering remains
+ordered. This is a narrow feasibility result, not a general trimming
+implementation.
 
 ## Experimental Boundaries
 
@@ -88,9 +102,17 @@ renderer failures are detected before commit.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.
-- Scrollback-capacity trimming and Update of the Block containing the reading
-  anchor remain unsupported by the private history spike. The integration
-  rejects only the tested capacity-overflow case instead of trimming.
+- Append-driven trimming, partial-Block trimming, and mutating a fully trimmed
+  Block remain unsupported and outside the current evidence. The preflight
+  permits trimming only within the tested complete-Block replacement boundary
+  and requires no earlier render to be pending. Other detected capacity cases
+  continue through the existing `resource_exhausted` path. Complete Update of
+  the Block containing the reading anchor remains unsupported independently of
+  capacity.
+- The xterm.js Buffer and range index discard a trimmed Block's rendered rows,
+  but the in-memory Session retains its logical snapshot. This experiment does
+  not yet establish a protocol lifecycle for forgotten Blocks or demonstrate
+  complete memory reclamation.
 - `@xterm/headless` 6.0.0 exposes no selection service or selection API, so
   selection and copying require a future browser-host experiment. Search,
   content metadata, active input, browser rendering, and real user interaction

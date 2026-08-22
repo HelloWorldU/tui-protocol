@@ -31,6 +31,11 @@ type TargetAnchorMapping =
   | "preserve"
   | { readonly retainedLineCount: number };
 
+interface CapacityTrimPlan {
+  readonly entryCount: number;
+  readonly blockIds: readonly BlockId[];
+}
+
 interface PrivateBufferLine {
   readonly isWrapped: boolean;
   copyFrom(line: PrivateBufferLine): void;
@@ -77,8 +82,10 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #plannedModel: TerminalPrototype;
   readonly #entries: BlockEntry[] = [];
   readonly #entryIndexes = new Map<BlockId, number>();
+  readonly #plannedTrimmedBlockIds = new Set<BlockId>();
   readonly #registrations: IDisposable[] = [];
   #readingAnchor: PrivateMarker | undefined;
+  #acceptedRenderCount = 0;
 
   constructor(terminal: Terminal) {
     this.#terminal = terminal;
@@ -111,32 +118,37 @@ export class PrivateCoreBlockHistory implements IDisposable {
   /** Records an accepted Operation in the projection used by preflight. */
   accept(operation: Operation): void {
     this.#plannedModel.apply(operation);
+    this.#acceptedRenderCount += 1;
   }
 
   /** Materializes an Operation that was already recorded by accept(). */
   async renderAccepted(operation: Operation): Promise<void> {
-    switch (operation.type) {
-      case "append":
-        await this.#append(operation.block);
-        return;
-      case "update":
-        await this.#update(operation.id, operation.content);
-        return;
-      case "extend":
-        await this.#extend(operation.id, operation.fragment);
-        return;
-      case "replaceSuffix":
-        await this.#replaceSuffix(
-          operation.id,
-          operation.retain,
-          operation.replacement,
-        );
-        return;
-      case "seal":
-        this.#model.apply(operation);
-        return;
-      default:
-        assertNever(operation);
+    try {
+      switch (operation.type) {
+        case "append":
+          await this.#append(operation.block);
+          return;
+        case "update":
+          await this.#update(operation.id, operation.content);
+          return;
+        case "extend":
+          await this.#extend(operation.id, operation.fragment);
+          return;
+        case "replaceSuffix":
+          await this.#replaceSuffix(
+            operation.id,
+            operation.retain,
+            operation.replacement,
+          );
+          return;
+        case "seal":
+          this.#model.apply(operation);
+          return;
+        default:
+          assertNever(operation);
+      }
+    } finally {
+      this.#acceptedRenderCount -= 1;
     }
   }
 
@@ -169,6 +181,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
         `Block ${JSON.stringify(operation.id)} has no planned xterm.js content.`,
       );
     }
+    if (this.#plannedTrimmedBlockIds.has(operation.id)) {
+      return true;
+    }
     const currentLineCount = layoutBlocks(
       [block],
       this.#terminal.cols,
@@ -199,14 +214,27 @@ export class PrivateCoreBlockHistory implements IDisposable {
       ],
       this.#terminal.cols,
     ).length;
+    const retainedBlocks = this.#plannedModel
+      .blocks()
+      .filter((candidate) => !this.#plannedTrimmedBlockIds.has(candidate.id));
     const plannedLineCount =
-      this.#plannedModel.allRows().length -
+      layoutBlocks(retainedBlocks, this.#terminal.cols).length -
       currentLineCount +
       replacementLineCount;
     const lines = this.#bufferService.buffer.lines;
-    return (
-      Math.max(this.#terminal.rows, plannedLineCount + 1) > lines.maxLength
-    );
+    const excess =
+      Math.max(this.#terminal.rows, plannedLineCount + 1) - lines.maxLength;
+    if (excess <= 0) {
+      return false;
+    }
+    const trimPlan = this.#capacityTrimPlan(excess, operation.id);
+    if (trimPlan === undefined) {
+      return true;
+    }
+    for (const id of trimPlan.blockIds) {
+      this.#plannedTrimmedBlockIds.add(id);
+    }
+    return false;
   }
 
   dispose(): void {
@@ -220,6 +248,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
     }
     this.#entries.length = 0;
     this.#entryIndexes.clear();
+    this.#plannedTrimmedBlockIds.clear();
   }
 
   async #append(block: Block): Promise<void> {
@@ -266,27 +295,49 @@ export class PrivateCoreBlockHistory implements IDisposable {
         : mapTargetAnchor(targetAnchorOffset, targetAnchorMapping);
 
     const delta = replacement.length - range.lineCount;
-    if (delta > 0 && buffer.lines.length + delta > buffer.lines.maxLength) {
-      throw new Error("This spike does not yet handle scrollback capacity trimming.");
+    const trimLineCount = Math.max(
+      0,
+      buffer.lines.length + delta - buffer.lines.maxLength,
+    );
+    const trimPlan =
+      trimLineCount === 0
+        ? undefined
+        : this.#capacityTrimPlan(
+            trimLineCount,
+            id,
+            Number.POSITIVE_INFINITY,
+          );
+    if (trimLineCount > 0 && trimPlan === undefined) {
+      throw new Error(
+        "This spike cannot safely trim the required scrollback rows.",
+      );
     }
 
     this.#model.apply({ type: "update", id, content });
 
     buffer.lines.splice(range.start, range.lineCount, ...replacement);
-    buffer.ybase = Math.max(0, oldYbase + delta);
+    buffer.ybase = Math.max(0, oldYbase + delta - trimLineCount);
 
     if (wasFollowingTail) {
       buffer.ydisp = buffer.ybase;
     } else if (mappedTargetAnchorOffset !== undefined) {
       buffer.ydisp = Math.min(
         buffer.ybase,
-        range.start + mappedTargetAnchorOffset,
+        range.start + mappedTargetAnchorOffset - trimLineCount,
       );
     } else if (oldYdisp >= oldEnd) {
-      buffer.ydisp = Math.max(0, oldYdisp + delta);
+      buffer.ydisp = Math.max(0, oldYdisp + delta - trimLineCount);
+    } else {
+      // If capacity trimming removes this reading position, zero is the
+      // nearest later retained row. Otherwise the same subtraction preserves
+      // the surviving position after leading rows move out of history.
+      buffer.ydisp = Math.max(0, oldYdisp - trimLineCount);
     }
 
-    entry.marker = buffer.addMarker(range.start);
+    entry.marker = buffer.addMarker(range.start - trimLineCount);
+    if (trimPlan !== undefined) {
+      this.#dropLeadingEntries(trimPlan.entryCount);
+    }
 
     this.#bufferService._onScroll.fire(buffer.ydisp);
   }
@@ -321,6 +372,51 @@ export class PrivateCoreBlockHistory implements IDisposable {
       `${retainedPrefix}${replacement}`,
       { retainedLineCount: retainedLines.length },
     );
+  }
+
+  #capacityTrimPlan(
+    lineCount: number,
+    targetId: BlockId,
+    acceptedRenderLimit = 0,
+  ): CapacityTrimPlan | undefined {
+    if (this.#acceptedRenderCount > acceptedRenderLimit || lineCount <= 0) {
+      return undefined;
+    }
+
+    let accumulated = 0;
+    for (const [index, entry] of this.#entries.entries()) {
+      if (entry.id === targetId) {
+        return undefined;
+      }
+      const range = this.#rangeAt(index);
+      if (index === 0 && range.start !== 0) {
+        return undefined;
+      }
+      accumulated += range.lineCount;
+      if (accumulated === lineCount) {
+        return {
+          entryCount: index + 1,
+          blockIds: this.#entries
+            .slice(0, index + 1)
+            .map((candidate) => candidate.id),
+        };
+      }
+      if (accumulated > lineCount) {
+        return undefined;
+      }
+    }
+    return undefined;
+  }
+
+  #dropLeadingEntries(count: number): void {
+    const removed = this.#entries.splice(0, count);
+    for (const entry of removed) {
+      this.#plannedTrimmedBlockIds.add(entry.id);
+    }
+    this.#entryIndexes.clear();
+    for (const [index, entry] of this.#entries.entries()) {
+      this.#entryIndexes.set(entry.id, index);
+    }
   }
 
   #rangeAt(index: number): BlockRange {

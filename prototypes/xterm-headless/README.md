@@ -88,7 +88,12 @@ can be designed.
 - Complete Update of the Block containing the viewport anchor remains
   undefined; the xterm integration separately exercises ReplaceSuffix's
   narrower mapping.
-- Scrollback-capacity trimming is not yet supported by the private range index.
+- The private range index supports one tested trimming boundary: exact removal
+  of complete oldest Blocks. It preserves a surviving reading position and
+  moves a removed one to the next retained Block without following the tail.
+  Append-driven trimming, partial-Block trimming, and later mutation of a
+  fully trimmed Block remain unsupported. The composed Session also retains
+  the logical snapshot after this private range index drops rendered rows.
 - Browser rendering and selection behavior are not exercised by headless
   tests.
 

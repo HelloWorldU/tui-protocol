@@ -490,6 +490,190 @@ test("when xterm cannot grow history within its capacity, the rejected Update ch
   xterm.dispose();
 });
 
+test("when an Update fills xterm history, one complete oldest Block is trimmed, a later row being read stays in place, and the following Extend renders", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 7,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(
+        append(contextId, "1", "oldest", "old-1\nold-2", "sealed"),
+        3,
+      ),
+      encodeInput(
+        append(contextId, "2", "thinking", "draft", "mutable"),
+        4,
+      ),
+      encodeInput(
+        append(
+          contextId,
+          "3",
+          "reader",
+          "reader-1\nreader-2\nreader-3",
+          "sealed",
+        ),
+        5,
+      ),
+      encodeInput(
+        append(contextId, "4", "tail", "tail-1\ntail-2", "sealed"),
+        6,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  const readerStart = requiredRange(endpoint, contextId, "reader").start;
+  assert.equal(readerStart, 3);
+  xterm.scrollToLine(readerStart);
+  assert.equal(viewportTopText(xterm), "reader-1");
+
+  assert.deepEqual(
+    endpoint.push(
+      concatenate([
+        encodeInput(
+          update(
+            contextId,
+            "5",
+            "thinking",
+            "new-1\nnew-2\nnew-3\nnew-4",
+          ),
+          7,
+        ),
+        encodeInput(
+          extend(contextId, "6", "thinking", "5", "-done"),
+          8,
+        ),
+      ]),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  assert.equal(endpoint.range(contextId, "oldest"), undefined);
+  assert.equal(
+    endpoint.context(contextId)?.blocks.find(
+      (block) => block.id === "oldest",
+    )?.content.data,
+    "old-1\nold-2",
+  );
+  assert.equal(requiredRange(endpoint, contextId, "thinking").start, 0);
+  assert.equal(requiredRange(endpoint, contextId, "reader").start, 4);
+  assert.equal(xterm.buffer.active.viewportY, 4);
+  assert.notEqual(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
+  assert.equal(viewportTopText(xterm), "reader-1");
+  assert.deepEqual(bufferRows(xterm), [
+    "new-1",
+    "new-2",
+    "new-3",
+    "new-4-done",
+    "reader-1",
+    "reader-2",
+    "reader-3",
+    "tail-1",
+    "tail-2",
+    "",
+  ]);
+  assert.equal(
+    endpoint.context(contextId)?.blocks.find(
+      (block) => block.id === "thinking",
+    )?.content.data,
+    "new-1\nnew-2\nnew-3\nnew-4-done",
+  );
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
+test("when capacity trimming removes the complete Block being read, the viewport moves to the next retained Block and does not follow the tail", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 7,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(
+        append(contextId, "1", "oldest", "old-1\nold-2", "sealed"),
+        3,
+      ),
+      encodeInput(
+        append(contextId, "2", "thinking", "draft", "mutable"),
+        4,
+      ),
+      encodeInput(
+        append(
+          contextId,
+          "3",
+          "reader",
+          "reader-1\nreader-2\nreader-3",
+          "sealed",
+        ),
+        5,
+      ),
+      encodeInput(
+        append(contextId, "4", "tail", "tail-1\ntail-2", "sealed"),
+        6,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  xterm.scrollToLine(0);
+  assert.equal(viewportTopText(xterm), "old-1");
+  assert.notEqual(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        update(
+          contextId,
+          "5",
+          "thinking",
+          "new-1\nnew-2\nnew-3\nnew-4",
+        ),
+        7,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  assert.equal(endpoint.range(contextId, "oldest"), undefined);
+  assert.equal(requiredRange(endpoint, contextId, "thinking").start, 0);
+  assert.equal(xterm.buffer.active.viewportY, 0);
+  assert.equal(viewportTopText(xterm), "new-1");
+  assert.notEqual(xterm.buffer.active.viewportY, xterm.buffer.active.baseY);
+  assert.deepEqual(bufferRows(xterm), [
+    "new-1",
+    "new-2",
+    "new-3",
+    "new-4",
+    "reader-1",
+    "reader-2",
+    "reader-3",
+    "tail-1",
+    "tail-2",
+    "",
+  ]);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 test("when Extend would exceed xterm history capacity, it changes neither Session nor rendered history and the prior base remains usable", async () => {
   const xterm = new Terminal({
     allowProposedApi: true,

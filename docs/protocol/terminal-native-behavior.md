@@ -139,12 +139,19 @@ Prototype](../../prototypes/integration/xterm-protocol-endpoint/README.md)
 composes the current OSC codec, Session semantics, and a private xterm.js
 history implementation. Its tested earlier-Block growth and shrink preserve a
 later history-reading position, including across a tested resize and reflow,
-while its tested tail-following viewport stays at the new tail. The
-prototype's capacity-limited case demonstrates that a known resource limit can
-reject a prepared Update with `resource_exhausted` before either Session state
-or rendered history changes. Other renderer failures remain outside that
-tested boundary. Its private APIs and untested interaction paths further bound
-this evidence; they are not a required implementation design.
+while its tested tail-following viewport stays at the new tail. Its Extend and
+ReplaceSuffix paths additionally exercise incremental content-state checks and
+their defined target-Block reading-anchor mappings. The prototype's
+capacity-limited cases demonstrate that a known resource limit can reject a
+prepared Update, Extend, or ReplaceSuffix with `resource_exhausted` before
+either Session state or rendered history changes. A separate capacity-aligned
+Update test trims exactly one complete oldest Block while preserving a later
+history-reading position and subsequent queued rendering. When that complete
+Block instead contains the reading position, another tested path moves the
+viewport to the next retained Block without following the tail. Partial-Block
+trimming remains outside that tested boundary. Other renderer failures,
+private APIs, and untested interaction paths further bound this evidence; they
+are not a required implementation design.
 
 ## Current Scope
 
