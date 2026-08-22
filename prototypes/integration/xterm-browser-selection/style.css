@@ -1,0 +1,46 @@
+:root {
+  color: #1f2933;
+  background: #eef2f6;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  box-sizing: border-box;
+  width: min(760px, calc(100% - 32px));
+  margin: 32px auto;
+  padding: 24px;
+  border: 1px solid #c9d2dc;
+  border-radius: 12px;
+  background: white;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+[data-status="passed"] {
+  color: #17633a;
+}
+
+[data-status="failed"] {
+  color: #a32727;
+}
+
+li + li {
+  margin-top: 8px;
+}
+
+section {
+  margin-top: 24px;
+  padding: 12px;
+  background: #101820;
+}
+
+#terminal {
+  height: 120px;
+}

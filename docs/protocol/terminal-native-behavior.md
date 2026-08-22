@@ -151,7 +151,13 @@ Block instead contains the reading position, another tested path moves the
 viewport to the next retained Block without following the tail. Partial-Block
 trimming remains outside that tested boundary. Other renderer failures,
 private APIs, and untested interaction paths further bound this evidence; they
-are not a required implementation design.
+are not a required implementation design. A separate [browser selection
+prototype](../../prototypes/integration/xterm-browser-selection/README.md)
+demonstrates two complete-Update cases: an unaffected later selection and its
+copy text survive earlier-Block growth, while updating the selected Block
+clears both the selection and its subsequent copy source. It does not yet
+cover mouse selection, the operating-system clipboard, incremental Operations,
+reflow, or capacity eviction.
 
 ## Current Scope
 

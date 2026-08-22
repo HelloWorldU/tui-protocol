@@ -95,7 +95,10 @@ can be designed.
   fully trimmed Block remain unsupported. The composed Session also retains
   the logical snapshot after this private range index drops rendered rows.
 - Browser rendering and selection behavior are not exercised by headless
-  tests.
+  tests. The separate [browser selection
+  experiment](../integration/xterm-browser-selection/README.md) exercises two
+  initial complete-Update scenarios for that boundary in browser-hosted
+  xterm.js.
 
 ## Run
 
