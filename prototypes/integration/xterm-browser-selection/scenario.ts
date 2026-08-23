@@ -146,6 +146,10 @@ async function runScenarios(): Promise<ScenarioResult[]> {
 
   const selectedBlockReflow = await runSelectedBlockReflowScenario();
   const earlierBlockReflow = await runEarlierBlockReflowScenario();
+  const retainedCapacitySelection =
+    await runRetainedCapacitySelectionScenario();
+  const evictedCapacitySelection =
+    await runEvictedCapacitySelectionScenario();
 
   return [
     preserved,
@@ -167,6 +171,8 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     },
     selectedBlockReflow,
     earlierBlockReflow,
+    retainedCapacitySelection,
+    evictedCapacitySelection,
   ];
 }
 
@@ -254,7 +260,132 @@ async function runEarlierBlockReflowScenario(): Promise<ScenarioResult> {
   }
 }
 
-function createIsolatedFixture(): {
+async function runRetainedCapacitySelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    const readerBefore = requiredRange("capacity-reader", fixture.history);
+    fixture.terminal.select(0, readerBefore.start, "reader".length);
+
+    await growCapacityFixture(fixture.history);
+
+    const readerAfter = requiredRange("capacity-reader", fixture.history);
+    assertEqual(
+      fixture.history.range("capacity-oldest"),
+      undefined,
+      "oldest Block range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "reader",
+      "retained selection after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      readerAfter.start,
+      "retained selection row after capacity eviction",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "reader",
+      "retained copy event after capacity eviction",
+    );
+    return {
+      name: "Capacity Evicts Earlier Block",
+      detail: "the retained selection moved with its Block and copied unchanged",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runEvictedCapacitySelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    const oldest = requiredRange("capacity-oldest", fixture.history);
+    fixture.terminal.select(0, oldest.start, "old-11111".length);
+
+    await growCapacityFixture(fixture.history);
+
+    assertEqual(
+      fixture.history.range("capacity-oldest"),
+      undefined,
+      "selected Block range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.hasSelection(),
+      false,
+      "selection after its complete Block is evicted",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      undefined,
+      "copy event after the selected Block is evicted",
+    );
+    return {
+      name: "Capacity Evicts Selected Block",
+      detail: "the selection and copy source were cleared",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function createCapacityFixture(): Promise<ReturnType<typeof createIsolatedFixture>> {
+  const fixture = createIsolatedFixture({
+    cols: 10,
+    rows: 3,
+    scrollback: 7,
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-oldest",
+      lifecycle: "sealed",
+      content: "old-11111old-22222",
+    },
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-growing",
+      lifecycle: "mutable",
+      content: "draft",
+    },
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-reader",
+      lifecycle: "sealed",
+      content: "reader",
+    },
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-tail",
+      lifecycle: "sealed",
+      content: "tail-1111tail-2222tail-3333tail-4",
+    },
+  });
+  return fixture;
+}
+
+async function growCapacityFixture(
+  fixtureHistory: BrowserSelectionHistory,
+): Promise<void> {
+  await fixtureHistory.apply({
+    type: "update",
+    id: "capacity-growing",
+    content: "new-11111new-22222new-33333new-4",
+  });
+}
+
+function createIsolatedFixture(options: {
+  readonly cols?: number;
+  readonly rows?: number;
+  readonly scrollback?: number;
+} = {}): {
   readonly terminal: Terminal;
   readonly history: BrowserSelectionHistory;
   dispose(): void;
@@ -263,9 +394,9 @@ function createIsolatedFixture(): {
   host.className = "isolated-terminal";
   document.body.appendChild(host);
   const isolatedTerminal = new Terminal({
-    cols: 20,
-    rows: 4,
-    scrollback: 100,
+    cols: options.cols ?? 20,
+    rows: options.rows ?? 4,
+    scrollback: options.scrollback ?? 100,
     disableStdin: true,
   });
   isolatedTerminal.open(host);

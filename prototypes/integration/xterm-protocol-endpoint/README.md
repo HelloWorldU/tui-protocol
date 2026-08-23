@@ -117,11 +117,11 @@ implementation.
   selection and copying are not exercised by this endpoint integration. A
   separate [browser-host experiment](../xterm-browser-selection/README.md)
   exercises complete-Update and single-line ASCII ReplaceSuffix selection
-  cases plus two resize/reflow selection cases without composing this endpoint.
-  Search, content metadata, active input, mouse selection, and other real user
-  interaction remain untested. Resize/reflow evidence is limited to the tested
-  dimensions, plain-text content, viewport-top anchor, and single-line ASCII
-  selections.
+  cases, two resize/reflow selection cases, and both complete-Block capacity
+  eviction outcomes without composing this endpoint. Search, content metadata,
+  active input, mouse selection, and other real user interaction remain
+  untested. Selection evidence is limited to single-line ASCII content and the
+  tested dimensions and capacity boundary.
 
 ## Run
 

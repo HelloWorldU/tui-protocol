@@ -161,9 +161,12 @@ inside the retained prefix survives, while a selection inside the replaced old
 suffix or crossing the retained-prefix boundary is cleared. Each case inserts
 a non-empty replacement suffix. Two resize cases preserve the selected and
 copied logical text when either the selected Block itself or an earlier Block
-reflows to new physical rows. The experiment does not yet cover mouse
-selection, the operating-system clipboard, Extend, capacity eviction, or
-non-ASCII, line-break, and multi-Block selection mapping.
+reflows to new physical rows. Two capacity cases preserve a selection in a
+retained Block when an earlier complete Block is evicted and clear the
+selection when its complete Block is evicted. The experiment does not yet
+cover mouse selection, the operating-system clipboard, Extend, partial-Block
+or Append-driven eviction, or non-ASCII, line-break, and multi-Block selection
+mapping.
 
 ## Current Scope
 

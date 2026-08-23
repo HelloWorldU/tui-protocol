@@ -51,12 +51,28 @@ content offsets before resize, then reconstructs physical selection coordinates
 after xterm.js reflow. This is a tested implementation fixture, not a proposed
 Terminal integration design.
 
+The browser run also demonstrates both sides of the tested capacity boundary:
+
+- When complete-Block capacity eviction removes an older Block before the
+  selected Block, the selection moves with its retained Block and copies the
+  same text.
+- When the same capacity boundary removes the complete selected Block, the
+  selection and subsequent copy source are cleared rather than attaching to
+  unrelated retained content.
+
+These scenarios reuse the private history prototype's narrow capacity boundary:
+an Update requires exactly the number of rows occupied by one complete oldest
+Block. The fixture restores a retained selection by Block identity and clears
+it when that Block no longer has a rendered range.
+
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
   selection, and cross-browser behavior are not exercised.
-- Selection behavior for `Extend`, capacity eviction, or a selection spanning
-  multiple Blocks is not yet implemented or tested.
+- Selection behavior for `Extend` or a selection spanning multiple Blocks is
+  not yet implemented or tested.
+- Partial-Block capacity eviction and Append-driven eviction remain outside the
+  selection experiment.
 - Resize selection mapping for line breaks, wide or combining characters, and
   other non-ASCII text is not implemented or tested.
 - ReplaceSuffix selection mapping for wrapped lines, line breaks, wide or

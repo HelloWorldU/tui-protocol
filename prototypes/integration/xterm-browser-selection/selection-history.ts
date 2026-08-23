@@ -77,6 +77,7 @@ export class BrowserSelectionHistory {
       await this.#history.apply(operation);
       return;
     }
+    const logicalSelection = this.#logicalSelectionSnapshot();
 
     const selectionStart =
       selection.row * this.#terminal.cols + selection.column;
@@ -90,20 +91,11 @@ export class BrowserSelectionHistory {
     if (intersectsTarget) {
       if (
         operation.type === "replaceSuffix" &&
-        this.#selectionIsInsideRetainedPrefix(
-          operation.id,
-          operation.retain,
-          selectionStart,
-          selectionEnd,
-          targetStart,
-        )
+        logicalSelection.blockId === operation.id &&
+        logicalSelection.endOffset <= operation.retain
       ) {
         await this.#history.apply(operation);
-        this.#terminal.select(
-          selection.column,
-          selection.row,
-          selection.length,
-        );
+        this.#restoreLogicalSelection(logicalSelection);
         return;
       }
 
@@ -113,43 +105,7 @@ export class BrowserSelectionHistory {
     }
 
     await this.#history.apply(operation);
-    const targetAfter = this.#history.range(operation.id);
-    if (targetAfter === undefined) {
-      this.#terminal.clearSelection();
-      return;
-    }
-
-    const rowDelta = targetAfter.lineCount - targetBefore.lineCount;
-    const row = selectionStart >= targetEnd
-      ? selection.row + rowDelta
-      : selection.row;
-    this.#terminal.select(selection.column, row, selection.length);
-  }
-
-  #selectionIsInsideRetainedPrefix(
-    id: string,
-    retain: number,
-    selectionStart: number,
-    selectionEnd: number,
-    targetStart: number,
-  ): boolean {
-    const block = this.#history
-      .blocks()
-      .find((candidate) => candidate.id === id);
-    if (block === undefined) {
-      return false;
-    }
-    if (
-      !/^[\x20-\x7e]*$/.test(block.content) ||
-      Array.from(block.content).length > this.#terminal.cols
-    ) {
-      throw new Error(
-        "ReplaceSuffix selection mapping is limited to one unwrapped ASCII line.",
-      );
-    }
-
-    const retainedEnd = targetStart + retain;
-    return selectionStart >= targetStart && selectionEnd <= retainedEnd;
+    this.#restoreLogicalSelection(logicalSelection);
   }
 
   range(id: string): Readonly<{ start: number; lineCount: number }> | undefined {
@@ -210,6 +166,23 @@ export class BrowserSelectionHistory {
 
     throw new Error(
       "Resize selection mapping requires one selection inside one retained Block.",
+    );
+  }
+
+  #restoreLogicalSelection(selection: LogicalSelectionSnapshot): void {
+    const range = this.#history.range(selection.blockId);
+    if (range === undefined) {
+      this.#terminal.clearSelection();
+      return;
+    }
+    const rowOffset = Math.floor(
+      selection.startOffset / this.#terminal.cols,
+    );
+    const column = selection.startOffset % this.#terminal.cols;
+    this.#terminal.select(
+      column,
+      range.start + rowOffset,
+      selection.endOffset - selection.startOffset,
     );
   }
 }

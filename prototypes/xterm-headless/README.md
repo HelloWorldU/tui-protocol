@@ -98,7 +98,9 @@ can be designed.
   tests. The separate [browser selection
   experiment](../integration/xterm-browser-selection/README.md) exercises
   complete-Update, single-line ASCII ReplaceSuffix, and two resize/reflow
-  selection scenarios for that boundary in browser-hosted xterm.js.
+  selection scenarios for that boundary in browser-hosted xterm.js. It also
+  covers both selection outcomes when the tested capacity path evicts one
+  complete oldest Block.
 
 ## Run
 
