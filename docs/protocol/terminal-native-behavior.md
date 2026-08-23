@@ -163,10 +163,12 @@ a non-empty replacement suffix. Two resize cases preserve the selected and
 copied logical text when either the selected Block itself or an earlier Block
 reflows to new physical rows. Two capacity cases preserve a selection in a
 retained Block when an earlier complete Block is evicted and clear the
-selection when its complete Block is evicted. The experiment does not yet
-cover mouse selection, the operating-system clipboard, Extend, partial-Block
-or Append-driven eviction, or non-ASCII, line-break, and multi-Block selection
-mapping.
+selection when its complete Block is evicted. Two final Operation regressions
+demonstrate that Extend preserves an existing selection without adding its new
+fragment to the copy source, and that Append and Seal leave an otherwise valid
+selection unchanged. The experiment does not yet cover mouse selection, the
+operating-system clipboard, partial-Block or Append-driven eviction, or
+non-ASCII, line-break, and multi-Block selection mapping.
 
 ## Current Scope
 

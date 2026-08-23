@@ -150,6 +150,9 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runRetainedCapacitySelectionScenario();
   const evictedCapacitySelection =
     await runEvictedCapacitySelectionScenario();
+  const extendedSelection = await runExtendPreservesSelectionScenario();
+  const appendedAndSealedSelection =
+    await runAppendAndSealPreserveSelectionScenario();
 
   return [
     preserved,
@@ -173,7 +176,105 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     earlierBlockReflow,
     retainedCapacitySelection,
     evictedCapacitySelection,
+    extendedSelection,
+    appendedAndSealedSelection,
   ];
+}
+
+async function runExtendPreservesSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "extend-selection",
+        lifecycle: "mutable",
+        content: "selected",
+      },
+    });
+    const range = requiredRange("extend-selection", fixture.history);
+    fixture.terminal.select(0, range.start, "selected".length);
+
+    await fixture.history.apply({
+      type: "extend",
+      id: "extend-selection",
+      fragment: "-new",
+    });
+
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "selected",
+      "selection after extending its Block",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "selected",
+      "copy event after extending its Block",
+    );
+    return {
+      name: "Extend Preserves Existing Selection",
+      detail: "the old selection stayed unchanged and excluded the new fragment",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runAppendAndSealPreserveSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "append-seal-selection",
+        lifecycle: "mutable",
+        content: "stay-selected",
+      },
+    });
+    const range = requiredRange("append-seal-selection", fixture.history);
+    fixture.terminal.select(0, range.start, "stay-selected".length);
+
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "later-append",
+        lifecycle: "sealed",
+        content: "later",
+      },
+    });
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "stay-selected",
+      "selection after appending another Block",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "stay-selected",
+      "copy event after appending another Block",
+    );
+
+    await fixture.history.apply({
+      type: "seal",
+      id: "append-seal-selection",
+    });
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "stay-selected",
+      "selection after sealing its Block",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "stay-selected",
+      "copy event after sealing its Block",
+    );
+    return {
+      name: "Append and Seal Preserve Selection",
+      detail:
+        "appending another Block and sealing this one left its copy source unchanged",
+    };
+  } finally {
+    fixture.dispose();
+  }
 }
 
 async function runSelectedBlockReflowScenario(): Promise<ScenarioResult> {

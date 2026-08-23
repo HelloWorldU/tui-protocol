@@ -100,7 +100,8 @@ can be designed.
   complete-Update, single-line ASCII ReplaceSuffix, and two resize/reflow
   selection scenarios for that boundary in browser-hosted xterm.js. It also
   covers both selection outcomes when the tested capacity path evicts one
-  complete oldest Block.
+  complete oldest Block and selection preservation across Extend, Append, and
+  Seal.
 
 ## Run
 

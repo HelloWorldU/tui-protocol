@@ -18,8 +18,7 @@ interface LogicalSelectionSnapshot {
 
 /**
  * A browser-only experiment around the private xterm history renderer. It is
- * deliberately limited to tested complete Update and single-line ASCII
- * ReplaceSuffix selection behavior.
+ * deliberately limited to the tested single-Block ASCII selection behavior.
  */
 export class BrowserSelectionHistory {
   readonly #terminal: Terminal;

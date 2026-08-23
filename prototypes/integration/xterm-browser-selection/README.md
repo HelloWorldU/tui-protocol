@@ -4,7 +4,8 @@ This browser-host experiment asks whether mutable xterm.js history can keep a
 selection attached to unaffected Block content and clear it when a complete
 `Update` replaces the selected Block. It also tests selection across
 `ReplaceSuffix`'s retained-prefix boundary while a new suffix is inserted and
-tests selection across resize and reflow.
+tests selection across resize, reflow, capacity eviction, Extend, Append, and
+Seal.
 
 It composes the private history mechanism from the [xterm-headless
 prototype](../../xterm-headless/README.md) with the public selection and copy
@@ -65,12 +66,22 @@ an Update requires exactly the number of rows occupied by one complete oldest
 Block. The fixture restores a retained selection by Block identity and clears
 it when that Block no longer has a rendered range.
 
+The final Operation regressions demonstrate that:
+
+- Extending the selected Block leaves its existing selection and copy source
+  unchanged; the appended fragment does not enter the old selection.
+- Appending a later Block does not clear or change an existing selection.
+- Sealing the selected Block does not clear or change that selection.
+
+These cases exercise one single-line ASCII selection and do not require a
+special logical remapping because none of the Operations replaces the selected
+content.
+
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
   selection, and cross-browser behavior are not exercised.
-- Selection behavior for `Extend` or a selection spanning multiple Blocks is
-  not yet implemented or tested.
+- A selection spanning multiple Blocks is not implemented or tested.
 - Partial-Block capacity eviction and Append-driven eviction remain outside the
   selection experiment.
 - Resize selection mapping for line breaks, wide or combining characters, and
