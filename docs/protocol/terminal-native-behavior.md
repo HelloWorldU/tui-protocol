@@ -159,9 +159,11 @@ clears both the selection and its subsequent copy source. The same browser run
 demonstrates three single-line ASCII ReplaceSuffix cases: a selection entirely
 inside the retained prefix survives, while a selection inside the replaced old
 suffix or crossing the retained-prefix boundary is cleared. Each case inserts
-a non-empty replacement suffix. The experiment does not yet cover mouse
-selection, the operating-system clipboard, Extend, reflow, capacity eviction,
-or non-ASCII and wrapped ReplaceSuffix mapping.
+a non-empty replacement suffix. Two resize cases preserve the selected and
+copied logical text when either the selected Block itself or an earlier Block
+reflows to new physical rows. The experiment does not yet cover mouse
+selection, the operating-system clipboard, Extend, capacity eviction, or
+non-ASCII, line-break, and multi-Block selection mapping.
 
 ## Current Scope
 

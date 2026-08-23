@@ -144,6 +144,9 @@ async function runScenarios(): Promise<ScenarioResult[]> {
   );
   assertEqual(copySelection(), undefined, "cross-boundary copy event");
 
+  const selectedBlockReflow = await runSelectedBlockReflowScenario();
+  const earlierBlockReflow = await runEarlierBlockReflowScenario();
+
   return [
     preserved,
     {
@@ -162,10 +165,123 @@ async function runScenarios(): Promise<ScenarioResult[]> {
       name: "ReplaceSuffix Boundary",
       detail: "a selection crossing the replacement boundary was cleared",
     },
+    selectedBlockReflow,
+    earlierBlockReflow,
   ];
 }
 
-function copySelection(): string | undefined {
+async function runSelectedBlockReflowScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "selected-reflow",
+        lifecycle: "sealed",
+        content: "abc-selected-xyz",
+      },
+    });
+    const range = requiredRange("selected-reflow", fixture.history);
+    fixture.terminal.select("abc-".length, range.start, "selected".length);
+
+    fixture.history.resize(10, 4);
+
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "selected",
+      "selection after its Block reflows",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "selected",
+      "copy event after its Block reflows",
+    );
+    return {
+      name: "Selected Block Reflow",
+      detail: "the same logical text remained selected and copied",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runEarlierBlockReflowScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "earlier-reflow",
+        lifecycle: "sealed",
+        content: "1234567890ABCDEF",
+      },
+    });
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "later-selection",
+        lifecycle: "sealed",
+        content: "later-copy",
+      },
+    });
+    const rangeBefore = requiredRange("later-selection", fixture.history);
+    fixture.terminal.select(0, rangeBefore.start, "later-copy".length);
+
+    fixture.history.resize(10, 4);
+
+    const rangeAfter = requiredRange("later-selection", fixture.history);
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "later-copy",
+      "selection after an earlier Block reflows",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      rangeAfter.start,
+      "selection row after an earlier Block reflows",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "later-copy",
+      "copy event after an earlier Block reflows",
+    );
+    return {
+      name: "Earlier Block Reflow",
+      detail: "the later selection moved with its Block and copied unchanged",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+function createIsolatedFixture(): {
+  readonly terminal: Terminal;
+  readonly history: BrowserSelectionHistory;
+  dispose(): void;
+} {
+  const host = document.createElement("div");
+  host.className = "isolated-terminal";
+  document.body.appendChild(host);
+  const isolatedTerminal = new Terminal({
+    cols: 20,
+    rows: 4,
+    scrollback: 100,
+    disableStdin: true,
+  });
+  isolatedTerminal.open(host);
+  const isolatedHistory = new BrowserSelectionHistory(isolatedTerminal);
+  return {
+    terminal: isolatedTerminal,
+    history: isolatedHistory,
+    dispose(): void {
+      isolatedHistory.dispose();
+      isolatedTerminal.dispose();
+      host.remove();
+    },
+  };
+}
+
+function copySelection(source: Terminal = terminal): string | undefined {
   let copied: string | undefined;
   const event = new Event("copy", { bubbles: true, cancelable: true });
   Object.defineProperty(event, "clipboardData", {
@@ -177,12 +293,15 @@ function copySelection(): string | undefined {
       },
     },
   });
-  terminal.element?.dispatchEvent(event);
+  source.element?.dispatchEvent(event);
   return copied;
 }
 
-function requiredRange(id: string): Readonly<{ start: number; lineCount: number }> {
-  const range = history.range(id);
+function requiredRange(
+  id: string,
+  source: BrowserSelectionHistory = history,
+): Readonly<{ start: number; lineCount: number }> {
+  const range = source.range(id);
   if (range === undefined) {
     throw new Error(`Block ${JSON.stringify(id)} has no rendered range.`);
   }

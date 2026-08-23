@@ -97,8 +97,8 @@ can be designed.
 - Browser rendering and selection behavior are not exercised by headless
   tests. The separate [browser selection
   experiment](../integration/xterm-browser-selection/README.md) exercises
-  complete-Update and single-line ASCII ReplaceSuffix scenarios for that
-  boundary in browser-hosted xterm.js.
+  complete-Update, single-line ASCII ReplaceSuffix, and two resize/reflow
+  selection scenarios for that boundary in browser-hosted xterm.js.
 
 ## Run
 

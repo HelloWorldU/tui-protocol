@@ -10,6 +10,12 @@ interface SelectionSnapshot {
   readonly length: number;
 }
 
+interface LogicalSelectionSnapshot {
+  readonly blockId: string;
+  readonly startOffset: number;
+  readonly endOffset: number;
+}
+
 /**
  * A browser-only experiment around the private xterm history renderer. It is
  * deliberately limited to tested complete Update and single-line ASCII
@@ -28,6 +34,31 @@ export class BrowserSelectionHistory {
 
   async apply(operation: Operation): Promise<void> {
     await this.#apply(operation);
+    this.#terminal.refresh(0, this.#terminal.rows - 1);
+  }
+
+  resize(cols: number, rows: number): void {
+    const selection = this.#terminal.hasSelection()
+      ? this.#logicalSelectionSnapshot()
+      : undefined;
+
+    this.#terminal.resize(cols, rows);
+
+    if (selection !== undefined) {
+      const range = this.#history.range(selection.blockId);
+      if (range === undefined) {
+        this.#terminal.clearSelection();
+      } else {
+        const rowOffset = Math.floor(selection.startOffset / cols);
+        const column = selection.startOffset % cols;
+        this.#terminal.select(
+          column,
+          range.start + rowOffset,
+          selection.endOffset - selection.startOffset,
+        );
+      }
+    }
+
     this.#terminal.refresh(0, this.#terminal.rows - 1);
   }
 
@@ -141,5 +172,44 @@ export class BrowserSelectionHistory {
       row: position.start.y,
       length: end - start,
     };
+  }
+
+  #logicalSelectionSnapshot(): LogicalSelectionSnapshot {
+    const position = this.#selectionSnapshot();
+    if (position === undefined) {
+      throw new Error("The terminal reported a selection without coordinates.");
+    }
+    const selectionStart =
+      position.row * this.#terminal.cols + position.column;
+    const selectionEnd = selectionStart + position.length;
+
+    for (const block of this.#history.blocks()) {
+      const range = this.#history.range(block.id);
+      if (range === undefined) {
+        continue;
+      }
+      const rangeStart = range.start * this.#terminal.cols;
+      const startOffset = selectionStart - rangeStart;
+      const endOffset = selectionEnd - rangeStart;
+      if (
+        startOffset < 0 ||
+        endOffset > range.lineCount * this.#terminal.cols
+      ) {
+        continue;
+      }
+      if (
+        !/^[\x20-\x7e]*$/.test(block.content) ||
+        endOffset > Array.from(block.content).length
+      ) {
+        throw new Error(
+          "Resize selection mapping is limited to one logical ASCII line.",
+        );
+      }
+      return { blockId: block.id, startOffset, endOffset };
+    }
+
+    throw new Error(
+      "Resize selection mapping requires one selection inside one retained Block.",
+    );
   }
 }
