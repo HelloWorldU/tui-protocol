@@ -168,7 +168,13 @@ demonstrate that Extend preserves an existing selection without adding its new
 fragment to the copy source, and that Append and Seal leave an otherwise valid
 selection unchanged. The experiment does not yet cover mouse selection, the
 operating-system clipboard, partial-Block or Append-driven eviction, or
-non-ASCII, line-break, and multi-Block selection mapping.
+non-ASCII, line-break, and multi-Block selection mapping. A separate [browser
+search prototype](../../prototypes/integration/xterm-browser-search/README.md)
+demonstrates one complete-Update case: the replaced current match is cleared,
+the old snapshot is no longer found, and replacement text becomes searchable.
+The experiment recreates xterm.js's search addon because private history
+mutation bypasses its normal cache-invalidation events; this is a feasibility
+workaround rather than a required integration design.
 
 ## Current Scope
 

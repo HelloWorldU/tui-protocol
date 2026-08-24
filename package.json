@@ -9,7 +9,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "build:xterm-browser-search": "vite build prototypes/integration/xterm-browser-search --outDir ../../../.tmp/xterm-browser-search-dist --emptyOutDir",
     "build:xterm-browser-selection": "vite build prototypes/integration/xterm-browser-selection --outDir ../../../.tmp/xterm-browser-selection-dist --emptyOutDir",
+    "prototype:xterm-browser-search": "vite prototypes/integration/xterm-browser-search",
     "prototype:xterm-browser-selection": "vite prototypes/integration/xterm-browser-selection",
     "test": "node --test prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts prototypes/reference-codec/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
@@ -20,6 +22,7 @@
     "vite": "8.2.1"
   },
   "dependencies": {
+    "@xterm/addon-search": "0.16.0",
     "@xterm/headless": "6.0.0",
     "@xterm/xterm": "6.0.0"
   }

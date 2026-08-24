@@ -119,8 +119,10 @@ implementation.
   exercises complete-Update and single-line ASCII ReplaceSuffix selection
   cases, two resize/reflow cases, both complete-Block capacity eviction
   outcomes, and selection preservation across Extend, Append, and Seal without
-  composing this endpoint. Search, content metadata, active input, mouse
-  selection, and other real user interaction remain untested. Selection
+  composing this endpoint. A separate [browser search
+  experiment](../xterm-browser-search/README.md) checks one complete-Update
+  search case without composing this endpoint. Content metadata, active input,
+  mouse selection, and other real user interaction remain untested. Selection
   evidence is limited to single-line ASCII content and the tested dimensions
   and capacity boundary.
 

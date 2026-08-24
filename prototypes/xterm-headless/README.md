@@ -101,7 +101,9 @@ can be designed.
   selection scenarios for that boundary in browser-hosted xterm.js. It also
   covers both selection outcomes when the tested capacity path evicts one
   complete oldest Block and selection preservation across Extend, Append, and
-  Seal.
+  Seal. A separate [browser search
+  experiment](../integration/xterm-browser-search/README.md) checks whether one
+  complete Update removes old searchable text and exposes its replacement.
 
 ## Run
 
