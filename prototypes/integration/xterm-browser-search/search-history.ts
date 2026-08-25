@@ -4,11 +4,8 @@ import type { Terminal } from "@xterm/xterm";
 import type { Operation } from "../../block-model/model.ts";
 import { BrowserSelectionHistory } from "../xterm-browser-selection/selection-history.ts";
 
-type AppendOperation = Extract<Operation, { readonly type: "append" }>;
-type UpdateOperation = Extract<Operation, { readonly type: "update" }>;
-
 /**
- * A narrow browser fixture for the first complete-Update search scenario.
+ * A narrow browser fixture for current-projection search scenarios.
  * Search invalidation is explicit because the private history mutation does
  * not emit xterm.js's normal write event.
  */
@@ -24,12 +21,7 @@ export class BrowserSearchHistory {
     terminal.loadAddon(this.#search);
   }
 
-  async append(operation: AppendOperation): Promise<void> {
-    await this.#history.apply(operation);
-    this.#refresh();
-  }
-
-  async update(operation: UpdateOperation): Promise<void> {
+  async apply(operation: Operation): Promise<void> {
     const currentTerm = this.#terminal.hasSelection()
       ? this.#currentTerm
       : undefined;

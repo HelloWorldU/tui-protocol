@@ -175,7 +175,10 @@ the old snapshot is no longer found, and replacement text becomes searchable;
 a current match in an unaffected later Block moves with that Block when an
 earlier Block grows. The experiment recreates xterm.js's search addon because
 private history mutation bypasses its normal cache-invalidation events; this
-is a feasibility workaround rather than a required integration design.
+is a feasibility workaround rather than a required integration design. Four
+additional Operation scenarios cover Extend preserving an old match and adding
+a new one, both sides of ReplaceSuffix's retained boundary, Append adding a
+searchable Block without losing the current match, and Seal preserving it.
 
 ## Current Scope
 

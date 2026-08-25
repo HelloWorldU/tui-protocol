@@ -22,6 +22,10 @@ try {
   const results = [
     await runSelectedBlockUpdateScenario(),
     await runEarlierBlockUpdateScenario(),
+    await runExtendSearchScenario(),
+    await runRetainedPrefixSearchScenario(),
+    await runRemovedSuffixSearchScenario(),
+    await runAppendAndSealSearchScenario(),
   ];
   reportPassed(results);
 } catch (error) {
@@ -32,7 +36,7 @@ try {
 }
 
 async function runSelectedBlockUpdateScenario(): Promise<ScenarioResult> {
-  await history.append({
+  await history.apply({
     type: "append",
     block: {
       id: "search-target",
@@ -44,7 +48,7 @@ async function runSelectedBlockUpdateScenario(): Promise<ScenarioResult> {
   assertEqual(history.findNext("obsolete"), true, "initial old-text search");
   assertEqual(terminal.getSelection(), "obsolete", "initial current match");
 
-  await history.update({
+  await history.apply({
     type: "update",
     id: "search-target",
     content: "fresh marker",
@@ -76,7 +80,7 @@ async function runSelectedBlockUpdateScenario(): Promise<ScenarioResult> {
 async function runEarlierBlockUpdateScenario(): Promise<ScenarioResult> {
   const fixture = createIsolatedFixture();
   try {
-    await fixture.history.append({
+    await fixture.history.apply({
       type: "append",
       block: {
         id: "earlier-search",
@@ -84,7 +88,7 @@ async function runEarlierBlockUpdateScenario(): Promise<ScenarioResult> {
         content: "early",
       },
     });
-    await fixture.history.append({
+    await fixture.history.apply({
       type: "append",
       block: {
         id: "unaffected-match",
@@ -105,7 +109,7 @@ async function runEarlierBlockUpdateScenario(): Promise<ScenarioResult> {
       "initial unaffected current match",
     );
 
-    await fixture.history.update({
+    await fixture.history.apply({
       type: "update",
       id: "earlier-search",
       content: "early-one\nearly-two\nearly-three",
@@ -131,6 +135,209 @@ async function runEarlierBlockUpdateScenario(): Promise<ScenarioResult> {
     return {
       name: "Earlier Block Update",
       detail: "the later current match moved with its unchanged Block",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runExtendSearchScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "extend-search",
+        lifecycle: "mutable",
+        content: "stable",
+      },
+    });
+    assertEqual(
+      fixture.history.findNext("stable"),
+      true,
+      "initial pre-Extend search",
+    );
+
+    await fixture.history.apply({
+      type: "extend",
+      id: "extend-search",
+      fragment: " new-token",
+    });
+
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "stable",
+      "current match after Extend",
+    );
+    assertEqual(
+      fixture.history.findNext("new-token"),
+      true,
+      "appended-text search after Extend",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "new-token",
+      "appended-text current match",
+    );
+
+    return {
+      name: "Extend",
+      detail: "the old match remained and appended text became searchable",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runRetainedPrefixSearchScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "retained-prefix-search",
+        lifecycle: "mutable",
+        content: "stable obsolete",
+      },
+    });
+    assertEqual(
+      fixture.history.findNext("stable"),
+      true,
+      "initial retained-prefix search",
+    );
+
+    await fixture.history.apply({
+      type: "replaceSuffix",
+      id: "retained-prefix-search",
+      retain: "stable".length,
+      replacement: " fresh",
+    });
+
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "stable",
+      "retained-prefix match after ReplaceSuffix",
+    );
+    assertEqual(
+      fixture.history.findNext("obsolete"),
+      false,
+      "removed-text search after ReplaceSuffix",
+    );
+    assertEqual(
+      fixture.history.findNext("fresh"),
+      true,
+      "replacement-text search after ReplaceSuffix",
+    );
+
+    return {
+      name: "ReplaceSuffix Retained Prefix",
+      detail: "the retained match stayed while old and new suffix results changed",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runRemovedSuffixSearchScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "removed-suffix-search",
+        lifecycle: "mutable",
+        content: "prefix obsolete",
+      },
+    });
+    assertEqual(
+      fixture.history.findNext("obsolete"),
+      true,
+      "initial removed-suffix search",
+    );
+
+    await fixture.history.apply({
+      type: "replaceSuffix",
+      id: "removed-suffix-search",
+      retain: "prefix".length,
+      replacement: " fresh",
+    });
+
+    assertEqual(
+      fixture.terminal.hasSelection(),
+      false,
+      "current match after its suffix is replaced",
+    );
+    assertEqual(
+      fixture.history.findNext("obsolete"),
+      false,
+      "removed current-match search after ReplaceSuffix",
+    );
+    assertEqual(
+      fixture.history.findNext("fresh"),
+      true,
+      "replacement search after current match is removed",
+    );
+
+    return {
+      name: "ReplaceSuffix Removed Match",
+      detail: "the removed current match cleared and replacement text was found",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runAppendAndSealSearchScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "existing-search",
+        lifecycle: "sealed",
+        content: "stable",
+      },
+    });
+    assertEqual(
+      fixture.history.findNext("stable"),
+      true,
+      "initial pre-Append search",
+    );
+
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "appended-search",
+        lifecycle: "mutable",
+        content: "append-match",
+      },
+    });
+
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "stable",
+      "existing current match after Append",
+    );
+    assertEqual(
+      fixture.history.findNext("append-match"),
+      true,
+      "new Block search after Append",
+    );
+
+    await fixture.history.apply({
+      type: "seal",
+      id: "appended-search",
+    });
+
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "append-match",
+      "current match after its Block is sealed",
+    );
+
+    return {
+      name: "Append and Seal",
+      detail: "Append added a result and neither Operation lost a valid match",
     };
   } finally {
     fixture.dispose();

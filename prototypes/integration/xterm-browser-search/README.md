@@ -8,8 +8,9 @@ It composes the private history mechanism from the [xterm-headless
 prototype](../../xterm-headless/README.md), logical selection mapping from the
 [browser selection prototype](../xterm-browser-selection/README.md),
 browser-hosted `@xterm/xterm` 6.0.0, and `@xterm/addon-search` 0.16.0.
-Recreating the addon after a private history replacement is an experimental
-integration fixture, not a proposed Terminal API.
+Recreating the addon and restoring a surviving current match after each
+fixture Operation is an experimental integration mechanism, not a proposed
+Terminal API.
 
 ## Proven
 
@@ -28,10 +29,20 @@ In a second browser scenario, growing an earlier Block moves a later current
 match to new physical rows while keeping it attached to the same unchanged
 Block content.
 
+Four further Operation scenarios demonstrate that:
+
+- Extend preserves a current match in existing content and makes its appended
+  text searchable.
+- ReplaceSuffix preserves a current match in its retained prefix, removes old
+  suffix matches, clears a current match in the removed suffix, and makes the
+  replacement searchable.
+- Append preserves an existing current match and makes the new Block
+  searchable.
+- Seal preserves a current match in the sealed Block.
+
 ## Not Proven
 
-- `Extend`, `ReplaceSuffix`, resize/reflow, and capacity eviction are not
-  tested.
+- Resize/reflow and capacity eviction are not tested.
 - Search-result counts, decorations, navigation policy, keyboard shortcuts,
   accessibility, and cross-browser behavior are not tested.
 - The private history mutation bypasses xterm.js write events, and the search
