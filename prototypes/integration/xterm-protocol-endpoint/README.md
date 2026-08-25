@@ -121,10 +121,11 @@ implementation.
   outcomes, and selection preservation across Extend, Append, and Seal without
   composing this endpoint. A separate [browser search
   experiment](../xterm-browser-search/README.md) checks Search behavior for
-  Update, Extend, ReplaceSuffix, Append, and Seal without composing this
-  endpoint. Content metadata, active input, mouse selection, and other real
-  user interaction remain untested. Selection evidence is limited to
-  single-line ASCII content and the tested dimensions and capacity boundary.
+  Update, Extend, ReplaceSuffix, Append, Seal, resize/reflow, and the tested
+  complete-Block capacity boundary without composing this endpoint. Content
+  metadata, active input, mouse selection, and other real user interaction
+  remain untested. Selection evidence is limited to single-line ASCII content
+  and the tested dimensions and capacity boundary.
 
 ## Run
 

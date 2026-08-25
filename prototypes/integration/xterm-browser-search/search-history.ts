@@ -22,16 +22,15 @@ export class BrowserSearchHistory {
   }
 
   async apply(operation: Operation): Promise<void> {
-    const currentTerm = this.#terminal.hasSelection()
-      ? this.#currentTerm
-      : undefined;
+    const currentTerm = this.#selectedSearchTerm();
     await this.#history.apply(operation);
-    const matchSurvived = this.#terminal.hasSelection();
-    this.#resetSearch();
-    if (matchSurvived && currentTerm !== undefined) {
-      this.#search.findNext(currentTerm);
-    }
-    this.#refresh();
+    this.#restoreSearch(currentTerm);
+  }
+
+  resize(cols: number, rows: number): void {
+    const currentTerm = this.#selectedSearchTerm();
+    this.#history.resize(cols, rows);
+    this.#restoreSearch(currentTerm);
   }
 
   findNext(term: string): boolean {
@@ -57,5 +56,18 @@ export class BrowserSearchHistory {
     this.#search.dispose();
     this.#search = new SearchAddon();
     this.#terminal.loadAddon(this.#search);
+  }
+
+  #restoreSearch(currentTerm: string | undefined): void {
+    const matchSurvived = this.#terminal.hasSelection();
+    this.#resetSearch();
+    if (matchSurvived && currentTerm !== undefined) {
+      this.#search.findNext(currentTerm);
+    }
+    this.#refresh();
+  }
+
+  #selectedSearchTerm(): string | undefined {
+    return this.#terminal.hasSelection() ? this.#currentTerm : undefined;
   }
 }

@@ -178,7 +178,12 @@ private history mutation bypasses its normal cache-invalidation events; this
 is a feasibility workaround rather than a required integration design. Four
 additional Operation scenarios cover Extend preserving an old match and adding
 a new one, both sides of ReplaceSuffix's retained boundary, Append adding a
-searchable Block without losing the current match, and Seal preserving it.
+searchable Block without losing the current match, and Seal preserving it. Two
+resize scenarios keep current matches attached across selected-Block and
+earlier-Block reflow. Two capacity scenarios preserve a current match when an
+earlier complete Block is evicted and clear it when its own complete Block is
+evicted, while retained text remains searchable. Partial-Block and
+Append-driven eviction remain outside this tested boundary.
 
 ## Current Scope
 

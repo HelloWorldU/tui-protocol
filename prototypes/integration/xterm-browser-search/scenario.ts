@@ -26,6 +26,10 @@ try {
     await runRetainedPrefixSearchScenario(),
     await runRemovedSuffixSearchScenario(),
     await runAppendAndSealSearchScenario(),
+    await runSelectedBlockReflowSearchScenario(),
+    await runEarlierBlockReflowSearchScenario(),
+    await runRetainedCapacitySearchScenario(),
+    await runEvictedCapacitySearchScenario(),
   ];
   reportPassed(results);
 } catch (error) {
@@ -344,7 +348,230 @@ async function runAppendAndSealSearchScenario(): Promise<ScenarioResult> {
   }
 }
 
-function createIsolatedFixture(): {
+async function runSelectedBlockReflowSearchScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "selected-reflow-search",
+        lifecycle: "sealed",
+        content: "abc-persistent-xyz",
+      },
+    });
+    assertEqual(
+      fixture.history.findNext("persistent"),
+      true,
+      "initial selected-Block reflow search",
+    );
+
+    fixture.history.resize(10, 4);
+
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "persistent",
+      "current match after its Block reflows",
+    );
+
+    return {
+      name: "Selected Block Reflow",
+      detail: "the current match stayed on the same logical text after wrapping",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runEarlierBlockReflowSearchScenario(): Promise<ScenarioResult> {
+  const fixture = createIsolatedFixture();
+  try {
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "earlier-reflow-search",
+        lifecycle: "sealed",
+        content: "1234567890ABCDEF",
+      },
+    });
+    await fixture.history.apply({
+      type: "append",
+      block: {
+        id: "later-reflow-match",
+        lifecycle: "sealed",
+        content: "later",
+      },
+    });
+    const rangeBefore = requiredRange("later-reflow-match", fixture.history);
+    assertEqual(
+      fixture.history.findNext("later"),
+      true,
+      "initial earlier-Block reflow search",
+    );
+
+    fixture.history.resize(10, 4);
+
+    const rangeAfter = requiredRange("later-reflow-match", fixture.history);
+    assertEqual(
+      rangeAfter.start > rangeBefore.start,
+      true,
+      "later match Block moved after earlier Block reflow",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "later",
+      "current match after an earlier Block reflows",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      rangeAfter.start,
+      "current match row after an earlier Block reflows",
+    );
+
+    return {
+      name: "Earlier Block Reflow",
+      detail: "the later current match moved with its unchanged Block",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runRetainedCapacitySearchScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    assertEqual(
+      fixture.history.findNext("reader"),
+      true,
+      "initial retained-capacity search",
+    );
+    fixture.terminal.scrollToBottom();
+
+    await growCapacityFixture(fixture.history);
+
+    const readerAfter = requiredRange("capacity-reader", fixture.history);
+    assertEqual(
+      fixture.history.range("capacity-oldest"),
+      undefined,
+      "oldest Block range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "reader",
+      "retained current match after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      readerAfter.start,
+      "retained current match row after capacity eviction",
+    );
+
+    return {
+      name: "Capacity Evicts Earlier Block",
+      detail: "the retained current match moved with its Block",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runEvictedCapacitySearchScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    assertEqual(
+      fixture.history.findNext("old-11111"),
+      true,
+      "initial evicted-capacity search",
+    );
+    fixture.terminal.scrollToBottom();
+
+    await growCapacityFixture(fixture.history);
+
+    assertEqual(
+      fixture.history.range("capacity-oldest"),
+      undefined,
+      "current-match Block range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.hasSelection(),
+      false,
+      "current match after its complete Block is evicted",
+    );
+    assertEqual(
+      fixture.history.findNext("old-11111"),
+      false,
+      "evicted-text search after capacity eviction",
+    );
+    assertEqual(
+      fixture.history.findNext("reader"),
+      true,
+      "retained-text search after capacity eviction",
+    );
+
+    return {
+      name: "Capacity Evicts Current Match",
+      detail: "the evicted match cleared and retained text stayed searchable",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function createCapacityFixture(): Promise<ReturnType<typeof createIsolatedFixture>> {
+  const fixture = createIsolatedFixture({
+    cols: 10,
+    rows: 3,
+    scrollback: 7,
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-oldest",
+      lifecycle: "sealed",
+      content: "old-11111old-22222",
+    },
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-growing",
+      lifecycle: "mutable",
+      content: "draft",
+    },
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-reader",
+      lifecycle: "sealed",
+      content: "reader",
+    },
+  });
+  await fixture.history.apply({
+    type: "append",
+    block: {
+      id: "capacity-tail",
+      lifecycle: "sealed",
+      content: "tail-1111tail-2222tail-3333tail-4",
+    },
+  });
+  return fixture;
+}
+
+async function growCapacityFixture(
+  fixtureHistory: BrowserSearchHistory,
+): Promise<void> {
+  await fixtureHistory.apply({
+    type: "update",
+    id: "capacity-growing",
+    content: "new-11111new-22222new-33333new-4",
+  });
+}
+
+function createIsolatedFixture(options: {
+  readonly cols?: number;
+  readonly rows?: number;
+  readonly scrollback?: number;
+} = {}): {
   readonly terminal: Terminal;
   readonly history: BrowserSearchHistory;
   dispose(): void;
@@ -353,9 +580,9 @@ function createIsolatedFixture(): {
   host.className = "isolated-terminal";
   document.body.appendChild(host);
   const isolatedTerminal = new Terminal({
-    cols: 20,
-    rows: 4,
-    scrollback: 100,
+    cols: options.cols ?? 20,
+    rows: options.rows ?? 4,
+    scrollback: options.scrollback ?? 100,
     disableStdin: true,
   });
   isolatedTerminal.open(host);

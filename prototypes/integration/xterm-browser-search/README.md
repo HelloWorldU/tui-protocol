@@ -2,7 +2,7 @@
 
 This browser-host experiment asks whether xterm.js search sees only the current
 text of mutable history and keeps an unaffected current match attached to its
-Block when an earlier complete `Update` moves its physical rows.
+Block when Operations, reflow, or capacity eviction move its physical rows.
 
 It composes the private history mechanism from the [xterm-headless
 prototype](../../xterm-headless/README.md), logical selection mapping from the
@@ -40,9 +40,19 @@ Four further Operation scenarios demonstrate that:
   searchable.
 - Seal preserves a current match in the sealed Block.
 
+Two resize scenarios keep the current match attached to the same logical text
+when either its own Block reflows or an earlier Block reflows and moves it.
+
+Two capacity scenarios cover the tested complete-Block boundary: evicting an
+earlier Block preserves a retained current match, while evicting the Block
+containing the current match clears it. Text in retained Blocks remains
+searchable.
+
 ## Not Proven
 
-- Resize/reflow and capacity eviction are not tested.
+- Partial-Block capacity eviction and Append-driven eviction are not tested.
+- Reflow mapping for line breaks, wide or combining characters, and other
+  non-ASCII text is not tested.
 - Search-result counts, decorations, navigation policy, keyboard shortcuts,
   accessibility, and cross-browser behavior are not tested.
 - The private history mutation bypasses xterm.js write events, and the search

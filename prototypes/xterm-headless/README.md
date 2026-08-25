@@ -103,7 +103,8 @@ can be designed.
   complete oldest Block and selection preservation across Extend, Append, and
   Seal. A separate [browser search
   experiment](../integration/xterm-browser-search/README.md) checks Search
-  behavior across Update, Extend, ReplaceSuffix, Append, and Seal.
+  behavior across Block Operations, resize/reflow, and the same tested
+  complete-Block capacity boundary.
 
 ## Run
 
