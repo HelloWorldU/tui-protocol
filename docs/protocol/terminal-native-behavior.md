@@ -185,6 +185,17 @@ earlier complete Block is evicted and clear it when its own complete Block is
 evicted, while retained text remains searchable. Partial-Block and
 Append-driven eviction remain outside this tested boundary.
 
+A separate [browser content metadata
+prototype](../../prototypes/integration/xterm-browser-metadata/README.md) uses
+an explicitly experimental styled-text fixture to demonstrate five cases. A
+complete Update replaces or removes the old snapshot's foreground color and
+bold weight; an unaffected later Block keeps its styling when earlier content
+growth moves it; resize keeps styling attached across reflow; and complete-
+Block capacity eviction removes the evicted Block's styling without changing
+a retained Block. The experiment does not define a content type or encoding
+and does not cover links, incremental metadata editing, non-ASCII content, or
+partial-Block and Append-driven eviction.
+
 ## Current Scope
 
 This draft defines initial correctness boundaries for reading, reflow,
