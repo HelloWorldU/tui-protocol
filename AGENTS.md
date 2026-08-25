@@ -23,6 +23,7 @@ prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.
     protocol-endpoint/        Terminal-side bytes-to-state and response path.
+    xterm-browser-input-state/ Browser active-input behavior experiment.
     xterm-browser-metadata/   Browser content-metadata behavior experiment.
     xterm-browser-search/     Browser search behavior experiment.
     xterm-browser-selection/  Browser selection and copy behavior experiment.

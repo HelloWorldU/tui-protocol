@@ -196,6 +196,17 @@ a retained Block. The experiment does not define a content type or encoding
 and does not cover links, incremental metadata editing, non-ASCII content, or
 partial-Block and Append-driven eviction.
 
+A separate [browser active input state
+prototype](../../prototypes/integration/xterm-browser-input-state/README.md)
+demonstrates five cases in a single-line ASCII input fixture. Complete Update,
+Extend, ReplaceSuffix, resize and reflow, and complete-Block capacity eviction
+leave the current input text, its logical cursor offset, and input focus
+unchanged. A synthetic browser composition also remains active and sends no
+input data while earlier history changes. The composition evidence does not
+cover a real operating-system IME, and the experiment does not cover multiline
+editors, wrapped or non-ASCII input, Append during input, partial-Block
+eviction, or cross-terminal behavior.
+
 ## Current Scope
 
 This draft defines initial correctness boundaries for reading, reflow,
