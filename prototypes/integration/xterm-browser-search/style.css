@@ -40,3 +40,10 @@ section {
 #terminal {
   height: 120px;
 }
+
+.isolated-terminal {
+  position: absolute;
+  left: -10000px;
+  width: 640px;
+  height: 160px;
+}

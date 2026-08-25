@@ -170,11 +170,12 @@ selection unchanged. The experiment does not yet cover mouse selection, the
 operating-system clipboard, partial-Block or Append-driven eviction, or
 non-ASCII, line-break, and multi-Block selection mapping. A separate [browser
 search prototype](../../prototypes/integration/xterm-browser-search/README.md)
-demonstrates one complete-Update case: the replaced current match is cleared,
-the old snapshot is no longer found, and replacement text becomes searchable.
-The experiment recreates xterm.js's search addon because private history
-mutation bypasses its normal cache-invalidation events; this is a feasibility
-workaround rather than a required integration design.
+demonstrates two complete-Update cases. A replaced current match is cleared,
+the old snapshot is no longer found, and replacement text becomes searchable;
+a current match in an unaffected later Block moves with that Block when an
+earlier Block grows. The experiment recreates xterm.js's search addon because
+private history mutation bypasses its normal cache-invalidation events; this
+is a feasibility workaround rather than a required integration design.
 
 ## Current Scope
 

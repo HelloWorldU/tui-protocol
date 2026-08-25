@@ -1,14 +1,15 @@
 # xterm Browser Search Integration Prototype
 
 This browser-host experiment asks whether xterm.js search sees only the current
-text of a mutable Block after a complete `Update` replaces its content.
+text of mutable history and keeps an unaffected current match attached to its
+Block when an earlier complete `Update` moves its physical rows.
 
 It composes the private history mechanism from the [xterm-headless
-prototype](../../xterm-headless/README.md) with browser-hosted `@xterm/xterm`
-6.0.0 and `@xterm/addon-search` 0.16.0. Clearing the addon's current search
-state and xterm.js selection, then recreating the addon after the private
-history replacement, is an experimental integration fixture, not a proposed
-Terminal API.
+prototype](../../xterm-headless/README.md), logical selection mapping from the
+[browser selection prototype](../xterm-browser-selection/README.md),
+browser-hosted `@xterm/xterm` 6.0.0, and `@xterm/addon-search` 0.16.0.
+Recreating the addon after a private history replacement is an experimental
+integration fixture, not a proposed Terminal API.
 
 ## Proven
 
@@ -23,10 +24,12 @@ This provides narrow experimental evidence for the current-projection rule in
 [Terminal-Native
 Behavior](../../../docs/protocol/terminal-native-behavior.md#8-search).
 
+In a second browser scenario, growing an earlier Block moves a later current
+match to new physical rows while keeping it attached to the same unchanged
+Block content.
+
 ## Not Proven
 
-- Matches in unaffected Blocks moving across an earlier Block update are not
-  tested.
 - `Extend`, `ReplaceSuffix`, resize/reflow, and capacity eviction are not
   tested.
 - Search-result counts, decorations, navigation policy, keyboard shortcuts,

@@ -1,9 +1,8 @@
 import { SearchAddon } from "@xterm/addon-search";
-import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import type { Terminal } from "@xterm/xterm";
 
 import type { Operation } from "../../block-model/model.ts";
-import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
+import { BrowserSelectionHistory } from "../xterm-browser-selection/selection-history.ts";
 
 type AppendOperation = Extract<Operation, { readonly type: "append" }>;
 type UpdateOperation = Extract<Operation, { readonly type: "update" }>;
@@ -15,14 +14,13 @@ type UpdateOperation = Extract<Operation, { readonly type: "update" }>;
  */
 export class BrowserSearchHistory {
   readonly #terminal: Terminal;
-  readonly #history: PrivateCoreBlockHistory;
+  readonly #history: BrowserSelectionHistory;
   #search = new SearchAddon();
+  #currentTerm: string | undefined;
 
   constructor(terminal: Terminal) {
     this.#terminal = terminal;
-    this.#history = new PrivateCoreBlockHistory(
-      terminal as unknown as HeadlessTerminal,
-    );
+    this.#history = new BrowserSelectionHistory(terminal);
     terminal.loadAddon(this.#search);
   }
 
@@ -32,17 +30,26 @@ export class BrowserSearchHistory {
   }
 
   async update(operation: UpdateOperation): Promise<void> {
-    this.#search.clearDecorations();
-    this.#terminal.clearSelection();
+    const currentTerm = this.#terminal.hasSelection()
+      ? this.#currentTerm
+      : undefined;
     await this.#history.apply(operation);
-    this.#search.dispose();
-    this.#search = new SearchAddon();
-    this.#terminal.loadAddon(this.#search);
+    const matchSurvived = this.#terminal.hasSelection();
+    this.#resetSearch();
+    if (matchSurvived && currentTerm !== undefined) {
+      this.#search.findNext(currentTerm);
+    }
     this.#refresh();
   }
 
   findNext(term: string): boolean {
-    return this.#search.findNext(term);
+    const found = this.#search.findNext(term);
+    this.#currentTerm = term;
+    return found;
+  }
+
+  range(id: string): Readonly<{ start: number; lineCount: number }> | undefined {
+    return this.#history.range(id);
   }
 
   dispose(): void {
@@ -52,5 +59,11 @@ export class BrowserSearchHistory {
 
   #refresh(): void {
     this.#terminal.refresh(0, this.#terminal.rows - 1);
+  }
+
+  #resetSearch(): void {
+    this.#search.dispose();
+    this.#search = new SearchAddon();
+    this.#terminal.loadAddon(this.#search);
   }
 }

@@ -120,11 +120,12 @@ implementation.
   cases, two resize/reflow cases, both complete-Block capacity eviction
   outcomes, and selection preservation across Extend, Append, and Seal without
   composing this endpoint. A separate [browser search
-  experiment](../xterm-browser-search/README.md) checks one complete-Update
-  search case without composing this endpoint. Content metadata, active input,
-  mouse selection, and other real user interaction remain untested. Selection
-  evidence is limited to single-line ASCII content and the tested dimensions
-  and capacity boundary.
+  experiment](../xterm-browser-search/README.md) checks complete-Update search
+  behavior for a replaced current match and an unaffected later match without
+  composing this endpoint. Content metadata, active input, mouse selection,
+  and other real user interaction remain untested. Selection evidence is
+  limited to single-line ASCII content and the tested dimensions and capacity
+  boundary.
 
 ## Run
 

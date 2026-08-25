@@ -102,8 +102,9 @@ can be designed.
   covers both selection outcomes when the tested capacity path evicts one
   complete oldest Block and selection preservation across Extend, Append, and
   Seal. A separate [browser search
-  experiment](../integration/xterm-browser-search/README.md) checks whether one
-  complete Update removes old searchable text and exposes its replacement.
+  experiment](../integration/xterm-browser-search/README.md) checks whether a
+  complete Update removes old searchable text and whether an unaffected later
+  match moves with its Block.
 
 ## Run
 
