@@ -126,9 +126,9 @@ implementation.
   metadata, active input, mouse selection, and other real user interaction
   remain untested in this headless fixture. A [browser protocol endpoint
   experiment](../xterm-browser-protocol-endpoint/README.md) composes encoded
-  OSC Update Messages with reading position, selection, search, and active
-  input checks. Selection evidence is limited to single-line ASCII content and
-  the tested dimensions and capacity boundary.
+  OSC Update and Extend Messages with reading position, selection, search, and
+  active input checks. Selection evidence is limited to single-line ASCII
+  content and the tested dimensions and capacity boundary.
 
 ## Run
 

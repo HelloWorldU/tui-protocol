@@ -1,8 +1,9 @@
 # xterm Browser Protocol Endpoint Integration Prototype
 
-This browser-host experiment asks whether an OSC `9002` Update can traverse
-the current codec, Session, and mutable xterm.js history path while preserving
-the terminal-native state already demonstrated by separate browser fixtures.
+This browser-host experiment asks whether OSC `9002` Update and Extend Messages
+can traverse the current codec, Session, and mutable xterm.js history path while
+preserving the terminal-native state already demonstrated by separate browser
+fixtures.
 
 It composes:
 
@@ -18,7 +19,7 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Three browser scenarios first negotiate the baseline capability and open a
+Six browser scenarios first negotiate the baseline capability and open a
 Context through encoded OSC Messages. They then demonstrate that:
 
 - an OSC Update grows an earlier Block while a later reading position and
@@ -26,6 +27,12 @@ Context through encoded OSC Messages. They then demonstrate that:
 - an OSC Update moves an unaffected current search match with its Block; and
 - an OSC Update changes earlier history without changing a current input line,
   input cursor, focus, or synthetic browser composition.
+- an OSC Extend grows a Block while preserving a reading position and selected
+  copy source in its retained content;
+- an OSC Extend preserves an existing current search match and makes its new
+  fragment searchable; and
+- an OSC Extend grows earlier history without changing current input or
+  synthetic browser composition.
 
 Each scenario also observes the updated Session content after the rendered
 history queue drains. This supplies narrow cross-layer evidence for the
@@ -38,10 +45,9 @@ requirements.
   search addon presents its current match through the terminal selection.
 - Content metadata is not composed because the protocol has not defined an
   optional styled content representation.
-- The scenarios cover only complete Update of an earlier Block with printable
-  ASCII fixtures. Other Operations, replacement of the observed Block, resize,
-  capacity eviction, and non-ASCII content remain covered only by their
-  narrower component prototypes.
+- The scenarios cover only complete Update and Extend with printable ASCII
+  fixtures. ReplaceSuffix, Append, Seal, resize, capacity eviction, and
+  non-ASCII content remain covered only by their narrower component prototypes.
 - The composition event is synthetic and does not prove compatibility with a
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
