@@ -219,7 +219,10 @@ and leave active input with synthetic composition unchanged. Four
 ReplaceSuffix scenarios preserve a retained-prefix reading position and
 selection, clear a removed-suffix selection, update retained, removed, and new
 search results, and leave active input with synthetic composition unchanged.
-Search and ordinary selection are separate because the tested
+Three Append scenarios preserve an existing history-reading position and
+selection, continue tail following, and add searchable tail content without
+losing an existing search match. Search and ordinary selection are separate
+because the tested
 xterm.js search addon uses the terminal selection to present its current match.
 The experiment does not compose content metadata or extend its component
 fixtures' character, Operation, terminal, or browser coverage.
