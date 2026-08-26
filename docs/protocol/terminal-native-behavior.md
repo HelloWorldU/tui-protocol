@@ -215,8 +215,11 @@ reading position and user selection, an unaffected current search match, and
 active input with a synthetic composition after encoded OSC Messages traverse
 the endpoint. Three Extend scenarios preserve a target-Block reading position
 and selection, retain an existing search match while adding searchable text,
-and leave active input with synthetic composition unchanged. Search and
-ordinary selection are separate because the tested
+and leave active input with synthetic composition unchanged. Four
+ReplaceSuffix scenarios preserve a retained-prefix reading position and
+selection, clear a removed-suffix selection, update retained, removed, and new
+search results, and leave active input with synthetic composition unchanged.
+Search and ordinary selection are separate because the tested
 xterm.js search addon uses the terminal selection to present its current match.
 The experiment does not compose content metadata or extend its component
 fixtures' character, Operation, terminal, or browser coverage.
