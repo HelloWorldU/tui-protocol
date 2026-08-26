@@ -1,9 +1,9 @@
 # xterm Browser Protocol Endpoint Integration Prototype
 
-This browser-host experiment asks whether OSC `9002` Update, Extend,
-ReplaceSuffix, and Append Messages can traverse the current codec, Session, and
-mutable xterm.js history path while preserving the terminal-native state
-already demonstrated by separate browser fixtures.
+This browser-host experiment asks whether all five current Block Operation
+Messages can traverse OSC `9002`, the codec, Session, and mutable xterm.js
+history path while preserving the terminal-native state already demonstrated
+by separate browser fixtures.
 
 It composes:
 
@@ -19,7 +19,7 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Thirteen browser scenarios first negotiate the baseline capability and open a
+Fifteen browser scenarios first negotiate the baseline capability and open a
 Context through encoded OSC Messages. They then demonstrate that:
 
 - an OSC Update grows an earlier Block while a later reading position and
@@ -46,6 +46,11 @@ Context through encoded OSC Messages. They then demonstrate that:
 - an OSC Append keeps a tail-following viewport at the new logical tail; and
 - an OSC Append preserves an existing current search match and makes the new
   Block searchable.
+- an OSC Seal changes a Block's Session lifecycle without changing its rendered
+  rows, history-reading position, selection, or copy source, and a later Update
+  returns the correlated `block_sealed` error without changing content; and
+- an OSC Seal preserves the current search match and searchable text in its
+  Block.
 
 Each scenario also observes the updated Session content after the rendered
 history queue drains. This supplies narrow cross-layer evidence for the
@@ -58,12 +63,16 @@ requirements.
   search addon presents its current match through the terminal selection.
 - Content metadata is not composed because the protocol has not defined an
   optional styled content representation.
-- The scenarios cover only complete Update, Extend, ReplaceSuffix, and Append
-  with printable ASCII fixtures. Seal, resize, capacity eviction, and non-ASCII
-  content remain covered only by their narrower component prototypes.
+- The scenarios exercise all five current Block Operation kinds with printable
+  ASCII fixtures, but only the scenarios listed above. Resize, capacity
+  eviction, and non-ASCII content remain covered only by narrower component
+  prototypes.
 - Append while input is active remains outside the experiment because
   coordinating new output with the TUI's current input is not historical Block
   mutation.
+- Seal has no active-input scenario because it changes Session lifecycle
+  without enqueueing a content render; the experiment claims only the tested
+  lifecycle, rejection, selection, and search outcomes.
 - The composition event is synthetic and does not prove compatibility with a
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain

@@ -221,8 +221,10 @@ selection, clear a removed-suffix selection, update retained, removed, and new
 search results, and leave active input with synthetic composition unchanged.
 Three Append scenarios preserve an existing history-reading position and
 selection, continue tail following, and add searchable tail content without
-losing an existing search match. Search and ordinary selection are separate
-because the tested
+losing an existing search match. Two Seal scenarios preserve selection and
+search while changing Session lifecycle; one also receives a correlated
+`block_sealed` error when a later Update is rejected without changing content.
+Search and ordinary selection are separate because the tested
 xterm.js search addon uses the terminal selection to present its current match.
 The experiment does not compose content metadata or extend its component
 fixtures' character, Operation, terminal, or browser coverage.
