@@ -11,10 +11,12 @@
   "scripts": {
     "build:xterm-browser-input-state": "vite build prototypes/integration/xterm-browser-input-state --outDir ../../../.tmp/xterm-browser-input-state-dist --emptyOutDir",
     "build:xterm-browser-metadata": "vite build prototypes/integration/xterm-browser-metadata --outDir ../../../.tmp/xterm-browser-metadata-dist --emptyOutDir",
+    "build:xterm-browser-protocol-endpoint": "vite build prototypes/integration/xterm-browser-protocol-endpoint --outDir ../../../.tmp/xterm-browser-protocol-endpoint-dist --emptyOutDir",
     "build:xterm-browser-search": "vite build prototypes/integration/xterm-browser-search --outDir ../../../.tmp/xterm-browser-search-dist --emptyOutDir",
     "build:xterm-browser-selection": "vite build prototypes/integration/xterm-browser-selection --outDir ../../../.tmp/xterm-browser-selection-dist --emptyOutDir",
     "prototype:xterm-browser-input-state": "vite prototypes/integration/xterm-browser-input-state",
     "prototype:xterm-browser-metadata": "vite prototypes/integration/xterm-browser-metadata",
+    "prototype:xterm-browser-protocol-endpoint": "vite prototypes/integration/xterm-browser-protocol-endpoint",
     "prototype:xterm-browser-search": "vite prototypes/integration/xterm-browser-search",
     "prototype:xterm-browser-selection": "vite prototypes/integration/xterm-browser-selection",
     "test": "node --test prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts prototypes/reference-codec/*.test.ts prototypes/xterm-headless/*.test.ts",

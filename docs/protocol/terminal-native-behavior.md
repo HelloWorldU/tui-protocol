@@ -207,6 +207,17 @@ cover a real operating-system IME, and the experiment does not cover multiline
 editors, wrapped or non-ASCII input, Append during input, partial-Block
 eviction, or cross-terminal behavior.
 
+A [browser protocol endpoint
+prototype](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
+then composes the OSC codec, Session, private xterm history renderer, and the
+browser state fixtures. Three complete-Update scenarios preserve a later
+reading position and user selection, an unaffected current search match, and
+active input with a synthetic composition after encoded OSC Messages traverse
+the endpoint. Search and ordinary selection are separate because the tested
+xterm.js search addon uses the terminal selection to present its current match.
+The experiment does not compose content metadata or extend its component
+fixtures' character, Operation, terminal, or browser coverage.
+
 ## Current Scope
 
 This draft defines initial correctness boundaries for reading, reflow,

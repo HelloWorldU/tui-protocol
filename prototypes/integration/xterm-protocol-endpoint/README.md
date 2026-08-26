@@ -124,8 +124,11 @@ implementation.
   Update, Extend, ReplaceSuffix, Append, Seal, resize/reflow, and the tested
   complete-Block capacity boundary without composing this endpoint. Content
   metadata, active input, mouse selection, and other real user interaction
-  remain untested. Selection evidence is limited to single-line ASCII content
-  and the tested dimensions and capacity boundary.
+  remain untested in this headless fixture. A [browser protocol endpoint
+  experiment](../xterm-browser-protocol-endpoint/README.md) composes encoded
+  OSC Update Messages with reading position, selection, search, and active
+  input checks. Selection evidence is limited to single-line ASCII content and
+  the tested dimensions and capacity boundary.
 
 ## Run
 

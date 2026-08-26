@@ -11,11 +11,19 @@ import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-histo
 
 export interface XtermProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
+  readonly history?: XtermBlockHistory;
 }
 
 export interface RenderedBlockRange {
   readonly start: number;
   readonly lineCount: number;
+}
+
+export interface XtermBlockHistory extends IDisposable {
+  wouldExceedCapacity(operation: Operation): boolean;
+  accept(operation: Operation): void;
+  renderAccepted(operation: Operation): Promise<void>;
+  range(id: string): Readonly<RenderedBlockRange> | undefined;
 }
 
 /**
@@ -24,11 +32,11 @@ export interface RenderedBlockRange {
  */
 export class XtermProtocolEndpoint implements IDisposable {
   readonly #endpoint: TerminalProtocolEndpoint;
-  readonly #history: PrivateCoreBlockHistory;
+  readonly #history: XtermBlockHistory;
   #rendering: Promise<void> = Promise.resolve();
 
   constructor(terminal: Terminal, options: XtermProtocolEndpointOptions) {
-    this.#history = new PrivateCoreBlockHistory(terminal);
+    this.#history = options.history ?? new PrivateCoreBlockHistory(terminal);
     this.#endpoint = new TerminalProtocolEndpoint({
       completeBaselineSupported: options.completeBaselineSupported,
       onOperationPrepared: (operation) =>

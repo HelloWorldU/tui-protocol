@@ -32,7 +32,20 @@ export class BrowserSelectionHistory {
   }
 
   async apply(operation: Operation): Promise<void> {
-    await this.#apply(operation);
+    this.accept(operation);
+    await this.renderAccepted(operation);
+  }
+
+  wouldExceedCapacity(operation: Operation): boolean {
+    return this.#history.wouldExceedCapacity(operation);
+  }
+
+  accept(operation: Operation): void {
+    this.#history.accept(operation);
+  }
+
+  async renderAccepted(operation: Operation): Promise<void> {
+    await this.#renderAccepted(operation);
     this.#terminal.refresh(0, this.#terminal.rows - 1);
   }
 
@@ -61,19 +74,19 @@ export class BrowserSelectionHistory {
     this.#terminal.refresh(0, this.#terminal.rows - 1);
   }
 
-  async #apply(operation: Operation): Promise<void> {
+  async #renderAccepted(operation: Operation): Promise<void> {
     if (
       (operation.type !== "update" && operation.type !== "replaceSuffix") ||
       !this.#terminal.hasSelection()
     ) {
-      await this.#history.apply(operation);
+      await this.#history.renderAccepted(operation);
       return;
     }
 
     const targetBefore = this.#history.range(operation.id);
     const selection = this.#selectionSnapshot();
     if (targetBefore === undefined || selection === undefined) {
-      await this.#history.apply(operation);
+      await this.#history.renderAccepted(operation);
       return;
     }
     const logicalSelection = this.#logicalSelectionSnapshot();
@@ -93,17 +106,17 @@ export class BrowserSelectionHistory {
         logicalSelection.blockId === operation.id &&
         logicalSelection.endOffset <= operation.retain
       ) {
-        await this.#history.apply(operation);
+        await this.#history.renderAccepted(operation);
         this.#restoreLogicalSelection(logicalSelection);
         return;
       }
 
       this.#terminal.clearSelection();
-      await this.#history.apply(operation);
+      await this.#history.renderAccepted(operation);
       return;
     }
 
-    await this.#history.apply(operation);
+    await this.#history.renderAccepted(operation);
     this.#restoreLogicalSelection(logicalSelection);
   }
 

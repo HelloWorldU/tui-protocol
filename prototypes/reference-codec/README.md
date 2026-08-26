@@ -33,12 +33,16 @@ It implements the current drafts for:
   identity; an empty replacement remains valid.
 - A framing failure discards only its incomplete Message and parsing resumes
   at a later valid protocol frame.
+- The same codec processes the tested OSC Messages in the [browser protocol
+  endpoint](../integration/xterm-browser-protocol-endpoint/README.md) without a
+  Node-only Base64 dependency.
 
 ## Experimental Boundaries
 
 - OSC number `9002` remains provisional and is not a public allocation.
 - The exported TypeScript API is an experimental fixture, not a stable SDK.
-- Node.js `Buffer` is used for Base64 as a prototype implementation detail.
+- Base64 uses the standard `btoa` and `atob` globals available in the declared
+  Node.js runtime and tested browser; broader runtime portability is untested.
 - Only the baseline `text/plain` content schema is implemented because no
   optional content type schema has been selected.
 - Decoder error events are local diagnostics; they are not wire-level

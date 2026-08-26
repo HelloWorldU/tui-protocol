@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 import {
   deserializeMessage,
   MessageCodecError,
@@ -66,7 +64,7 @@ export function encodeMessageFrames(
     const end = Math.min(offset + RAW_FRAGMENT_BYTES, payload.length);
     const fragment = payload.subarray(offset, end);
     const more = end < payload.length ? 1 : 0;
-    const base64 = Buffer.from(fragment).toString("base64");
+    const base64 = encodeBase64(fragment);
     frames.push(
       asciiEncoder.encode(
         `\u001B]${OSC_NUMBER};${FRAMING_VERSION};${frameId};${index};${more};${base64}\u001B\\`,
@@ -345,7 +343,7 @@ function parseFrame(content: readonly number[]): ParsedFrame {
   if (content.some((byte) => byte > 0x7f)) {
     throw new FrameCodecError("Protocol frame content must be ASCII.");
   }
-  const text = Buffer.from(content).toString("ascii");
+  const text = String.fromCharCode(...content);
   const match = framePattern.exec(text);
   if (match === null) {
     throw new FrameCodecError("Protocol frame header is invalid.");
@@ -384,11 +382,23 @@ function decodeBase64(text: string): Uint8Array {
   ) {
     throw new FrameCodecError("Fragment payload is not canonical Base64.");
   }
-  const bytes = Buffer.from(text, "base64");
-  if (bytes.toString("base64") !== text) {
+  let decoded: string;
+  try {
+    decoded = atob(text);
+  } catch {
     throw new FrameCodecError("Fragment payload is not canonical Base64.");
   }
-  return new Uint8Array(bytes);
+  const bytes = Uint8Array.from(decoded, (character) =>
+    character.charCodeAt(0),
+  );
+  if (encodeBase64(bytes) !== text) {
+    throw new FrameCodecError("Fragment payload is not canonical Base64.");
+  }
+  return bytes;
+}
+
+function encodeBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
 }
 
 function parseBoundedInteger(

@@ -25,6 +25,7 @@ prototypes/                   Executable experiments that test assumptions.
     protocol-endpoint/        Terminal-side bytes-to-state and response path.
     xterm-browser-input-state/ Browser active-input behavior experiment.
     xterm-browser-metadata/   Browser content-metadata behavior experiment.
+    xterm-browser-protocol-endpoint/ Browser bytes-to-native-state experiment.
     xterm-browser-search/     Browser search behavior experiment.
     xterm-browser-selection/  Browser selection and copy behavior experiment.
     xterm-protocol-endpoint/  Protocol bytes to mutable xterm history path.

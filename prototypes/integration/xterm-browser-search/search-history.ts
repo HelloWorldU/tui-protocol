@@ -22,8 +22,21 @@ export class BrowserSearchHistory {
   }
 
   async apply(operation: Operation): Promise<void> {
+    this.accept(operation);
+    await this.renderAccepted(operation);
+  }
+
+  wouldExceedCapacity(operation: Operation): boolean {
+    return this.#history.wouldExceedCapacity(operation);
+  }
+
+  accept(operation: Operation): void {
+    this.#history.accept(operation);
+  }
+
+  async renderAccepted(operation: Operation): Promise<void> {
     const currentTerm = this.#selectedSearchTerm();
-    await this.#history.apply(operation);
+    await this.#history.renderAccepted(operation);
     this.#restoreSearch(currentTerm);
   }
 
