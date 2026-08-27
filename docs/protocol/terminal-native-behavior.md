@@ -224,10 +224,19 @@ selection, continue tail following, and add searchable tail content without
 losing an existing search match. Two Seal scenarios preserve selection and
 search while changing Session lifecycle; one also receives a correlated
 `block_sealed` error when a later Update is rejected without changing content.
+Four resize scenarios preserve reading and selection through reflow and a
+later encoded Update, preserve a current search match and active input, and
+continue tail following. Five Update-driven complete-Block capacity scenarios
+preserve or clear selection and search according to whether their logical
+content remains rendered, move an evicted reading position to the next retained
+Block without following the tail, and preserve active input. In these capacity
+fixtures, the Session retains the evicted Block's logical snapshot after its
+rendered range disappears.
 Search and ordinary selection are separate because the tested
 xterm.js search addon uses the terminal selection to present its current match.
-The experiment does not compose content metadata or extend its component
-fixtures' character, Operation, terminal, or browser coverage.
+The experiment does not compose content metadata and does not extend its
+component fixtures beyond the listed ASCII, dimension, complete-Block,
+terminal, or browser boundaries.
 
 ## Current Scope
 

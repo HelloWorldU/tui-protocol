@@ -52,6 +52,10 @@ export class BrowserXtermProtocolEndpoint {
     return this.#history.findNext(term);
   }
 
+  resize(cols: number, rows: number): void {
+    this.#history.resize(cols, rows);
+  }
+
   dispose(): void {
     this.#endpoint.dispose();
   }

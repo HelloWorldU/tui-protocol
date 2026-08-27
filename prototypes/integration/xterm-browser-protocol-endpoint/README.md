@@ -19,7 +19,7 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Fifteen browser scenarios first negotiate the baseline capability and open a
+Twenty-four browser scenarios first negotiate the baseline capability and open a
 Context through encoded OSC Messages. They then demonstrate that:
 
 - an OSC Update grows an earlier Block while a later reading position and
@@ -51,6 +51,17 @@ Context through encoded OSC Messages. They then demonstrate that:
   returns the correlated `block_sealed` error without changing content; and
 - an OSC Seal preserves the current search match and searchable text in its
   Block.
+- a browser resize reflows Block ranges while preserving a history-reading
+  position, selection, copy source, and a subsequent OSC Update;
+- browser resize preserves a current search match, active input, and
+  tail-following state in separate scenarios;
+- an Update-driven complete-Block capacity eviction preserves a retained
+  history-reading position, selection, copy source, and search match;
+- the same capacity boundary clears a selection or search match inside the
+  evicted Block, moves an evicted reading position to the next retained Block
+  without following the tail, and leaves retained text searchable; and
+- complete-Block capacity eviction leaves current input text, cursor, and focus
+  unchanged.
 
 Each scenario also observes the updated Session content after the rendered
 history queue drains. This supplies narrow cross-layer evidence for the
@@ -63,10 +74,14 @@ requirements.
   search addon presents its current match through the terminal selection.
 - Content metadata is not composed because the protocol has not defined an
   optional styled content representation.
-- The scenarios exercise all five current Block Operation kinds with printable
-  ASCII fixtures, but only the scenarios listed above. Resize, capacity
-  eviction, and non-ASCII content remain covered only by narrower component
-  prototypes.
+- The scenarios exercise all five current Block Operation kinds, one fixed
+  `20`-to-`10`-column resize, and one Update-driven complete-Block capacity
+  eviction with printable ASCII fixtures, but only the outcomes listed above.
+- Partial-Block trimming, Append-driven eviction, other dimensions, and
+  non-ASCII content remain outside this composed experiment.
+- Capacity eviction removes the tested Block's rendered range while Session
+  retains its logical snapshot. The experiment does not define forgotten-Block
+  lifecycle or prove complete memory reclamation.
 - Append while input is active remains outside the experiment because
   coordinating new output with the TUI's current input is not historical Block
   mutation.

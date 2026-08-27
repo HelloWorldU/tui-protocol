@@ -22,6 +22,12 @@ interface Fixture {
   dispose(): void;
 }
 
+interface FixtureOptions {
+  readonly cols?: number;
+  readonly rows?: number;
+  readonly scrollback?: number;
+}
+
 interface InputSnapshot {
   readonly absoluteRow: number;
   readonly cursorX: number;
@@ -69,6 +75,15 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runAppendSearchScenario(),
     await runSealSelectionAndRejectionScenario(),
     await runSealSearchScenario(),
+    await runResizeReadingSelectionAndUpdateScenario(),
+    await runResizeSearchScenario(),
+    await runResizeActiveInputScenario(),
+    await runResizeTailFollowingScenario(),
+    await runCapacityRetainsSelectionAndReadingScenario(),
+    await runCapacityEvictsSelectedBlockScenario(),
+    await runCapacityRetainsSearchMatchScenario(),
+    await runCapacityEvictsSearchMatchScenario(),
+    await runCapacityActiveInputScenario(),
   ];
 }
 
@@ -1177,11 +1192,527 @@ async function runSealSearchScenario(): Promise<ScenarioResult> {
   }
 }
 
-function createFixture(): Fixture {
+async function runResizeReadingSelectionAndUpdateScenario(): Promise<ScenarioResult> {
+  const fixture = createFixture({ cols: 20, rows: 4 });
+  try {
+    pushMessages(fixture.endpoint, [
+      append(
+        fixture.contextId,
+        "1",
+        "earlier",
+        "1234567890ABCDEF",
+        "mutable",
+      ),
+      append(fixture.contextId, "2", "reader", "later", "sealed"),
+      append(
+        fixture.contextId,
+        "3",
+        "tail",
+        "tail-1\ntail-2\ntail-3\ntail-4",
+        "sealed",
+      ),
+    ]);
+    await fixture.endpoint.drain();
+
+    const readerBefore = requiredRange(fixture, "reader");
+    fixture.terminal.scrollToLine(readerBefore.start);
+    fixture.terminal.select(0, readerBefore.start, "later".length);
+
+    fixture.endpoint.resize(10, 4);
+
+    const readerAfterResize = requiredRange(fixture, "reader");
+    assertTrue(
+      readerAfterResize.start > readerBefore.start,
+      "reader Block moved after an earlier Block reflowed",
+    );
+    assertEqual(
+      fixture.terminal.buffer.active.viewportY,
+      readerAfterResize.start,
+      "reading row after resize",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "later",
+      "selection after resize",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      readerAfterResize.start,
+      "selection row after resize",
+    );
+    assertEqual(copySelection(fixture.terminal), "later", "copy after resize");
+
+    pushMessages(fixture.endpoint, [
+      update(fixture.contextId, "4", "earlier", "short"),
+    ]);
+    await fixture.endpoint.drain();
+
+    const readerAfterUpdate = requiredRange(fixture, "reader");
+    assertTrue(
+      readerAfterUpdate.start < readerAfterResize.start,
+      "reader Block moved back after the resized earlier Block shrank",
+    );
+    assertEqual(
+      fixture.terminal.buffer.active.viewportY,
+      readerAfterUpdate.start,
+      "reading row after post-resize Update",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "later",
+      "selection after post-resize Update",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      readerAfterUpdate.start,
+      "selection row after post-resize Update",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "later",
+      "copy after post-resize Update",
+    );
+    assertBlockContent(fixture, "earlier", "short");
+    assertBlockContent(fixture, "reader", "later");
+    return {
+      name: "Browser Resize Preserves Reading and Selection Through a Later Update",
+      detail: "the selected reader row followed reflow and a subsequent OSC Update without changing its copy text",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runResizeSearchScenario(): Promise<ScenarioResult> {
+  const fixture = createFixture({ cols: 20, rows: 4 });
+  try {
+    pushMessages(fixture.endpoint, [
+      append(
+        fixture.contextId,
+        "1",
+        "earlier",
+        "1234567890ABCDEF",
+        "sealed",
+      ),
+      append(
+        fixture.contextId,
+        "2",
+        "search-result",
+        "persistent match",
+        "sealed",
+      ),
+      append(
+        fixture.contextId,
+        "3",
+        "tail",
+        "tail-1\ntail-2\ntail-3",
+        "sealed",
+      ),
+    ]);
+    await fixture.endpoint.drain();
+    assertEqual(
+      fixture.endpoint.findNext("persistent"),
+      true,
+      "current search before resize",
+    );
+    const resultBefore = requiredRange(fixture, "search-result");
+
+    fixture.endpoint.resize(10, 4);
+
+    const resultAfter = requiredRange(fixture, "search-result");
+    assertTrue(
+      resultAfter.start > resultBefore.start,
+      "search-result Block moved after earlier reflow",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "persistent",
+      "current search match after resize",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      resultAfter.start,
+      "current search match row after resize",
+    );
+    assertBlockContent(fixture, "search-result", "persistent match");
+    return {
+      name: "Browser Resize Preserves the Current Search Match",
+      detail: "the current match moved with its Block when earlier content reflowed",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runResizeActiveInputScenario(): Promise<ScenarioResult> {
+  const fixture = createFixture({ cols: 20, rows: 4 });
+  try {
+    pushMessages(fixture.endpoint, [
+      append(
+        fixture.contextId,
+        "1",
+        "history",
+        "1234567890ABCDEF",
+        "sealed",
+      ),
+      append(
+        fixture.contextId,
+        "2",
+        "tail",
+        "tail-1\ntail-2\ntail-3",
+        "sealed",
+      ),
+    ]);
+    await fixture.endpoint.drain();
+    await write(fixture.terminal, "> edit");
+    await write(fixture.terminal, "\u001b[2D");
+    fixture.terminal.focus();
+    const inputBefore = inputSnapshot(fixture.terminal);
+
+    fixture.endpoint.resize(10, 4);
+    await nextTurn();
+
+    const inputAfter = inputSnapshot(fixture.terminal);
+    assertInputStateUnchanged(inputAfter, inputBefore, "active input after resize");
+    assertTrue(
+      inputAfter.absoluteRow > inputBefore.absoluteRow,
+      "active input moved below reflowed history",
+    );
+    assertBlockContent(fixture, "history", "1234567890ABCDEF");
+    return {
+      name: "Browser Resize Preserves Active Input",
+      detail: "the input moved physically while keeping its text, cursor, and focus",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runResizeTailFollowingScenario(): Promise<ScenarioResult> {
+  const fixture = createFixture({ cols: 20, rows: 4 });
+  try {
+    pushMessages(fixture.endpoint, [
+      append(
+        fixture.contextId,
+        "1",
+        "history",
+        "1234567890ABCDEF",
+        "sealed",
+      ),
+      append(
+        fixture.contextId,
+        "2",
+        "tail",
+        "tail-1\ntail-2\ntail-3\ntail-4\ntail-5",
+        "sealed",
+      ),
+    ]);
+    await fixture.endpoint.drain();
+    fixture.terminal.scrollToBottom();
+    const baseBefore = fixture.terminal.buffer.active.baseY;
+
+    fixture.endpoint.resize(10, 4);
+
+    assertTrue(
+      fixture.terminal.buffer.active.baseY > baseBefore,
+      "terminal history grew after resize reflow",
+    );
+    assertEqual(
+      fixture.terminal.buffer.active.viewportY,
+      fixture.terminal.buffer.active.baseY,
+      "tail-following viewport after resize",
+    );
+    assertBlockContent(fixture, "history", "1234567890ABCDEF");
+    return {
+      name: "Browser Resize Preserves Tail Following",
+      detail: "the viewport remained at the logical tail after reflow added rows",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runCapacityRetainsSelectionAndReadingScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    const readerBefore = requiredRange(fixture, "capacity-reader");
+    fixture.terminal.scrollToLine(readerBefore.start);
+    fixture.terminal.select(0, readerBefore.start, "reader".length);
+
+    await growCapacityFixture(fixture);
+
+    const readerAfter = requiredRange(fixture, "capacity-reader");
+    assertEqual(
+      fixture.endpoint.range(fixture.contextId, "capacity-oldest"),
+      undefined,
+      "oldest Block rendered range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.buffer.active.viewportY,
+      readerAfter.start,
+      "retained reading row after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "reader",
+      "retained selection after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      readerAfter.start,
+      "retained selection row after capacity eviction",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      "reader",
+      "retained copy after capacity eviction",
+    );
+    assertBlockContent(fixture, "capacity-oldest", "old-11111old-22222");
+    assertBlockContent(
+      fixture,
+      "capacity-growing",
+      "new-11111new-22222new-33333new-4",
+    );
+    return {
+      name: "Capacity Eviction Preserves a Retained Reading Position and Selection",
+      detail: "the oldest rendered Block disappeared while the later reader row and copy source stayed attached",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runCapacityEvictsSelectedBlockScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    const oldest = requiredRange(fixture, "capacity-oldest");
+    fixture.terminal.scrollToLine(oldest.start);
+    fixture.terminal.select(0, oldest.start, "old-11111".length);
+
+    await growCapacityFixture(fixture);
+
+    const nextRetained = requiredRange(fixture, "capacity-growing");
+    assertEqual(
+      fixture.endpoint.range(fixture.contextId, "capacity-oldest"),
+      undefined,
+      "selected Block rendered range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.hasSelection(),
+      false,
+      "selection after its complete Block is evicted",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      undefined,
+      "copy after its complete Block is evicted",
+    );
+    assertEqual(
+      fixture.terminal.buffer.active.viewportY,
+      nextRetained.start,
+      "reading row after its complete Block is evicted",
+    );
+    assertTrue(
+      fixture.terminal.buffer.active.viewportY <
+        fixture.terminal.buffer.active.baseY,
+      "evicted reading position did not switch to tail following",
+    );
+    assertBlockContent(fixture, "capacity-oldest", "old-11111old-22222");
+    return {
+      name: "Capacity Eviction Clears an Evicted Selection and Moves Reading Forward",
+      detail: "the removed Block lost its copy source and the viewport moved to the next retained Block without following the tail",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runCapacityRetainsSearchMatchScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    assertEqual(
+      fixture.endpoint.findNext("reader"),
+      true,
+      "retained search before capacity eviction",
+    );
+    fixture.terminal.scrollToBottom();
+
+    await growCapacityFixture(fixture);
+
+    const readerAfter = requiredRange(fixture, "capacity-reader");
+    assertEqual(
+      fixture.endpoint.range(fixture.contextId, "capacity-oldest"),
+      undefined,
+      "oldest search Block range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "reader",
+      "retained current match after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition()?.start.y,
+      readerAfter.start,
+      "retained current match row after capacity eviction",
+    );
+    assertEqual(
+      fixture.endpoint.findNext("old-11111"),
+      false,
+      "evicted text search after capacity eviction",
+    );
+    assertEqual(
+      fixture.endpoint.findNext("reader"),
+      true,
+      "retained text search after capacity eviction",
+    );
+    return {
+      name: "Capacity Eviction Preserves a Retained Search Match",
+      detail: "the later match stayed attached while evicted rendered text left the search projection",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runCapacityEvictsSearchMatchScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    assertEqual(
+      fixture.endpoint.findNext("old-11111"),
+      true,
+      "evicted search before capacity eviction",
+    );
+    fixture.terminal.scrollToBottom();
+
+    await growCapacityFixture(fixture);
+
+    assertEqual(
+      fixture.endpoint.range(fixture.contextId, "capacity-oldest"),
+      undefined,
+      "current-match Block range after capacity eviction",
+    );
+    assertEqual(
+      fixture.terminal.hasSelection(),
+      false,
+      "current search match after its complete Block is evicted",
+    );
+    assertEqual(
+      fixture.endpoint.findNext("old-11111"),
+      false,
+      "evicted current-match search after capacity eviction",
+    );
+    assertEqual(
+      fixture.endpoint.findNext("reader"),
+      true,
+      "retained search after current-match eviction",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "reader",
+      "replacement current match after capacity eviction",
+    );
+    return {
+      name: "Capacity Eviction Clears an Evicted Search Match",
+      detail: "the removed match cleared and retained rendered text remained searchable",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function runCapacityActiveInputScenario(): Promise<ScenarioResult> {
+  const fixture = await createCapacityFixture();
+  try {
+    await write(fixture.terminal, "> edit");
+    await write(fixture.terminal, "\u001b[2D");
+    fixture.terminal.focus();
+    const inputBefore = inputSnapshot(fixture.terminal);
+    requiredRange(fixture, "capacity-oldest");
+
+    await growCapacityFixture(fixture);
+
+    const inputAfter = inputSnapshot(fixture.terminal);
+    assertEqual(
+      fixture.endpoint.range(fixture.contextId, "capacity-oldest"),
+      undefined,
+      "oldest Block rendered range after input-state capacity eviction",
+    );
+    assertInputStateUnchanged(
+      inputAfter,
+      inputBefore,
+      "active input after capacity eviction",
+    );
+    assertBlockContent(
+      fixture,
+      "capacity-growing",
+      "new-11111new-22222new-33333new-4",
+    );
+    return {
+      name: "Capacity Eviction Preserves Active Input",
+      detail: "removing an old complete Block changed no input text, cursor, or focus",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function createCapacityFixture(): Promise<Fixture> {
+  const fixture = createFixture({ cols: 10, rows: 3, scrollback: 7 });
+  pushMessages(fixture.endpoint, [
+    append(
+      fixture.contextId,
+      "1",
+      "capacity-oldest",
+      "old-11111old-22222",
+      "sealed",
+    ),
+    append(
+      fixture.contextId,
+      "2",
+      "capacity-growing",
+      "draft",
+      "mutable",
+    ),
+    append(
+      fixture.contextId,
+      "3",
+      "capacity-reader",
+      "reader",
+      "sealed",
+    ),
+    append(
+      fixture.contextId,
+      "4",
+      "capacity-tail",
+      "tail-1111tail-2222tail-3333tail-4",
+      "sealed",
+    ),
+  ]);
+  await fixture.endpoint.drain();
+  return fixture;
+}
+
+async function growCapacityFixture(fixture: Fixture): Promise<void> {
+  pushMessages(fixture.endpoint, [
+    update(
+      fixture.contextId,
+      "5",
+      "capacity-growing",
+      "new-11111new-22222new-33333new-4",
+    ),
+  ]);
+  await fixture.endpoint.drain();
+}
+
+function createFixture(options: FixtureOptions = {}): Fixture {
   const host = document.createElement("div");
   host.className = "isolated-terminal";
   document.body.appendChild(host);
-  const fixtureTerminal = new Terminal({ cols: 20, rows: 4, scrollback: 100 });
+  const fixtureTerminal = new Terminal({
+    cols: options.cols ?? 20,
+    rows: options.rows ?? 4,
+    scrollback: options.scrollback ?? 100,
+  });
   fixtureTerminal.open(host);
   const endpoint = new BrowserXtermProtocolEndpoint(fixtureTerminal);
   const contextId = negotiateAndOpen(endpoint);
@@ -1405,6 +1936,16 @@ function inputSnapshot(source: Terminal): InputSnapshot {
     focused: document.activeElement === source.textarea,
     text,
   };
+}
+
+function assertInputStateUnchanged(
+  actual: InputSnapshot,
+  expected: InputSnapshot,
+  label: string,
+): void {
+  assertEqual(actual.text, expected.text, `${label} text`);
+  assertEqual(actual.cursorX, expected.cursorX, `${label} cursor`);
+  assertEqual(actual.focused, expected.focused, `${label} focus`);
 }
 
 function copySelection(source: Terminal): string | undefined {

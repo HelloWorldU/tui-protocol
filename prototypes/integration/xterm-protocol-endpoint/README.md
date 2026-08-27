@@ -125,11 +125,12 @@ implementation.
   complete-Block capacity boundary without composing this endpoint. Content
   metadata, active input, mouse selection, and other real user interaction
   remain untested in this headless fixture. A [browser protocol endpoint
-  experiment](../xterm-browser-protocol-endpoint/README.md) composes encoded
-  all five current OSC Block Operation Messages with reading position,
+  experiment](../xterm-browser-protocol-endpoint/README.md) composes all five
+  current Block Operation Messages encoded in OSC with reading position,
   selection, search, tail-following, lifecycle rejection, and active input
-  checks. Selection evidence is limited to single-line ASCII content and the
-  tested dimensions and capacity boundary.
+  checks. It also composes those browser states with the tested resize/reflow
+  and Update-driven complete-Block capacity boundary. Selection evidence is
+  limited to single-line ASCII content and the tested dimensions.
 
 ## Run
 
