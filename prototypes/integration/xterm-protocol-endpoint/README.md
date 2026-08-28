@@ -13,8 +13,11 @@ It composes:
   deliberately private core path can replace materialized Block ranges in an
   xterm.js Buffer.
 
-Only Block Operations accepted by the Session enter an ordered rendering
-queue. Tests await `drain()` before observing the resulting xterm.js history.
+An experimental `XtermTerminalAdapter` owns the conversion from accepted
+protocol Operations to the Block-history model, the internal Context-and-Block
+key, capacity preparation, and the ordered rendering queue. Only Block
+Operations committed by the Session are accepted by this adapter. Tests await
+`drain()` before observing the resulting xterm.js history.
 
 ## Proven
 
@@ -22,6 +25,8 @@ queue. Tests await `drain()` before observing the resulting xterm.js history.
   path before Block Operations are sent.
 - Tested OSC `9002` Append, Update, Extend, and ReplaceSuffix Message bytes
   materialize `text/plain` Blocks in real xterm.js Buffer lines.
+- In a tested pair of Contexts, the same Block ID produces separate rendered
+  ranges, and updating one Context's Block leaves the other unchanged.
 - Tested Append and Update Messages decoded from one input chunk retain their
   order while rendering is queued and materialize the updated Block.
 - Growing and shrinking an earlier mutable Block keeps a later logical history
@@ -87,6 +92,8 @@ implementation.
 
 - xterm.js history replacement still uses private core fields and is not a
   proposed public API or production implementation.
+- `XtermTerminalAdapter` is an integration-prototype boundary, not a stable or
+  proposed Terminal API.
 - Incoming bytes go directly to the protocol-only endpoint. Ordinary terminal
   data, a real terminal parser, PTY, multiplexer, and remote transport are not
   part of this experiment.
@@ -95,8 +102,8 @@ implementation.
   afterward. The prototype does not provide general failure atomicity,
   recovery, backpressure, or partial-rendering handling for other renderer
   failures.
-- Context and Block IDs are combined into an internal rendering key. The key
-  is an implementation fixture and has no wire-level meaning.
+- The adapter combines Context and Block IDs into an internal rendering key.
+  The key is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
   later Operations remain enforced by the Session.
 - The positive Capability result remains a configured host assertion, not

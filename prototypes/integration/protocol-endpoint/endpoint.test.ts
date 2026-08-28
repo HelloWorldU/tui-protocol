@@ -12,6 +12,7 @@ import {
   TerminalProtocolEndpoint,
   type AppliedBlockOperation,
   type EndpointResult,
+  type TerminalOperationAdapter,
 } from "./endpoint.ts";
 
 test("capability query bytes split across two writes produce a supported response Message", () => {
@@ -156,7 +157,7 @@ test("Extend bytes append only on the named content state, and Update restores a
   const applied: AppliedBlockOperation[] = [];
   const endpoint = new TerminalProtocolEndpoint({
     completeBaselineSupported: true,
-    onOperationApplied: (operation) => applied.push(operation),
+    operationAdapter: adapterThatRecords(applied),
   });
   const contextId = openContext(endpoint);
 
@@ -277,7 +278,7 @@ test("ReplaceSuffix bytes replace a Unicode-scalar suffix, while an out-of-range
   const applied: AppliedBlockOperation[] = [];
   const endpoint = new TerminalProtocolEndpoint({
     completeBaselineSupported: true,
-    onOperationApplied: (operation) => applied.push(operation),
+    operationAdapter: adapterThatRecords(applied),
   });
   const contextId = openContext(endpoint);
 
@@ -358,11 +359,11 @@ test("ReplaceSuffix bytes replace a Unicode-scalar suffix, while an out-of-range
   );
 });
 
-test("successful Block Operations reach the host in byte-stream order, while a rejected Update does not", () => {
+test("the adapter accepts Append, Update, and Seal in byte-stream order but not the rejected Update", () => {
   const applied: AppliedBlockOperation[] = [];
   const endpoint = new TerminalProtocolEndpoint({
     completeBaselineSupported: true,
-    onOperationApplied: (operation) => applied.push(operation),
+    operationAdapter: adapterThatRecords(applied),
   });
   const contextId = openContext(endpoint);
   const operations: readonly Message[] = [
@@ -427,13 +428,13 @@ test("successful Block Operations reach the host in byte-stream order, while a r
   ]);
 });
 
-test("a host capacity rejection returns resource_exhausted without changing the Block or reporting the Update as applied", () => {
+test("when the adapter rejects an Update for capacity, the endpoint returns resource_exhausted, keeps the old Block content, and does not accept the Update", () => {
   const applied: AppliedBlockOperation[] = [];
   const endpoint = new TerminalProtocolEndpoint({
     completeBaselineSupported: true,
-    onOperationPrepared: (operation) =>
+    operationAdapter: adapterThatRecords(applied, (operation) =>
       operation.kind === "block.update" ? "resource_exhausted" : undefined,
-    onOperationApplied: (operation) => applied.push(operation),
+    ),
   });
   const contextId = openContext(endpoint);
 
@@ -493,10 +494,10 @@ test("a host capacity rejection returns resource_exhausted without changing the 
   );
 });
 
-test("a thrown host preparation failure returns internal_error, leaves the Block unchanged, and does not block the next Operation", () => {
+test("when adapter preparation throws, the endpoint returns internal_error, keeps the old Block content, and processes the next Update", () => {
   const endpoint = new TerminalProtocolEndpoint({
     completeBaselineSupported: true,
-    onOperationPrepared: (operation) => {
+    operationAdapter: adapterThatRecords([], (operation) => {
       if (
         operation.kind === "block.update" &&
         operation.body.content.data === "preflight failure"
@@ -504,7 +505,7 @@ test("a thrown host preparation failure returns internal_error, leaves the Block
         throw new Error("renderer preflight failed");
       }
       return undefined;
-    },
+    }),
   });
   const contextId = openContext(endpoint);
   endpoint.push(
@@ -832,6 +833,18 @@ test("ending the byte stream rejects an incomplete Message, closes Contexts, and
 
 function supportedEndpoint(): TerminalProtocolEndpoint {
   return new TerminalProtocolEndpoint({ completeBaselineSupported: true });
+}
+
+function adapterThatRecords(
+  accepted: AppliedBlockOperation[],
+  prepare: TerminalOperationAdapter["prepare"] = () => undefined,
+): TerminalOperationAdapter {
+  return {
+    prepare,
+    accept(operation) {
+      accepted.push(operation);
+    },
+  };
 }
 
 function openContext(endpoint: TerminalProtocolEndpoint): string {

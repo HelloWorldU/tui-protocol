@@ -24,16 +24,17 @@ It composes:
   without success responses.
 - A tested Extend chain accepts the exact current base, returns correlated
   `content_state_mismatch` for a stale base, and continues from a complete
-  Update without reporting rejected fragments as applied to the host.
+  Update without sending rejected fragments to the adapter.
 - A tested ReplaceSuffix byte sequence counts an emoji as one Unicode scalar,
   reports an out-of-range retained prefix as `invalid_content_boundary`, and
-  does not report the rejected Operation as applied to the host.
-- Successful tested Block Operations are reported to an optional host hook in
-  byte-stream order; rejected Operations are not reported as applied.
-- A tested synchronous host preparation hook can reject an otherwise valid
+  does not send the rejected Operation to the adapter.
+- Successful tested Block Operations are accepted by an optional terminal
+  Operation adapter in byte-stream order; rejected Operations are not
+  accepted.
+- A tested synchronous adapter preparation step can reject an otherwise valid
   Update with `resource_exhausted` before Session state changes; the Update
-  produces a correlated error and is not reported as applied.
-- A tested exception from host preparation produces a local host diagnostic
+  produces a correlated error and is not accepted by the adapter.
+- A tested exception from adapter preparation produces a local host diagnostic
   and correlated `internal_error`, leaves Block state unchanged, and does not
   prevent the next Operation from being processed.
 - A tested Update of a sealed Block leaves its content unchanged and produces
@@ -54,10 +55,11 @@ It composes:
 
 - The exported TypeScript API is an integration harness, not a stable Terminal
   or SDK interface.
-- The optional preparation and applied-Operation hooks are synchronous
-  integration seams. Preparation can reject an Operation before Session
-  commit, but these hooks do not make asynchronous external rendering one
-  failure-atomic transaction.
+- The optional terminal Operation adapter is a synchronous experimental
+  execution boundary. Its preparation step can reject an Operation before
+  Session commit, and its accept step runs only after a successful commit. It
+  does not make subsequent asynchronous rendering one failure-atomic
+  transaction.
 - Outgoing response frame IDs use a local increasing counter that wraps after
   the framing maximum. The values are experimental transport fixtures with no
   application-level meaning.

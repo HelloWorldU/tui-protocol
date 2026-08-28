@@ -102,6 +102,62 @@ test("OSC Message bytes grow and shrink an earlier Block without moving the late
   xterm.dispose();
 });
 
+test("the same Block ID in two Contexts produces separate rendered ranges, and updating one leaves the other unchanged", async () => {
+  const xterm = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const firstContextId = negotiateAndOpen(endpoint);
+  const secondContextId = openContext(endpoint, "open-2", 3);
+
+  assert.deepEqual(
+    endpoint.push(
+      concatenate([
+        encodeInput(
+          append(firstContextId, "1", "shared", "first", "mutable"),
+          4,
+        ),
+        encodeInput(
+          append(secondContextId, "1", "shared", "second", "mutable"),
+          5,
+        ),
+      ]),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  assert.deepEqual(requiredRange(endpoint, firstContextId, "shared"), {
+    start: 0,
+    lineCount: 1,
+  });
+  assert.deepEqual(requiredRange(endpoint, secondContextId, "shared"), {
+    start: 1,
+    lineCount: 1,
+  });
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(update(firstContextId, "2", "shared", "changed"), 6),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  assert.equal(
+    endpoint.context(firstContextId)?.blocks[0]?.content.data,
+    "changed",
+  );
+  assert.equal(
+    endpoint.context(secondContextId)?.blocks[0]?.content.data,
+    "second",
+  );
+  assert.deepEqual(bufferRows(xterm), ["changed", "second", ""]);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 test("Extend bytes grow an earlier Block without moving the later history row being read, while a stale base renders nothing", async () => {
   const xterm = createTerminal();
   const endpoint = new XtermProtocolEndpoint(xterm, {
@@ -985,15 +1041,23 @@ function negotiateAndOpen(endpoint: XtermProtocolEndpoint): string {
     },
   ]);
 
+  return openContext(endpoint, "open-1", 2);
+}
+
+function openContext(
+  endpoint: XtermProtocolEndpoint,
+  requestId: string,
+  frameId: number,
+): string {
   const opened = endpoint.push(
     encodeInput(
       {
         version: 1,
         kind: "context.open",
-        request_id: "open-1",
+        request_id: requestId,
         body: {},
       },
-      2,
+      frameId,
     ),
   );
   const [response] = decodeResponses(opened);

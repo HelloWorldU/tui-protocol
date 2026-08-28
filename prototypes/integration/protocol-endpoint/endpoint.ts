@@ -25,12 +25,20 @@ export type AppliedBlockOperation = Extract<
   }
 >;
 
+/**
+ * Experimental synchronous boundary between protocol execution and a
+ * terminal-side Operation consumer.
+ */
+export interface TerminalOperationAdapter {
+  prepare(
+    operation: AppliedBlockOperation,
+  ): OperationExecutionErrorCode | undefined;
+  accept(operation: AppliedBlockOperation): void;
+}
+
 export interface TerminalProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
-  readonly onOperationPrepared?: (
-    operation: AppliedBlockOperation,
-  ) => OperationExecutionErrorCode | undefined;
-  readonly onOperationApplied?: (operation: AppliedBlockOperation) => void;
+  readonly operationAdapter?: TerminalOperationAdapter;
 }
 
 export interface EndpointDiagnostic {
@@ -53,17 +61,13 @@ export class ProtocolEndpointError extends Error {
 export class TerminalProtocolEndpoint {
   readonly #decoder = new ProtocolStreamDecoder();
   readonly #session: TerminalProtocolSession;
-  readonly #onOperationPrepared:
-    TerminalProtocolEndpointOptions["onOperationPrepared"];
-  readonly #onOperationApplied:
-    TerminalProtocolEndpointOptions["onOperationApplied"];
+  readonly #operationAdapter: TerminalOperationAdapter | undefined;
   #nextResponseFrameId = 1;
   #ended = false;
 
   constructor(options: TerminalProtocolEndpointOptions) {
     this.#session = new TerminalProtocolSession(options);
-    this.#onOperationPrepared = options.onOperationPrepared;
-    this.#onOperationApplied = options.onOperationApplied;
+    this.#operationAdapter = options.operationAdapter;
   }
 
   push(bytes: Uint8Array): EndpointResult {
@@ -116,7 +120,7 @@ export class TerminalProtocolEndpoint {
             } else {
               let executionError: OperationExecutionErrorCode | undefined;
               try {
-                executionError = this.#onOperationPrepared?.(
+                executionError = this.#operationAdapter?.prepare(
                   structuredClone(preparation.operation),
                 );
               } catch (error: unknown) {
@@ -145,7 +149,7 @@ export class TerminalProtocolEndpoint {
           continue;
         }
         if (appliedOperation !== undefined) {
-          this.#onOperationApplied?.(appliedOperation);
+          this.#operationAdapter?.accept(appliedOperation);
         }
       }
 

@@ -1,29 +1,19 @@
 import type { IDisposable, Terminal } from "@xterm/headless";
 
-import type { Operation } from "../../block-model/model.ts";
 import {
   TerminalProtocolEndpoint,
-  type AppliedBlockOperation,
   type EndpointResult,
 } from "../protocol-endpoint/index.ts";
 import type { SessionContextSnapshot } from "../../protocol-session/index.ts";
-import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
+import {
+  XtermTerminalAdapter,
+  type RenderedBlockRange,
+  type XtermBlockHistory,
+} from "./adapter.ts";
 
 export interface XtermProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
   readonly history?: XtermBlockHistory;
-}
-
-export interface RenderedBlockRange {
-  readonly start: number;
-  readonly lineCount: number;
-}
-
-export interface XtermBlockHistory extends IDisposable {
-  wouldExceedCapacity(operation: Operation): boolean;
-  accept(operation: Operation): void;
-  renderAccepted(operation: Operation): Promise<void>;
-  range(id: string): Readonly<RenderedBlockRange> | undefined;
 }
 
 /**
@@ -32,18 +22,13 @@ export interface XtermBlockHistory extends IDisposable {
  */
 export class XtermProtocolEndpoint implements IDisposable {
   readonly #endpoint: TerminalProtocolEndpoint;
-  readonly #history: XtermBlockHistory;
-  #rendering: Promise<void> = Promise.resolve();
+  readonly #adapter: XtermTerminalAdapter;
 
   constructor(terminal: Terminal, options: XtermProtocolEndpointOptions) {
-    this.#history = options.history ?? new PrivateCoreBlockHistory(terminal);
+    this.#adapter = new XtermTerminalAdapter(terminal, options.history);
     this.#endpoint = new TerminalProtocolEndpoint({
       completeBaselineSupported: options.completeBaselineSupported,
-      onOperationPrepared: (operation) =>
-        this.#history.wouldExceedCapacity(toRenderingOperation(operation))
-          ? "resource_exhausted"
-          : undefined,
-      onOperationApplied: (operation) => this.#enqueue(operation),
+      operationAdapter: this.#adapter,
     });
   }
 
@@ -56,7 +41,7 @@ export class XtermProtocolEndpoint implements IDisposable {
   }
 
   async drain(): Promise<void> {
-    await this.#rendering;
+    await this.#adapter.drain();
   }
 
   context(id: string): SessionContextSnapshot | undefined {
@@ -68,56 +53,10 @@ export class XtermProtocolEndpoint implements IDisposable {
   }
 
   range(contextId: string, blockId: string): RenderedBlockRange | undefined {
-    return this.#history.range(renderBlockId(contextId, blockId));
+    return this.#adapter.range(contextId, blockId);
   }
 
   dispose(): void {
-    this.#history.dispose();
+    this.#adapter.dispose();
   }
-
-  #enqueue(operation: AppliedBlockOperation): void {
-    const renderingOperation = toRenderingOperation(operation);
-    this.#history.accept(renderingOperation);
-    this.#rendering = this.#rendering.then(() =>
-      this.#history.renderAccepted(renderingOperation),
-    );
-  }
-}
-
-function toRenderingOperation(operation: AppliedBlockOperation): Operation {
-  const id = renderBlockId(operation.context_id, operation.body.block_id);
-  switch (operation.kind) {
-    case "block.append":
-      return {
-        type: "append",
-        block: {
-          id,
-          lifecycle: operation.body.lifecycle,
-          content: operation.body.content.data,
-        },
-      };
-    case "block.update":
-      return { type: "update", id, content: operation.body.content.data };
-    case "block.extend":
-      return { type: "extend", id, fragment: operation.body.fragment };
-    case "block.replace_suffix":
-      return {
-        type: "replaceSuffix",
-        id,
-        retain: operation.body.retain,
-        replacement: operation.body.replacement,
-      };
-    case "block.seal":
-      return { type: "seal", id };
-    default:
-      return assertNever(operation);
-  }
-}
-
-function renderBlockId(contextId: string, blockId: string): string {
-  return JSON.stringify([contextId, blockId]);
-}
-
-function assertNever(value: never): never {
-  throw new Error(`Unexpected applied Operation: ${JSON.stringify(value)}`);
 }
