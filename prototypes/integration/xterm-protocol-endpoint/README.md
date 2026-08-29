@@ -19,12 +19,23 @@ key, capacity preparation, and the ordered rendering queue. Only Block
 Operations committed by the Session are accepted by this adapter. Tests await
 `drain()` before observing the resulting xterm.js history.
 
+An optional experimental parser addon registers OSC `9002` with the xterm.js
+parser and forwards completed payloads to the same endpoint. It is a narrow
+bridge experiment, not yet a complete mixed-stream ingress implementation.
+
 ## Proven
 
 - Tested Capability and Context control bytes establish a supported protocol
   path before Block Operations are sent.
 - Tested OSC `9002` Append, Update, Extend, and ReplaceSuffix Message bytes
   materialize `text/plain` Blocks in real xterm.js Buffer lines.
+- In a tested parser-addon path, ordinary startup output remains visible while
+  a Capability query split across two xterm.js writes is consumed without
+  displaying its carrier bytes. Capability and Context responses reach the
+  tested response callback, and subsequent Append and Update Messages reach
+  both Session state and rendered history.
+- A tested invalid OSC `9002` payload produces a framing diagnostic, is not
+  displayed, and does not prevent later ordinary output from being displayed.
 - In a tested pair of Contexts, the same Block ID produces separate rendered
   ranges, and updating one Context's Block leaves the other unchanged.
 - Tested Append and Update Messages decoded from one input chunk retain their
@@ -94,9 +105,25 @@ implementation.
   proposed public API or production implementation.
 - `XtermTerminalAdapter` is an integration-prototype boundary, not a stable or
   proposed Terminal API.
-- Incoming bytes go directly to the protocol-only endpoint. Ordinary terminal
-  data, a real terminal parser, PTY, multiplexer, and remote transport are not
-  part of this experiment.
+- Most tests still send incoming bytes directly to the protocol-only endpoint.
+  The parser-addon tests add one narrow real-parser path, but a PTY,
+  multiplexer, remote transport, and bidirectional connection are not part of
+  this experiment.
+- The xterm.js OSC handler exposes only a completed payload, not its original
+  terminator or intervening stream events. The addon always reconstructs an
+  ST-ended frame for the current codec, so it cannot enforce the ST-only rule
+  and would treat an otherwise valid BEL-ended payload as ST-ended. It also
+  cannot observe ordinary output or another control between Message fragments
+  and would continue rather than interrupt that assembly. The positive tests
+  therefore use single-frame Messages, and this addon is not a complete
+  mixed-stream ingress.
+- The OSC handler returns synchronously while accepted Block rendering is
+  deferred. The experiment does not prove relative display order when one
+  xterm.js write contains both a protocol frame and later ordinary output.
+- The private history fixture still assumes that it owns writes after managed
+  Blocks begin. The parser test places ordinary output before the first Block;
+  arbitrary ordinary output after or between Blocks is not yet safely indexed
+  or tested.
 - Known Update, Extend, and ReplaceSuffix capacity exhaustion is checked before
   Session commit, but accepted Operations still render asynchronously
   afterward. The prototype does not provide general failure atomicity,
