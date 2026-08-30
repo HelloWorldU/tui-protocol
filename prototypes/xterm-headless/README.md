@@ -3,7 +3,7 @@
 This spike connects the in-memory
 [Block model](../block-model/README.md) to the real `@xterm/headless` parser.
 It validates that an OSC sequence can carry experimental Block Operations
-through arbitrary write boundaries.
+across a tested split write boundary.
 
 The spike deliberately uses OSC 777 with a JSON payload. Both the identifier
 and encoding are temporary test fixtures, not the subsequently selected OSC
@@ -40,7 +40,7 @@ API recommendation. It uses xterm.js markers as a resize-aware Block range
 index. Its internal Extend and ReplaceSuffix projections are exercised by the
 separate
 [xterm protocol endpoint integration](../integration/xterm-protocol-endpoint/README.md)
-and currently materializes the resulting complete Block range.
+and currently materialize the resulting complete Block range.
 `private-core-osc-addon.ts` connects the older temporary OSC transport through
 a deferred Operation queue.
 

@@ -170,9 +170,11 @@ accepted.
 
 Missing required members, unexpected members, forbidden envelope members,
 wrong JSON types, and invalid tagged alternatives make the complete Message
-invalid. A parseable Message with trustworthy correlation identity reports
-`invalid_message`; the receiver does not remove an invalid member and execute
-the remainder.
+invalid. An invalid TUI-to-terminal control request or Block Operation with
+trustworthy correlation identity reports `invalid_message`; the receiver does
+not remove an invalid member and execute the remainder. An invalid
+terminal-to-TUI Message does not cause a reverse error response, and a
+`protocol.error` never receives a protocol response.
 
 ## 6. Parsing Failure and Correlation
 
@@ -189,9 +191,11 @@ value provides no trustworthy logical identity. The receiver discards that
 framed payload and emits no correlated protocol response. Framing recovery
 then continues at the next valid frame boundary.
 
-Once the request or Operation identity required by a recognized schema has
-been validated, later structural and semantic failures use the correlated
-response and ErrorCode rules.
+Once the request or Operation identity required by a recognized
+TUI-to-terminal schema has been validated, later structural and semantic
+failures use that message kind's correlated reporting path and ErrorCode
+rules. A malformed terminal-to-TUI response or `protocol.error` is discarded
+and may be diagnosed locally; it does not trigger another protocol Message.
 
 ## 7. Logical Equality and Retransmission
 

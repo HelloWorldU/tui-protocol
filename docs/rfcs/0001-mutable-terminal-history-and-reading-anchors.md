@@ -19,11 +19,16 @@ sessions in which earlier content continues to finalize, expand, shrink, and
 reflow. Users still expect to review that content through terminal-owned
 scrollback and its native reading capabilities.
 
-Existing terminal protocols let applications edit the active screen, but do
-not give historical content stable logical identity. Differential redraw
-cannot generally reach anonymous rows already in scrollback, while destructive
-clear-and-replay can erase history, duplicate content, or move the user's
-reading position.
+Traditional cursor-oriented terminal control lets applications edit the active
+presentation, but generally does not give rows already committed to
+terminal-owned scrollback stable application-addressable identity. Related
+systems provide structure or identity for narrower models, but the [bounded
+prior-art review](../prior-art.md) has not identified among its surveyed
+mechanisms a contract that combines mutable historical Blocks with native
+terminal history and reading-anchor preservation. Differential redraw cannot
+generally reach anonymous rows already in scrollback, while destructive clear-
+and-replay can erase history, duplicate content, or move the user's reading
+position.
 
 The missing contract is not a new redraw algorithm. Applications need to
 express the identity and revision of logical content; terminals need to apply
@@ -77,8 +82,9 @@ terminal.
 The terminal may use block identity to preserve a reading anchor across an
 operation, but an anchor is not exposed as a separate primitive in this
 initial model. Detailed Operation semantics and content-representation
-requirements are maintained in the living protocol drafts below; their wire
-encoding remains open.
+requirements are maintained in the living protocol drafts below. The current
+experimental wire mapping is also defined there and remains a non-normative
+draft.
 
 ## Protocol Semantics
 
@@ -89,6 +95,11 @@ Detailed observable semantics are consolidated in the living
   semantics are defined.
 - [Update](../protocol/operations.md#update) replaces the content of an
   existing mutable Block; its initial semantics are defined.
+- [Extend](../protocol/operations.md#extend) adds text at the exact current
+  logical tail of a mutable Block; its initial semantics are defined.
+- [ReplaceSuffix](../protocol/operations.md#replacesuffix) replaces a
+  non-empty suffix of a mutable `text/plain` Block; its initial semantics are
+  defined.
 - [Seal](../protocol/operations.md#seal) finalizes a Block; its initial
   semantics are defined.
 

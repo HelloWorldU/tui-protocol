@@ -39,9 +39,16 @@ Each snapshot explicitly declares its content type. The terminal interprets
 the accompanying data according to that type and does not infer the type by
 inspecting the payload.
 
-An unknown, unnegotiated, or invalid content type makes the containing
-Operation invalid and leaves protocol state unchanged. The concrete type
-identifier and schema encoding remain wire-level design questions.
+A malformed type field or `ContentData` value that violates the selected
+Message schema reports `invalid_message` when correlation is reliable. A well-
+formed but unknown or unnegotiated type reports `unsupported_content_type`.
+Structurally valid data for a supported type that violates that type's
+additional content-validity rules reports `invalid_content`. Each failure
+leaves protocol state unchanged.
+
+The initial JSON mapping represents the type as a non-empty string and defines
+`text/plain` as the baseline identifier. Naming, registration, and schemas for
+optional types remain open design questions.
 
 ## 4. Complete Replacement Across Types
 

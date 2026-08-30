@@ -26,10 +26,11 @@ ContentSnapshot {
 
 NonEmptyText = one or more Unicode scalar values
 Text = zero or more Unicode scalar values
+DiagnosticText = zero or more Unicode scalar values
 ScalarCount = integer from 0 through 9007199254740991
 
-Failure {
-  code: ErrorCode
+ControlFailure {
+  code: ControlErrorCode
   message?: DiagnosticText
 }
 ```
@@ -38,9 +39,12 @@ Failure {
 baseline `text/plain` representation, `data` is a logical text value. Each
 optional content type defines its own complete `ContentData` schema.
 
-`ErrorCode` belongs to the stable protocol-defined
-[Error Codes](error-codes.md) enumeration. `message` is an optional
-human-readable diagnostic and is not a machine-readable contract.
+`ControlErrorCode` is the subset of the stable protocol-defined [Error
+Codes](error-codes.md) marked as valid for a control response.
+`OperationErrorCode` is the subset marked as valid for `protocol.error`. A code
+appearing in a reporting path marked `no` violates that Message schema.
+`message` is an optional human-readable diagnostic and is not a machine-
+readable contract.
 
 Request IDs, Operation IDs, Context IDs, and Block IDs retain the ownership,
 scope, uniqueness, and opacity rules of their semantic drafts. Their concrete
@@ -95,7 +99,7 @@ capability.response body =
     }
   | {
       outcome: error
-      error: Failure
+      error: ControlFailure
     }
 ```
 
@@ -118,7 +122,7 @@ context.open.response body =
     }
   | {
       outcome: error
-      error: Failure
+      error: ControlFailure
     }
 ```
 
@@ -137,7 +141,7 @@ context.close.response body =
     }
   | {
       outcome: error
-      error: Failure
+      error: ControlFailure
     }
 ```
 
@@ -219,7 +223,7 @@ A rejected, reliably identified Block Operation produces:
 
 ```text
 protocol.error body {
-  code: ErrorCode
+  code: OperationErrorCode
   message?: DiagnosticText
 }
 ```

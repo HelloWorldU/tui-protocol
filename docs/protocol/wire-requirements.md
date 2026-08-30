@@ -99,5 +99,9 @@ Context scope, and closed-schema compatibility rules are consolidated in the
 ## Open Design Choices
 
 - A coordinated stable OSC number.
-- Reset behavior for incomplete frame assemblies.
+- Relative display ordering between a completed protocol Message and adjacent
+  ordinary terminal output, including when Block rendering is asynchronous.
+- How ordinary output interleaved between managed Blocks is represented in
+  terminal-owned history.
+- Which terminal reset mechanisms discard incomplete frame assemblies.
 - Authentication, provenance, and authority to mutate existing Blocks.

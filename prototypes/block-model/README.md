@@ -37,4 +37,5 @@ pnpm typecheck
 - Complete Update of the Block containing the reading anchor remains
   undefined. ReplaceSuffix separately tests its defined retained-prefix and
   removed-suffix mappings.
-- Operations are in-memory TypeScript values; no wire encoding is defined.
+- This prototype accepts in-memory TypeScript Operations and does not encode or
+  decode wire Messages.

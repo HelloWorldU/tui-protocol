@@ -63,8 +63,9 @@ Context through encoded OSC Messages. They then demonstrate that:
 - complete-Block capacity eviction leaves current input text, cursor, and focus
   unchanged.
 
-Each scenario also observes the updated Session content after the rendered
-history queue drains. This supplies narrow cross-layer evidence for the
+Across these scenarios, the fixture drains the rendered-history queue before
+observing terminal state and checks Session content where it is part of the
+scenario's assertion. This supplies narrow cross-layer evidence for the
 [Terminal-Native Behavior](../../../docs/protocol/terminal-native-behavior.md)
 requirements.
 
@@ -92,7 +93,8 @@ requirements.
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
   experimental fixtures, not a proposed public Terminal API.
-- Ordinary terminal output, a real PTY and TUI process, multiplexers, remote
+- Arbitrary ordinary terminal output interleaved with protocol frames through
+  one mixed-stream ingress, a real PTY and TUI process, multiplexers, remote
   transport, other terminals, and cross-browser behavior are not tested.
 
 ## Run

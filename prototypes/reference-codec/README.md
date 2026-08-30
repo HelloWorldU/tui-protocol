@@ -36,6 +36,9 @@ It implements the current drafts for:
 - The same codec processes the tested OSC Messages in the [browser protocol
   endpoint](../integration/xterm-browser-protocol-endpoint/README.md) without a
   Node-only Base64 dependency.
+- A narrow [xterm parser bridge](../integration/xterm-protocol-endpoint/README.md)
+  forwards tested completed OSC `9002` payloads through the same decoder; that
+  bridge's mixed-stream limitations are recorded in its README.
 
 ## Experimental Boundaries
 
@@ -56,7 +59,8 @@ It implements the current drafts for:
 
 - Context or Block semantic state transitions and correlated error responses.
 - Capability timeouts, retry storage, or unsupported-terminal fallback.
-- Integration with a terminal parser, multiplexer, or bidirectional PTY.
+- Complete mixed-stream terminal-parser ingress, multiplexer integration, or a
+  bidirectional PTY path.
 - Authentication, provenance, reset behavior, or resource exhaustion outside
   the framing limits.
 - A stable public API or compatibility with future protocol versions.

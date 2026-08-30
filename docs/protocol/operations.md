@@ -81,7 +81,8 @@ lifecycle boundary, and non-reuse rules.
 
 Append carries a complete initial content snapshot and declares the Block's
 initial lifecycle as mutable or sealed. Dynamic content may begin mutable and
-later receive Update and Seal Operations. Static content may begin sealed.
+later receive Update, Extend, ReplaceSuffix, and Seal Operations as applicable.
+Static content may begin sealed.
 
 On success, the Append Operation's ID identifies the Block's initial content
 state.
@@ -130,9 +131,10 @@ path after an incremental content chain can no longer continue.
 
 ### 3. History Integrity
 
-The resulting history contains the replacement and every unaffected Block
-exactly once and in the same logical order. The terminal does not realize the
-Update by replaying old content into scrollback.
+Within content retained under the terminal's normal capacity policy, the
+resulting history contains the replacement and every unaffected Block exactly
+once and in the same logical order. The terminal does not realize the Update
+by replaying old content into scrollback.
 
 These semantics constrain the completed result. This draft does not yet
 require a particular visibility or atomicity policy for intermediate rendering
@@ -276,7 +278,8 @@ definition explicitly adopts incremental editing.
 
 `Seal` targets a Block by ID and permanently changes its lifecycle from mutable
 to sealed. The Block retains its ID, content, and position in append order.
-Subsequent Updates targeting it are invalid.
+Subsequent Update, Extend, ReplaceSuffix, or Seal Operations targeting it are
+invalid.
 
 Sealing expresses that the TUI has relinquished the right to modify the Block.
 It is independent of whether the Block's rendered rows are in the viewport or
@@ -296,11 +299,12 @@ identifier.
 ### 3. Content Invariance
 
 Seal carries no content and does not modify the Block's current content. If the
-TUI needs to make a final content change, it sends Update before Seal.
+TUI needs to make a final content change, it sends Update, Extend, or
+ReplaceSuffix before Seal.
 
 The terminal may still reflow sealed content in response to terminal-native
 events such as resize, but reflow does not change logical content. A future
-wire encoding may combine a final Update and Seal as shorthand only if its
+protocol version may combine a final Update and Seal as shorthand only if its
 observable semantics remain equivalent to the two Operations in that order.
 
 ### 4. Failure Isolation

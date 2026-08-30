@@ -19,8 +19,9 @@ It composes:
   response Message.
 - A tested host that does not claim complete version 1 support produces
   response bytes that decode to the expected unsupported outcome.
-- Tested Context-open, Append, complete Update, Extend, ReplaceSuffix, and Seal
-  Messages encoded as incoming bytes produce the expected Session state
+- A tested Context-open Message establishes a Context and returns its correlated
+  response. Tested Append, complete Update, Extend, ReplaceSuffix, and Seal
+  Messages encoded as incoming bytes then produce the expected Session state
   without success responses.
 - A tested Extend chain accepts the exact current base, returns correlated
   `content_state_mismatch` for a stale base, and continues from a complete

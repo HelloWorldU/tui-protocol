@@ -42,7 +42,8 @@ It exercises the current drafts for:
   host commits or rejects it, preserving the Session's ordered execution
   boundary. Ending the connection instead discards the prepared Operation,
   closes its Context, and leaves its uncommitted content change unapplied.
-- Interleaved Contexts maintain independent Block and Operation namespaces.
+- The tested two Contexts maintain independent Block and Operation namespaces
+  while reusing the same Block and Operation IDs.
 
 ## Experimental Boundaries
 

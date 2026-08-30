@@ -75,9 +75,10 @@ apply to that failure.
 ## 6. Closure and Content Retention
 
 Closing a Context permanently revokes its TUI's right to modify any of its
-Blocks. Their latest content and append order remain in terminal-owned history,
-and any Blocks still mutable at closure become sealed. Closing a Context does
-not delete or replay its content.
+Blocks. Closing does not itself delete or replay their content; their latest
+state and append order remain subject to the terminal's normal history-
+retention and capacity policy. Any Blocks still mutable at closure become
+sealed.
 
 Seal remains useful while a Context is open because it finalizes one Block
 without ending the TUI's authority over other Blocks.
@@ -125,8 +126,9 @@ and error reporting for abandoned Contexts remain open design questions.
 
 Within one terminal byte stream, valid Block Operations before a closure
 request are applied before the Context closes. The positive closure response
-means those preceding Operations have completed and the Context is closed.
-Operations ordered after closure are invalid.
+means those preceding Operations have completed at the protocol state boundary
+and the Context is closed. It does not promise that asynchronous terminal
+rendering has finished. Operations ordered after closure are invalid.
 
 This boundary follows the shared byte-stream ordering requirement rather than
 thread scheduling or rendering completion. Concurrency across independent

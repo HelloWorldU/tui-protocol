@@ -75,5 +75,5 @@ For interactive inspection:
 pnpm prototype:xterm-browser-search
 ```
 
-Then open the local URL printed by Vite. The page reports whether the search
-scenario passed or identifies the first failed assertion.
+Then open the local URL printed by Vite. The page reports the number of passed
+search scenarios or identifies the first failed assertion.

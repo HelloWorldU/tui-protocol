@@ -102,8 +102,10 @@ response within the caller's negotiation window is treated as unsupported.
 Negotiation creates no Block, changes no protocol lifecycle state, and does
 not affect terminal history or the viewport. The query identifier,
 request-response matching, and retry identity follow the
-[Logical Wire Message Model](wire-format.md); their concrete encoding and the
-timeout policy remain wire-level questions.
+[Logical Wire Message Model](wire-format.md), with their initial concrete
+mapping defined by the [Message Schemas](message-schemas.md) and [JSON
+Serialization](serialization.md). The negotiation window and timeout policy
+remain caller-owned policy choices.
 After positive confirmation, the TUI establishes a Protocol Context through a
 separate correlated exchange before sending Block Operations.
 
@@ -112,5 +114,6 @@ separate correlated exchange before sending Block Operations.
 These questions are constrained by the shared
 [Wire Format Requirements](wire-requirements.md):
 
-- Timing, timeout, and repeated-query behavior.
+- Repeated-query and backoff guidance.
+- Selection among multiple mutually supported protocol versions.
 - Forwarding behavior across multiplexers and remote terminal paths.

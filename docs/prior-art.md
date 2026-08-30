@@ -2,7 +2,7 @@
 
 Status: living research note
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-30
 
 This document records primary sources that constrain the project. It is not a
 claim that every terminal or proposal has been surveyed.
@@ -17,8 +17,9 @@ claim that every terminal or proposal has been surveyed.
 | [SpaceTerm TBP v1](https://github.com/taquangtrung/spaceterm/blob/main/docs/terminal-block-protocol-spec.md) | Identified MIME content blocks | `open`, RFC 6902 `patch`, and `close` | No terminal-native reading-anchor behavior is specified | Closest block lifecycle, fallback, capability, and trust design |
 | [iTerm2 blocks](https://iterm2.com/documentation-escape-codes.html) | Identified start/end regions | Existing blocks can be folded or unfolded | No arbitrary content replacement anchor | Demonstrates deployed block identity and limited updates |
 
-SpaceTerm is the most important design dependency. Its protocol already
-answers several questions this project must not casually reinvent:
+For this project, SpaceTerm is the closest prior-art design reference. Its
+protocol already answers several questions this project must not casually
+reinvent:
 
 - block identity and live-block lifecycle;
 - capability negotiation;
@@ -27,11 +28,14 @@ answers several questions this project must not casually reinvent:
 - trust tiers;
 - in-band and optional side-channel transport.
 
-SpaceTerm describes itself as a web-native terminal, and its core models
-scrollback as a block list. The unresolved comparison is not whether TBP can
-identify and patch a block; it can. The question is whether TBP can be
-extended or profiled to define mutation and anchor behavior for
-terminal-owned history with terminal-native interaction.
+[SpaceTerm describes itself as a web-native
+terminal](https://github.com/taquangtrung/spaceterm/blob/main/README.md), and
+[its core models scrollback as a block
+list](https://github.com/taquangtrung/spaceterm/blob/main/crates/core/src/lib.rs).
+The unresolved comparison is not whether TBP can identify and patch a block;
+it can. The question is whether TBP can be extended or profiled to define
+mutation and anchor behavior for terminal-owned history with terminal-native
+interaction.
 
 ## Application architecture evidence
 

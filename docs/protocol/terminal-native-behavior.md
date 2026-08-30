@@ -49,8 +49,9 @@ the reading anchor, the terminal is not required to preserve an internal
 position within that Block.
 
 The Update still follows the normal Block replacement and history-integrity
-semantics. This exception does not permit corruption, duplication, or loss of
-unaffected Blocks.
+semantics. This exception does not permit corruption or duplication.
+Unaffected content may disappear only through the normal capacity policy
+defined below.
 
 ReplaceSuffix provides a narrower mapping for an anchor in its target Block.
 An anchor in the retained prefix remains at its logical position. An anchor in
@@ -68,6 +69,12 @@ anchor was trimmed.
 
 Capacity trimming is terminal-owned resource management. It is distinct from
 history being cleared, duplicated, or lost while realizing an Operation.
+Trimming is not a Block lifecycle transition and does not itself Seal a Block
+or revoke Context authority.
+
+This draft has not yet defined the observable result of a later Operation that
+targets partially or fully trimmed content, or the reading-state fallback when
+no later retained logical position exists.
 
 ## 6. Resize and Reflow
 
@@ -134,109 +141,28 @@ position.
 
 ## Experimental Evidence
 
-The [xterm Protocol Endpoint Integration
-Prototype](../../prototypes/integration/xterm-protocol-endpoint/README.md)
-composes the current OSC codec, Session semantics, and a private xterm.js
-history implementation. Its tested earlier-Block growth and shrink preserve a
-later history-reading position, including across a tested resize and reflow,
-while its tested tail-following viewport stays at the new tail. Its Extend and
-ReplaceSuffix paths additionally exercise incremental content-state checks and
-their defined target-Block reading-anchor mappings. The prototype's
-capacity-limited cases demonstrate that a known resource limit can reject a
-prepared Update, Extend, or ReplaceSuffix with `resource_exhausted` before
-either Session state or rendered history changes. A separate capacity-aligned
-Update test trims exactly one complete oldest Block while preserving a later
-history-reading position and subsequent queued rendering. When that complete
-Block instead contains the reading position, another tested path moves the
-viewport to the next retained Block without following the tail. Partial-Block
-trimming remains outside that tested boundary. Other renderer failures,
-private APIs, and untested interaction paths further bound this evidence; they
-are not a required implementation design. A separate [browser selection
-prototype](../../prototypes/integration/xterm-browser-selection/README.md)
-demonstrates two complete-Update cases: an unaffected later selection and its
-copy text survive earlier-Block growth, while updating the selected Block
-clears both the selection and its subsequent copy source. The same browser run
-demonstrates three single-line ASCII ReplaceSuffix cases: a selection entirely
-inside the retained prefix survives, while a selection inside the replaced old
-suffix or crossing the retained-prefix boundary is cleared. Each case inserts
-a non-empty replacement suffix. Two resize cases preserve the selected and
-copied logical text when either the selected Block itself or an earlier Block
-reflows to new physical rows. Two capacity cases preserve a selection in a
-retained Block when an earlier complete Block is evicted and clear the
-selection when its complete Block is evicted. Two final Operation regressions
-demonstrate that Extend preserves an existing selection without adding its new
-fragment to the copy source, and that Append and Seal leave an otherwise valid
-selection unchanged. The experiment does not yet cover mouse selection, the
-operating-system clipboard, partial-Block or Append-driven eviction, or
-non-ASCII, line-break, and multi-Block selection mapping. A separate [browser
-search prototype](../../prototypes/integration/xterm-browser-search/README.md)
-demonstrates two complete-Update cases. A replaced current match is cleared,
-the old snapshot is no longer found, and replacement text becomes searchable;
-a current match in an unaffected later Block moves with that Block when an
-earlier Block grows. The experiment recreates xterm.js's search addon because
-private history mutation bypasses its normal cache-invalidation events; this
-is a feasibility workaround rather than a required integration design. Four
-additional Operation scenarios cover Extend preserving an old match and adding
-a new one, both sides of ReplaceSuffix's retained boundary, Append adding a
-searchable Block without losing the current match, and Seal preserving it. Two
-resize scenarios keep current matches attached across selected-Block and
-earlier-Block reflow. Two capacity scenarios preserve a current match when an
-earlier complete Block is evicted and clear it when its own complete Block is
-evicted, while retained text remains searchable. Partial-Block and
-Append-driven eviction remain outside this tested boundary.
+The executable evidence for this draft is recorded in the linked prototype
+READMEs; those documents are the source of truth for exact scenarios and
+limitations:
 
-A separate [browser content metadata
-prototype](../../prototypes/integration/xterm-browser-metadata/README.md) uses
-an explicitly experimental styled-text fixture to demonstrate five cases. A
-complete Update replaces or removes the old snapshot's foreground color and
-bold weight; an unaffected later Block keeps its styling when earlier content
-growth moves it; resize keeps styling attached across reflow; and complete-
-Block capacity eviction removes the evicted Block's styling without changing
-a retained Block. The experiment does not define a content type or encoding
-and does not cover links, incremental metadata editing, non-ASCII content, or
-partial-Block and Append-driven eviction.
+- The [xterm protocol endpoint](../../prototypes/integration/xterm-protocol-endpoint/README.md)
+  composes the codec, Session, terminal adapter, and private xterm.js history
+  path. It exercises reading anchors, tail following, resize and reflow, a
+  narrow complete-Block capacity boundary, and a narrow parser bridge.
+- The browser-hosted [selection and copy](../../prototypes/integration/xterm-browser-selection/README.md),
+  [search](../../prototypes/integration/xterm-browser-search/README.md),
+  [content metadata](../../prototypes/integration/xterm-browser-metadata/README.md),
+  and [active input state](../../prototypes/integration/xterm-browser-input-state/README.md)
+  fixtures provide bounded evidence for their corresponding sections above.
+- The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
+  composes all five current Block Operations with the tested browser states,
+  resize and reflow, and the same narrow complete-Block capacity boundary.
 
-A separate [browser active input state
-prototype](../../prototypes/integration/xterm-browser-input-state/README.md)
-demonstrates five cases in a single-line ASCII input fixture. Complete Update,
-Extend, ReplaceSuffix, resize and reflow, and complete-Block capacity eviction
-leave the current input text, its logical cursor offset, and input focus
-unchanged. A synthetic browser composition also remains active and sends no
-input data while earlier history changes. The composition evidence does not
-cover a real operating-system IME, and the experiment does not cover multiline
-editors, wrapped or non-ASCII input, Append during input, partial-Block
-eviction, or cross-terminal behavior.
-
-A [browser protocol endpoint
-prototype](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
-then composes the OSC codec, Session, private xterm history renderer, and the
-browser state fixtures. Three complete-Update scenarios preserve a later
-reading position and user selection, an unaffected current search match, and
-active input with a synthetic composition after encoded OSC Messages traverse
-the endpoint. Three Extend scenarios preserve a target-Block reading position
-and selection, retain an existing search match while adding searchable text,
-and leave active input with synthetic composition unchanged. Four
-ReplaceSuffix scenarios preserve a retained-prefix reading position and
-selection, clear a removed-suffix selection, update retained, removed, and new
-search results, and leave active input with synthetic composition unchanged.
-Three Append scenarios preserve an existing history-reading position and
-selection, continue tail following, and add searchable tail content without
-losing an existing search match. Two Seal scenarios preserve selection and
-search while changing Session lifecycle; one also receives a correlated
-`block_sealed` error when a later Update is rejected without changing content.
-Four resize scenarios preserve reading and selection through reflow and a
-later encoded Update, preserve a current search match and active input, and
-continue tail following. Five Update-driven complete-Block capacity scenarios
-preserve or clear selection and search according to whether their logical
-content remains rendered, move an evicted reading position to the next retained
-Block without following the tail, and preserve active input. In these capacity
-fixtures, the Session retains the evicted Block's logical snapshot after its
-rendered range disappears.
-Search and ordinary selection are separate because the tested
-xterm.js search addon uses the terminal selection to present its current match.
-The experiment does not compose content metadata and does not extend its
-component fixtures beyond the listed ASCII, dimension, complete-Block,
-terminal, or browser boundaries.
+Together these experiments provide bounded evidence only for their listed
+fixtures. They do not establish protocol conformance, cross-terminal
+compatibility, a public terminal API, arbitrary mixed-stream ingress,
+partial-Block or Append-driven eviction, non-ASCII position mapping, or
+production renderer failure atomicity.
 
 ## Current Scope
 
@@ -245,3 +171,7 @@ selection, search, content metadata, and active input. It does not standardize
 terminal shortcuts, search navigation policy, visual presentation, or internal
 data structures. Detailed behavior for optional content representations
 remains part of each representation's definition.
+
+The physical ownership and display ordering of ordinary terminal output
+interleaved between managed Blocks also remains open and is tracked by the
+[Wire Format Requirements](wire-requirements.md).

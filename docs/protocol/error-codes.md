@@ -27,7 +27,7 @@ requires a protocol version whose schema defines it.
 | `block_not_found` | no | yes | Update, Extend, ReplaceSuffix, or Seal addressed no Block in the open Context. |
 | `block_sealed` | no | yes | Update, Extend, ReplaceSuffix, or Seal addressed a Block whose lifecycle is already sealed. |
 | `unsupported_content_type` | no | yes | A snapshot declares an unavailable type, or the target type does not support the requested content Operation. |
-| `invalid_content` | no | yes | Snapshot data violates the schema or validity rules of its supported content type. |
+| `invalid_content` | no | yes | Structurally valid snapshot data violates additional content-validity rules of its supported type. |
 | `content_state_mismatch` | no | yes | An incremental Operation's base ID does not equal the Block's current content-state Operation ID. |
 | `invalid_content_boundary` | no | yes | ReplaceSuffix's retained-prefix count is not below the current text's scalar-value length. |
 | `resource_exhausted` | yes | yes | The receiver cannot complete the request or Operation within an enforced resource limit. |
@@ -97,9 +97,11 @@ when an incremental content Operation targets a representation for which that
 Operation is not defined; the initial Extend and ReplaceSuffix semantics
 therefore reject a non-`text/plain` target with this code.
 
-`invalid_content` means the type is supported but its data is invalid under
-that type's defined schema or validity rules. Neither code permits the
-terminal to infer another type, repair the snapshot, or partially apply it.
+`invalid_content` means the type is supported and its data passes Message-
+schema validation but violates additional content-validity rules defined by
+that type. A value that fails its selected `ContentData` schema instead uses
+`invalid_message`. Neither code permits the terminal to infer another type,
+repair the snapshot, or partially apply it.
 
 `content_state_mismatch` means the incremental Operation was structurally
 valid but named an Operation ID other than the target Block's current

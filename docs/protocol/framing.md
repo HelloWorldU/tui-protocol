@@ -116,8 +116,8 @@ resynchronizes at the carrier terminator.
 The initial framing layer uses no inactivity timeout. Ordered delivery,
 strictly increasing fragment indices, a single active assembly, and the byte
 limit bound retained state without making correctness depend on connection
-latency. Connection termination or terminal reset discards an incomplete
-assembly.
+latency. Connection termination discards an incomplete assembly; behavior
+across terminal reset mechanisms remains open below.
 
 ## 6. Assembly and Ordered Application
 
@@ -139,6 +139,11 @@ An invalid OSC `9002` header, framing version, field, Base64 payload, fragment
 index, or resource bound invalidates that carrier frame. If an assembly is
 active, any invalid or unexpected OSC `9002` frame discards the entire
 incomplete Message without changing protocol state.
+
+While an assembly is active, ordinary bytes or a non-protocol control sequence
+before the next expected fragment also abandons that assembly. The intervening
+traffic retains its normal terminal meaning. A later index-`0` frame may start
+a fresh assembly.
 
 A frame beginning at index `0` starts a fresh assembly after any abandoned
 one. A nonzero index without the exact preceding assembly is discarded. Later
@@ -171,8 +176,7 @@ remain separate design questions.
 ## Open Design Choices
 
 - A coordinated stable OSC number.
-- Context and incomplete-assembly behavior across specific terminal reset
-  mechanisms.
+- Which terminal reset mechanisms discard an incomplete assembly.
 - Authentication and provenance in shared or nested terminal streams.
 - Whether a future negotiated framing version adds compression or a local
   side channel for substantially larger content.

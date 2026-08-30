@@ -24,6 +24,11 @@ here.
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Integration prototype | Experimental |
 | [xterm protocol endpoint](../prototypes/integration/xterm-protocol-endpoint/README.md) | Integration prototype | Experimental |
+| [xterm browser protocol endpoint](../prototypes/integration/xterm-browser-protocol-endpoint/README.md) | Browser integration prototype | Experimental |
+| [xterm browser selection and copy](../prototypes/integration/xterm-browser-selection/README.md) | Browser integration prototype | Experimental |
+| [xterm browser search](../prototypes/integration/xterm-browser-search/README.md) | Browser integration prototype | Experimental |
+| [xterm browser content metadata](../prototypes/integration/xterm-browser-metadata/README.md) | Browser integration prototype | Experimental |
+| [xterm browser active input state](../prototypes/integration/xterm-browser-input-state/README.md) | Browser integration prototype | Experimental |
 | [Protocol session prototype](../prototypes/protocol-session/README.md) | Executable prototype | Experimental |
 | [TypeScript reference codec](../prototypes/reference-codec/README.md) | Executable prototype | Experimental |
 | [xterm-headless OSC spike](../prototypes/xterm-headless/README.md) | Feasibility spike | Experimental |
@@ -42,6 +47,7 @@ Only directories with real content are created. The intended layout is:
 ```text
 docs/
   README.md       Documentation index
+  design/         Working design notes for experiments
   prior-art.md    Verified related work and project evidence
   protocol/       Draft consolidated protocol semantics
   rfcs/           Numbered design proposals and decisions
@@ -51,9 +57,10 @@ prototypes/       Executable semantic and implementation experiments
 tests/            Future black-box scenarios and conformance fixtures
 ```
 
-`prototypes/` now contains the first executable Block-model experiment. The
-`spec/` and `tests/` directories should be added only when the project has a
-normative specification or reusable conformance fixtures to place in them.
+`prototypes/` contains executable semantic, codec, Session, and xterm.js
+integration experiments. The `spec/` and `tests/` directories should be added
+only when the project has a normative specification or reusable conformance
+fixtures to place in them.
 
 ## Document authority
 

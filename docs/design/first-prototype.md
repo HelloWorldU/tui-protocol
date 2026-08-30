@@ -23,10 +23,10 @@ The first prototype follows one dynamic block through its complete lifecycle:
 
 Entering scrollback is a presentation event, not a block lifecycle event.
 
-The first prototype guarantees reading-anchor stability when Operations change
-a different Block, including a mutable Block above the user's reading
-position. Mapping an anchor through a complete Update of its own Block is
-explicitly undefined at this stage.
+The first prototype tests reading-anchor stability when Operations change a
+different Block, including a mutable Block above the user's reading position.
+Mapping an anchor through a complete Update of its own Block is explicitly
+undefined at this stage.
 
 ## Working Model
 
@@ -53,7 +53,8 @@ The executable prototypes implement the five current baseline Operations.
 the Block ID, its initial complete content, and its initial lifecycle state.
 
 Static content may be appended as `sealed`. Dynamic content is appended as
-`mutable` and may later receive `Update` and `Seal` Operations.
+`mutable` and may later receive `Update`, `Extend`, `ReplaceSuffix`, and `Seal`
+Operations as applicable.
 
 #### Update
 
@@ -91,10 +92,11 @@ reading-anchor mapping and capacity-rejection boundary.
 #### Seal
 
 `Seal` changes an existing Block from `mutable` to `sealed`. Afterward, the
-terminal must reject further Updates to that Block.
+terminal must reject Update, Extend, ReplaceSuffix, and repeated Seal
+Operations targeting that Block.
 
-Seal is a distinct semantic Operation. A future wire format may still encode
-a final Update and Seal together.
+Seal is a distinct semantic Operation. A future protocol version may still
+encode a final Update and Seal together.
 
 ## Responsibility Boundaries
 
@@ -110,18 +112,19 @@ internally to preserve a reading anchor.
 
 ## Open Questions
 
-- Concrete wire representations for Context and Block IDs; Context scope and
-  reuse semantics are now defined in
-  [Protocol Context Semantics](../protocol/contexts.md).
+- Resource limits and allocation policy for Context and Block IDs. Their JSON
+  representation is defined in [JSON Serialization](../protocol/serialization.md);
+  scope and reuse semantics are defined in [Protocol Context
+  Semantics](../protocol/contexts.md).
 - Concrete optional content types and their terminal-native projections; the
   shared requirements are now defined in
   [Content Representation](../protocol/content-representation.md).
-- The wire encoding for capability negotiation; unsupported-terminal fallback
-  is application-owned.
+- Repeated-query and backoff guidance; negotiation windows and timeout policies
+  are caller-owned, while unsupported-terminal fallback is application-owned.
 - How to map a reading anchor when its own Block receives a complete Update.
 - How far to extend the current incremental-Operation evidence beyond the
-  tested plain-text, headless-xterm scenarios without weakening complete
+  tested plain-text xterm.js scenarios without weakening complete
   Update as the recovery path.
 - Whether removal or an Operation beyond Append, Update, Extend,
   ReplaceSuffix, and Seal is needed.
-- The wire encoding and whether common Operation sequences should be combined.
+- Whether a future protocol version should combine common Operation sequences.
