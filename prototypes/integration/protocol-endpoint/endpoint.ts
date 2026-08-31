@@ -3,6 +3,7 @@ import {
   encodeMessageFrames,
   type DecoderEvent,
   type Message,
+  type ProtocolDecoderEvent,
 } from "../../reference-codec/index.ts";
 import {
   ProtocolSessionError,
@@ -71,12 +72,14 @@ export class TerminalProtocolEndpoint {
   }
 
   push(bytes: Uint8Array): EndpointResult {
-    if (this.#ended) {
-      throw new ProtocolEndpointError(
-        "Protocol endpoint cannot receive bytes after its connection ends.",
-      );
-    }
+    this.#assertCanReceive();
     return this.#process(this.#decoder.push(bytes));
+  }
+
+  /** Accepts one event from an external mixed-stream decoder. */
+  acceptDecoded(event: ProtocolDecoderEvent): EndpointResult {
+    this.#assertCanReceive();
+    return this.#process([event]);
   }
 
   finish(): EndpointResult {
@@ -98,11 +101,19 @@ export class TerminalProtocolEndpoint {
     return this.#session.contexts();
   }
 
+  invalidateContext(id: string): boolean {
+    this.#assertCanReceive();
+    return this.#session.invalidateContext(id);
+  }
+
   #process(events: readonly DecoderEvent[]): EndpointResult {
     const responseFrames: Uint8Array[] = [];
     const diagnostics: EndpointDiagnostic[] = [];
 
     for (const event of events) {
+      if (event.type === "ordinary") {
+        continue;
+      }
       let responses: readonly Message[];
       if (event.type === "error") {
         diagnostics.push({ layer: event.layer, reason: event.reason });
@@ -161,6 +172,14 @@ export class TerminalProtocolEndpoint {
     }
 
     return { responseFrames, diagnostics };
+  }
+
+  #assertCanReceive(): void {
+    if (this.#ended) {
+      throw new ProtocolEndpointError(
+        "Protocol endpoint cannot receive bytes after its connection ends.",
+      );
+    }
   }
 
   #takeResponseFrameId(): number {

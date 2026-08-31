@@ -49,7 +49,7 @@ interface StoredBlock {
 
 interface StoredContext {
   readonly id: string;
-  state: "open" | "closed";
+  state: "open" | "closed" | "invalidated";
   readonly blocks: StoredBlock[];
   readonly blockIds: Set<string>;
   readonly operationIds: Set<string>;
@@ -68,7 +68,7 @@ export interface SessionBlockSnapshot {
 
 export interface SessionContextSnapshot {
   readonly id: string;
-  readonly state: "open" | "closed";
+  readonly state: "open" | "closed" | "invalidated";
   readonly blocks: readonly SessionBlockSnapshot[];
 }
 
@@ -144,6 +144,21 @@ export class TerminalProtocolSession {
 
   contexts(): readonly SessionContextSnapshot[] {
     return [...this.#contexts.values()].map(snapshotContext);
+  }
+
+  /**
+   * Host-side integrity boundary for frame-external terminal traffic that has
+   * made one Context's rendered Block mapping unreliable. It is not a
+   * protocol Message and produces no response.
+   */
+  invalidateContext(id: string): boolean {
+    this.#assertCanProcess();
+    const context = this.#contexts.get(id);
+    if (context === undefined || context.state !== "open") {
+      return false;
+    }
+    context.state = "invalidated";
+    return true;
   }
 
   endConnection(): void {
@@ -255,7 +270,7 @@ export class TerminalProtocolSession {
 
   #closeContext(request: ContextClose): Message {
     const context = this.#contexts.get(request.context_id);
-    if (context === undefined) {
+    if (context === undefined || context.state === "invalidated") {
       return controlError(request, "context_not_open");
     }
 
@@ -613,7 +628,7 @@ function replaceBlock(
 }
 
 function closeStoredContext(context: StoredContext): void {
-  if (context.state === "closed") {
+  if (context.state !== "open") {
     return;
   }
   for (const block of context.blocks) {

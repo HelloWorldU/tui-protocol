@@ -128,6 +128,48 @@ test("resizing xterm while reading history preserves Block boundaries and the re
   xterm.dispose();
 });
 
+test("a Block range follows xterm's realized carriage-return layout so Update removes every old row", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 100,
+  });
+  const history = new PrivateCoreBlockHistory(xterm);
+
+  await history.apply(append("thinking", "a\rb", "mutable"));
+  assert.deepEqual(history.range("thinking"), { start: 0, lineCount: 2 });
+
+  await history.apply({ type: "update", id: "thinking", content: "done" });
+
+  assert.deepEqual(history.range("thinking"), { start: 0, lineCount: 1 });
+  assert.deepEqual(bufferRows(xterm), ["done", ""]);
+
+  history.dispose();
+  xterm.dispose();
+});
+
+test("a Block range follows xterm's realized wide-character wrapping so Update removes every old row", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 3,
+    rows: 3,
+    scrollback: 100,
+  });
+  const history = new PrivateCoreBlockHistory(xterm);
+
+  await history.apply(append("thinking", "界界", "mutable"));
+  assert.deepEqual(history.range("thinking"), { start: 0, lineCount: 2 });
+
+  await history.apply({ type: "update", id: "thinking", content: "x" });
+
+  assert.deepEqual(history.range("thinking"), { start: 0, lineCount: 1 });
+  assert.deepEqual(bufferRows(xterm), ["x", ""]);
+
+  history.dispose();
+  xterm.dispose();
+});
+
 function append(
   id: string,
   content: string,

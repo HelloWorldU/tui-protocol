@@ -52,6 +52,39 @@ export class XtermProtocolEndpoint implements IDisposable {
     return this.#endpoint.contexts();
   }
 
+  invalidateContextsIntersectingRows(
+    start: number,
+    end: number,
+  ): readonly string[] {
+    if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
+      throw new Error("The invalidation row range must be non-empty integers.");
+    }
+    const affected: string[] = [];
+    for (const context of this.#endpoint.contexts()) {
+      if (context.state !== "open") {
+        continue;
+      }
+      const intersects = context.blocks.some((block) => {
+        const range = this.#adapter.range(context.id, block.id);
+        return (
+          range !== undefined &&
+          range.start < end &&
+          start < range.start + range.lineCount
+        );
+      });
+      if (intersects && this.#endpoint.invalidateContext(context.id)) {
+        affected.push(context.id);
+      }
+    }
+    return affected;
+  }
+
+  acceptDecoded(
+    event: Parameters<TerminalProtocolEndpoint["acceptDecoded"]>[0],
+  ): EndpointResult {
+    return this.#endpoint.acceptDecoded(event);
+  }
+
   range(contextId: string, blockId: string): RenderedBlockRange | undefined {
     return this.#adapter.range(contextId, blockId);
   }

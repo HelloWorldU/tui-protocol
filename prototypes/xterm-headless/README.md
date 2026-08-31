@@ -25,6 +25,10 @@ carrier and Base64 framing.
 - Marker-backed Block boundaries and a tested history-reading position survive
   terminal resize reflow and still identify the correct history range for a
   later Update.
+- The private range index records start and exclusive-end markers around the
+  physical rows xterm.js actually materialized. Tests cover carriage-return
+  normalization and one wide-character wrapping case; the composed xterm
+  endpoint separately covers one intervening unmanaged row.
 - The experimental OSC transport and private-core mutation path work together:
   an in-band Update can replace real xterm.js history end to end.
 
@@ -84,7 +88,9 @@ can be designed.
 - The spike models one implicit Protocol Context and does not implement its
   control exchanges or Context IDs on Operations.
 - Plain text only; terminal control sequences are not part of the experiment.
-- A dedicated terminal owns all writes while Block ranges are tracked.
+- The standalone spike assumes a dedicated terminal. The composed xterm
+  endpoint separately tests one narrow unmanaged-output gap; arbitrary mixed
+  output remains outside this spike.
 - Complete Update of the Block containing the viewport anchor remains
   undefined; the xterm integration separately exercises ReplaceSuffix's
   narrower mapping.

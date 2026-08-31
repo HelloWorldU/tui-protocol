@@ -73,14 +73,16 @@ initial protocol.
 ## 4. Context and Block State
 
 `context_not_open` deliberately combines an unknown Context, a closed Context,
-a Context from another connection, and any other Context ID that grants no
-current mutation authority. These cases produce the same TUI-visible result
-and need not reveal how the terminal classified the handle internally.
+a Context invalidated after frame-external terminal traffic made its managed
+rendering unreliable, a Context from another connection, and any other Context
+ID that grants no current mutation authority. These cases produce the same
+TUI-visible result and need not reveal how the terminal classified the handle
+internally.
 
 For Context closure, repeating closure of a known closed Context remains a
 successful idempotent result. `context_not_open` applies when the requested
-Context never belonged to a valid closure lifecycle on the current
-connection.
+Context never belonged to a valid closure lifecycle on the current connection
+or was invalidated rather than closed.
 
 `block_id_reused` is specific to Append. `block_not_found` applies to Update,
 Extend, ReplaceSuffix, and Seal when no target exists. `block_sealed` applies

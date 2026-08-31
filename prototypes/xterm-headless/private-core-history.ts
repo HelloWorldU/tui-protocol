@@ -23,7 +23,8 @@ interface PrivateMarker extends IDisposable {
 
 interface BlockEntry {
   readonly id: BlockId;
-  marker: PrivateMarker;
+  startMarker: PrivateMarker;
+  endMarker: PrivateMarker;
 }
 
 type TargetAnchorMapping =
@@ -57,6 +58,7 @@ interface PrivateBuffer {
   readonly lines: PrivateCircularList;
   ybase: number;
   ydisp: number;
+  readonly x: number;
   readonly y: number;
   addMarker(line: number): PrivateMarker;
   getBlankLine(): PrivateBufferLine;
@@ -161,6 +163,14 @@ export class PrivateCoreBlockHistory implements IDisposable {
     if (index === undefined) {
       return undefined;
     }
+    const entry = this.#entries[index];
+    if (
+      entry.startMarker.isDisposed ||
+      entry.endMarker.isDisposed ||
+      entry.endMarker.line <= entry.startMarker.line
+    ) {
+      return undefined;
+    }
     return { ...this.#rangeAt(index) };
   }
 
@@ -244,7 +254,8 @@ export class PrivateCoreBlockHistory implements IDisposable {
     this.#readingAnchor?.dispose();
     this.#readingAnchor = undefined;
     for (const entry of this.#entries) {
-      entry.marker.dispose();
+      entry.startMarker.dispose();
+      entry.endMarker.dispose();
     }
     this.#entries.length = 0;
     this.#entryIndexes.clear();
@@ -255,16 +266,20 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const lines = await this.#materialize(block.content);
     this.#model.apply({ type: "append", block });
 
-    await write(this.#terminal, toTerminalText(block.content));
     const buffer = this.#bufferService.buffer;
+    await write(
+      this.#terminal,
+      `${appendBoundary(buffer)}${toTerminalText(block.content)}`,
+    );
     const end = buffer.ybase + buffer.y;
     const start = end - lines.length;
     if (start < 0) {
       throw new Error("The appended Block was trimmed before it could be indexed.");
     }
-    const marker = buffer.addMarker(start);
+    const startMarker = buffer.addMarker(start);
+    const endMarker = buffer.addMarker(end);
     this.#entryIndexes.set(block.id, this.#entries.length);
-    this.#entries.push({ id: block.id, marker });
+    this.#entries.push({ id: block.id, startMarker, endMarker });
   }
 
   async #update(
@@ -279,6 +294,11 @@ export class PrivateCoreBlockHistory implements IDisposable {
     }
     const entry = this.#entries[entryIndex];
     const range = this.#rangeAt(entryIndex);
+    const previousEntry = this.#entries[entryIndex - 1];
+    const previousEndSharesStart =
+      previousEntry !== undefined &&
+      !previousEntry.endMarker.isDisposed &&
+      previousEntry.endMarker.line === range.start;
 
     const buffer = this.#bufferService.buffer;
     const oldEnd = range.start + range.lineCount;
@@ -334,7 +354,18 @@ export class PrivateCoreBlockHistory implements IDisposable {
       buffer.ydisp = Math.max(0, oldYdisp - trimLineCount);
     }
 
-    entry.marker = buffer.addMarker(range.start - trimLineCount);
+    entry.startMarker.dispose();
+    entry.endMarker.dispose();
+    if (previousEndSharesStart) {
+      previousEntry.endMarker.dispose();
+    }
+    const updatedStart = range.start - trimLineCount;
+    entry.startMarker = buffer.addMarker(updatedStart);
+    entry.endMarker = buffer.addMarker(updatedStart + replacement.length);
+    const trimmedEntryCount = trimPlan?.entryCount ?? 0;
+    if (previousEndSharesStart && entryIndex - 1 >= trimmedEntryCount) {
+      previousEntry.endMarker = buffer.addMarker(updatedStart);
+    }
     if (trimPlan !== undefined) {
       this.#dropLeadingEntries(trimPlan.entryCount);
     }
@@ -384,15 +415,17 @@ export class PrivateCoreBlockHistory implements IDisposable {
     }
 
     let accumulated = 0;
+    let expectedStart = 0;
     for (const [index, entry] of this.#entries.entries()) {
       if (entry.id === targetId) {
         return undefined;
       }
       const range = this.#rangeAt(index);
-      if (index === 0 && range.start !== 0) {
+      if (range.start !== expectedStart) {
         return undefined;
       }
       accumulated += range.lineCount;
+      expectedStart = range.start + range.lineCount;
       if (accumulated === lineCount) {
         return {
           entryCount: index + 1,
@@ -411,6 +444,8 @@ export class PrivateCoreBlockHistory implements IDisposable {
   #dropLeadingEntries(count: number): void {
     const removed = this.#entries.splice(0, count);
     for (const entry of removed) {
+      entry.startMarker.dispose();
+      entry.endMarker.dispose();
       this.#plannedTrimmedBlockIds.add(entry.id);
     }
     this.#entryIndexes.clear();
@@ -421,16 +456,16 @@ export class PrivateCoreBlockHistory implements IDisposable {
 
   #rangeAt(index: number): BlockRange {
     const entry = this.#entries[index];
-    if (entry.marker.isDisposed) {
+    if (entry.startMarker.isDisposed || entry.endMarker.isDisposed) {
       throw new Error(`Block ${JSON.stringify(entry.id)} was trimmed from xterm.js.`);
     }
-    const start = entry.marker.line;
-    const nextEntry = this.#entries[index + 1];
-    const end =
-      nextEntry === undefined
-        ? this.#bufferService.buffer.ybase + this.#bufferService.buffer.y
-        : nextEntry.marker.line;
-    return { start, lineCount: end - start };
+    if (entry.endMarker.line <= entry.startMarker.line) {
+      throw new Error(`Block ${JSON.stringify(entry.id)} has an invalid xterm.js range.`);
+    }
+    return {
+      start: entry.startMarker.line,
+      lineCount: entry.endMarker.line - entry.startMarker.line,
+    };
   }
 
   async #materialize(content: string): Promise<PrivateBufferLine[]> {
@@ -492,6 +527,16 @@ function toTerminalText(content: string): string {
     .replaceAll("\r", "\n")
     .replaceAll("\n", "\r\n");
   return `${normalized}\r\n`;
+}
+
+function appendBoundary(buffer: PrivateBuffer): string {
+  const cursorLine = buffer.lines.get(buffer.ybase + buffer.y);
+  const currentLineHasText =
+    (cursorLine?.translateToString(true).length ?? 0) > 0;
+  if (currentLineHasText) {
+    return "\r\n";
+  }
+  return buffer.x === 0 ? "" : "\r";
 }
 
 function write(terminal: Terminal, data: string): Promise<void> {

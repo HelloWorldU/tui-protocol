@@ -20,6 +20,9 @@ It exercises the current drafts for:
 - The tested request-ID conflict is rejected without creating a Context.
 - Context closure seals mutable Blocks, retains their content and order, and
   remains successful when repeated for a known closed Context.
+- A tested host invalidation revokes one Context's mutation authority without
+  pretending to close or Seal its Blocks. A later Update and closure request
+  both report `context_not_open`.
 - Explicit connection termination closes every remaining open Context and
   seals its mutable Blocks in the tested session.
 - The tested Append, complete Update, and Seal sequence preserves Block
@@ -54,6 +57,10 @@ It exercises the current drafts for:
   terminal satisfies the complete baseline.
 - `endConnection()` is an experimental host hook; it does not detect the end
   of a real byte stream by itself.
+- `invalidateContext()` is an experimental host hook for a terminal integration
+  that has already determined frame-external traffic made a managed Block's
+  rendering or reliable range untrustworthy. The Session does not inspect
+  terminal controls or rendered rows itself.
 - The exported TypeScript API and its in-memory snapshots are experimental,
   not a stable terminal or SDK interface.
 - The session accepts already validated logical Messages and implements only

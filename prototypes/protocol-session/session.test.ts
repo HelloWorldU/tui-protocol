@@ -598,6 +598,48 @@ test("closing a Context that was never opened returns context_not_open and creat
   assert.deepEqual(session.contexts(), []);
 });
 
+test("invalidating a Context revokes mutation without sealing its Block, and later Update and close requests report context_not_open", () => {
+  const session = openSession();
+  session.handle(append("1", "thinking", "draft"));
+
+  assert.equal(session.invalidateContext("context-1"), true);
+  assert.equal(session.invalidateContext("context-1"), false);
+  assert.deepEqual(session.context("context-1"), {
+    id: "context-1",
+    state: "invalidated",
+    blocks: [
+      {
+        id: "thinking",
+        lifecycle: "mutable",
+        content: { type: "text/plain", data: "draft" },
+      },
+    ],
+  });
+  assertOperationError(
+    session.handle(update("2", "thinking", "late")),
+    "2",
+    "context_not_open",
+  );
+  assert.deepEqual(
+    session.handle({
+      version: 1,
+      kind: "context.close",
+      request_id: "close-invalidated",
+      context_id: "context-1",
+      body: {},
+    }),
+    [
+      {
+        version: 1,
+        kind: "context.close.response",
+        request_id: "close-invalidated",
+        context_id: "context-1",
+        body: { outcome: "error", error: { code: "context_not_open" } },
+      },
+    ],
+  );
+});
+
 test("one request ID cannot close two different Contexts", () => {
   const session = openSession();
   session.handle({

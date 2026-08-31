@@ -516,6 +516,117 @@ test("ordinary output between Message fragments rejects that Message but not the
   ]);
 });
 
+test("mixed decoding preserves ordinary text and another OSC around a protocol Message in byte-stream order", () => {
+  const decoder = new ProtocolStreamDecoder({ emitOrdinaryData: true });
+  const title = "\u001B]2;working\u001B\\";
+  const events = decoder.push(
+    concatenate([
+      new TextEncoder().encode("before"),
+      new TextEncoder().encode(goldenOsc),
+      new TextEncoder().encode(`between${title}after`),
+    ]),
+  );
+
+  assert.equal(events.length, 3);
+  assert.equal(events[0]?.type, "ordinary");
+  assert.equal(
+    events[0]?.type === "ordinary"
+      ? new TextDecoder().decode(events[0].data)
+      : undefined,
+    "before",
+  );
+  assert.deepEqual(events[1], {
+    type: "message",
+    frameId: 7,
+    message: goldenMessage,
+  });
+  assert.equal(events[2]?.type, "ordinary");
+  assert.equal(
+    events[2]?.type === "ordinary"
+      ? new TextDecoder().decode(events[2].data)
+      : undefined,
+    `between${title}after`,
+  );
+});
+
+test("every split of tested mixed bytes preserves the same ordinary data and protocol Message order", () => {
+  const stream = concatenate([
+    new TextEncoder().encode("前🙂\u001B[31m"),
+    new TextEncoder().encode(goldenOsc),
+    new TextEncoder().encode("\u001B]2;working\u001B\\后"),
+  ]);
+  const wholeDecoder = new ProtocolStreamDecoder({ emitOrdinaryData: true });
+  const expected = normalizeDecoderEvents([
+    ...wholeDecoder.push(stream),
+    ...wholeDecoder.finish(),
+  ]);
+
+  for (let split = 0; split <= stream.length; split += 1) {
+    const decoder = new ProtocolStreamDecoder({ emitOrdinaryData: true });
+    const actual = normalizeDecoderEvents([
+      ...decoder.push(stream.subarray(0, split)),
+      ...decoder.push(stream.subarray(split)),
+      ...decoder.finish(),
+    ]);
+    assert.deepEqual(actual, expected, `mixed-stream split at byte ${split}`);
+  }
+});
+
+test("mixed decoding preserves the exact bytes of a tested BEL-ended unrelated OSC", () => {
+  const decoder = new ProtocolStreamDecoder({ emitOrdinaryData: true });
+  const ordinary = Uint8Array.from([
+    0xff,
+    0x1b,
+    0x5d,
+    0x32,
+    0x3b,
+    0x74,
+    0x69,
+    0x74,
+    0x6c,
+    0x65,
+    0x07,
+    0x80,
+  ]);
+
+  const events = [...decoder.push(ordinary), ...decoder.finish()];
+
+  assert.equal(events.length, 1);
+  assert.equal(events[0]?.type, "ordinary");
+  assert.deepEqual(
+    events[0]?.type === "ordinary" ? events[0].data : undefined,
+    ordinary,
+  );
+});
+
+test("mixed decoding consumes a malformed protocol OSC instead of displaying it as ordinary data", () => {
+  const decoder = new ProtocolStreamDecoder({ emitOrdinaryData: true });
+  const events = decoder.push(
+    new TextEncoder().encode(
+      "before\u001B]9002;1;7;0;0;!!!!\u001B\\after",
+    ),
+  );
+
+  assert.deepEqual(events.map((event) => event.type), [
+    "ordinary",
+    "error",
+    "ordinary",
+  ]);
+  assert.equal(
+    events[0]?.type === "ordinary"
+      ? new TextDecoder().decode(events[0].data)
+      : undefined,
+    "before",
+  );
+  assert.equal(events[1]?.type === "error" ? events[1].layer : undefined, "framing");
+  assert.equal(
+    events[2]?.type === "ordinary"
+      ? new TextDecoder().decode(events[2].data)
+      : undefined,
+    "after",
+  );
+});
+
 function assertMessageError(
   source: string,
   expectedCode: MessageCodecError["code"],
@@ -556,4 +667,27 @@ function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
     offset += chunk.length;
   }
   return result;
+}
+
+type NormalizedDecoderEvent =
+  | Exclude<DecoderEvent, { readonly type: "ordinary" }>
+  | { readonly type: "ordinary"; readonly data: number[] };
+
+function normalizeDecoderEvents(
+  events: readonly DecoderEvent[],
+): readonly NormalizedDecoderEvent[] {
+  const normalized: NormalizedDecoderEvent[] = [];
+  for (const event of events) {
+    if (event.type !== "ordinary") {
+      normalized.push(event);
+      continue;
+    }
+    const previous = normalized.at(-1);
+    if (previous?.type === "ordinary") {
+      previous.data.push(...event.data);
+    } else {
+      normalized.push({ type: "ordinary", data: [...event.data] });
+    }
+  }
+  return normalized;
 }

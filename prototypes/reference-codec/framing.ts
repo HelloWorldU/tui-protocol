@@ -38,7 +38,17 @@ export interface DecoderErrorEvent {
   readonly identity?: InvalidMessageIdentity;
 }
 
-export type DecoderEvent = DecodedMessageEvent | DecoderErrorEvent;
+export interface OrdinaryDataEvent {
+  readonly type: "ordinary";
+  readonly data: Uint8Array;
+}
+
+export type ProtocolDecoderEvent = DecodedMessageEvent | DecoderErrorEvent;
+export type DecoderEvent = ProtocolDecoderEvent | OrdinaryDataEvent;
+
+export interface ProtocolStreamDecoderOptions {
+  readonly emitOrdinaryData?: boolean;
+}
 
 export class FrameCodecError extends Error {
   constructor(message: string) {
@@ -80,6 +90,8 @@ type ParserState =
   | "escape"
   | "osc"
   | "oscEscape"
+  | "ordinaryOsc"
+  | "ordinaryOscEscape"
   | "discardOsc"
   | "discardOscEscape";
 
@@ -98,30 +110,61 @@ interface ParsedFrame {
 }
 
 export class ProtocolStreamDecoder {
+  readonly #emitOrdinaryData: boolean;
   #state: ParserState = "ground";
   #oscContent: number[] = [];
+  #ordinaryData: number[] = [];
   #discardedProtocolOsc = false;
   #discardReason = "Invalid OSC content.";
   #assembly: Assembly | undefined;
+
+  constructor(options: ProtocolStreamDecoderOptions = {}) {
+    this.#emitOrdinaryData = options.emitOrdinaryData ?? false;
+  }
 
   push(chunk: Uint8Array): readonly DecoderEvent[] {
     const events: DecoderEvent[] = [];
     for (const byte of chunk) {
       this.#consume(byte, events);
     }
+    this.#flushOrdinaryData(events);
     return events;
   }
 
   finish(): readonly DecoderEvent[] {
     const events: DecoderEvent[] = [];
-    if (this.#assembly !== undefined) {
+    const hadAssembly = this.#assembly !== undefined;
+    if (hadAssembly) {
       events.push(framingError("Connection ended during Message assembly."));
-    } else if (
-      this.#state !== "ground" &&
-      (this.#discardedProtocolOsc || isProtocolContent(this.#oscContent))
-    ) {
-      events.push(framingError("Connection ended during a protocol frame."));
     }
+    switch (this.#state) {
+      case "escape":
+        this.#flushIncompleteOrdinaryControl();
+        break;
+      case "osc":
+      case "oscEscape":
+        if (isProtocolContent(this.#oscContent)) {
+          if (!hadAssembly) {
+            events.push(
+              framingError("Connection ended during a protocol frame."),
+            );
+          }
+        } else {
+          this.#flushIncompleteOrdinaryControl();
+        }
+        break;
+      case "discardOsc":
+      case "discardOscEscape":
+        if (!hadAssembly) {
+          events.push(framingError("Connection ended during a protocol frame."));
+        }
+        break;
+      case "ground":
+      case "ordinaryOsc":
+      case "ordinaryOscEscape":
+        break;
+    }
+    this.#flushOrdinaryData(events);
     this.#reset();
     return events;
   }
@@ -136,6 +179,7 @@ export class ProtocolStreamDecoder {
             "Ordinary terminal data appeared between Message fragments.",
             events,
           );
+          this.#appendOrdinaryByte(byte);
         }
         return;
       case "escape":
@@ -147,7 +191,11 @@ export class ProtocolStreamDecoder {
             "Another terminal control appeared between Message fragments.",
             events,
           );
+          this.#appendOrdinaryByte(ESC);
           this.#state = byte === ESC ? "escape" : "ground";
+          if (byte !== ESC) {
+            this.#appendOrdinaryByte(byte);
+          }
         }
         return;
       case "osc":
@@ -156,7 +204,18 @@ export class ProtocolStreamDecoder {
         } else if (byte === ESC) {
           this.#state = "oscEscape";
         } else if (this.#oscContent.length === MAX_OSC_CONTENT_BYTES) {
-          this.#beginDiscard("OSC content exceeds the frame-size limit.");
+          if (isProtocolContent(this.#oscContent)) {
+            this.#beginDiscard("OSC content exceeds the frame-size limit.");
+          } else {
+            this.#interruptAssembly(
+              "Another OSC sequence appeared between Message fragments.",
+              events,
+            );
+            this.#appendOrdinaryOscPrefix();
+            this.#appendOrdinaryByte(byte);
+            this.#oscContent = [];
+            this.#state = "ordinaryOsc";
+          }
         } else {
           this.#oscContent.push(byte);
         }
@@ -164,6 +223,17 @@ export class ProtocolStreamDecoder {
       case "oscEscape":
         if (byte === BACKSLASH) {
           this.#finishOsc("ST", events);
+        } else if (!isProtocolContent(this.#oscContent)) {
+          this.#interruptAssembly(
+            "Another OSC sequence appeared between Message fragments.",
+            events,
+          );
+          this.#appendOrdinaryOscPrefix();
+          this.#appendOrdinaryByte(ESC);
+          this.#appendOrdinaryByte(byte);
+          this.#oscContent = [];
+          this.#state =
+            byte === ESC ? "ordinaryOscEscape" : "ordinaryOsc";
         } else {
           this.#abortOsc("OSC contains an invalid control byte.", events);
           if (byte === RIGHT_BRACKET) {
@@ -171,6 +241,22 @@ export class ProtocolStreamDecoder {
           } else {
             this.#state = byte === ESC ? "escape" : "ground";
           }
+        }
+        return;
+      case "ordinaryOsc":
+        this.#appendOrdinaryByte(byte);
+        if (byte === BEL) {
+          this.#state = "ground";
+        } else if (byte === ESC) {
+          this.#state = "ordinaryOscEscape";
+        }
+        return;
+      case "ordinaryOscEscape":
+        this.#appendOrdinaryByte(byte);
+        if (byte === BACKSLASH || byte === BEL) {
+          this.#state = "ground";
+        } else {
+          this.#state = byte === ESC ? "ordinaryOscEscape" : "ordinaryOsc";
         }
         return;
       case "discardOsc":
@@ -202,8 +288,18 @@ export class ProtocolStreamDecoder {
         "Another OSC sequence appeared between Message fragments.",
         events,
       );
+      this.#appendOrdinaryByte(ESC);
+      this.#appendOrdinaryByte(RIGHT_BRACKET);
+      this.#appendOrdinaryBytes(content);
+      if (terminator === "BEL") {
+        this.#appendOrdinaryByte(BEL);
+      } else {
+        this.#appendOrdinaryByte(ESC);
+        this.#appendOrdinaryByte(BACKSLASH);
+      }
       return;
     }
+    this.#flushOrdinaryData(events);
     if (terminator !== "ST") {
       this.#assembly = undefined;
       events.push(framingError("Protocol frames must use the ST terminator."));
@@ -226,6 +322,7 @@ export class ProtocolStreamDecoder {
 
   #abortOsc(reason: string, events: DecoderEvent[]): void {
     if (isProtocolContent(this.#oscContent) || this.#assembly !== undefined) {
+      this.#flushOrdinaryData(events);
       events.push(framingError(reason));
     }
     this.#assembly = undefined;
@@ -236,6 +333,7 @@ export class ProtocolStreamDecoder {
 
   #finishDiscard(events: DecoderEvent[]): void {
     if (this.#discardedProtocolOsc || this.#assembly !== undefined) {
+      this.#flushOrdinaryData(events);
       events.push(framingError(this.#discardReason));
     }
     this.#assembly = undefined;
@@ -327,12 +425,64 @@ export class ProtocolStreamDecoder {
       return;
     }
     this.#assembly = undefined;
+    this.#flushOrdinaryData(events);
     events.push(framingError(reason));
+  }
+
+  #appendOrdinaryOscPrefix(): void {
+    this.#appendOrdinaryByte(ESC);
+    this.#appendOrdinaryByte(RIGHT_BRACKET);
+    this.#appendOrdinaryBytes(this.#oscContent);
+  }
+
+  #appendOrdinaryByte(byte: number): void {
+    if (this.#emitOrdinaryData) {
+      this.#ordinaryData.push(byte);
+    }
+  }
+
+  #appendOrdinaryBytes(bytes: readonly number[]): void {
+    if (this.#emitOrdinaryData) {
+      this.#ordinaryData.push(...bytes);
+    }
+  }
+
+  #flushOrdinaryData(events: DecoderEvent[]): void {
+    if (this.#ordinaryData.length === 0) {
+      return;
+    }
+    events.push({
+      type: "ordinary",
+      data: Uint8Array.from(this.#ordinaryData),
+    });
+    this.#ordinaryData = [];
+  }
+
+  #flushIncompleteOrdinaryControl(): void {
+    switch (this.#state) {
+      case "escape":
+        this.#appendOrdinaryByte(ESC);
+        return;
+      case "osc":
+        this.#appendOrdinaryOscPrefix();
+        return;
+      case "oscEscape":
+        this.#appendOrdinaryOscPrefix();
+        this.#appendOrdinaryByte(ESC);
+        return;
+      case "ground":
+      case "ordinaryOsc":
+      case "ordinaryOscEscape":
+      case "discardOsc":
+      case "discardOscEscape":
+        return;
+    }
   }
 
   #reset(): void {
     this.#state = "ground";
     this.#oscContent = [];
+    this.#ordinaryData = [];
     this.#discardedProtocolOsc = false;
     this.#discardReason = "Invalid OSC content.";
     this.#assembly = undefined;

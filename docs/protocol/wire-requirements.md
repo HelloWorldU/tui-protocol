@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Logical wire message model](wire-format.md), [Message schemas](message-schemas.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Content representation](content-representation.md) |
+| Related drafts | [Logical wire message model](wire-format.md), [Message schemas](message-schemas.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md), [Operations](operations.md), [Capabilities](capabilities.md), [Protocol Contexts](contexts.md), [Terminal-native behavior](terminal-native-behavior.md), [Content representation](content-representation.md) |
 
 This document defines the requirements that the wire format must satisfy. The
 logical Message uses the selected UTF-8 JSON serialization and the initial
@@ -30,6 +30,9 @@ existing terminal control sequences. Bytes outside a protocol frame retain
 their normal terminal meaning. A recognized protocol frame is parsed rather
 than rendered as text.
 
+The history and native-behavior semantics of frame-external traffic are defined
+by [Terminal-Native Behavior](terminal-native-behavior.md#11-mixed-ordinary-output).
+
 Payload data cannot escape its frame or execute unintended terminal controls.
 The capability query must fail safely on an unsupported terminal without
 leaving visible garbage or persistent terminal state. Without positive
@@ -41,6 +44,13 @@ fallback behavior.
 Completed Messages are applied in the byte-stream order of their final carrier
 frames. A later protocol Message cannot overtake an earlier Message because
 parsing or execution completes sooner.
+
+Completed Messages and ordinary terminal traffic share this ordering. Later
+ordinary traffic does not become observably effective before an earlier Block
+Operation solely because realizing that Operation is asynchronous. Likewise,
+a later Message does not overtake earlier ordinary traffic. This requirement
+defines observable order, not a particular parser, queue, or rendering
+implementation.
 
 A malformed carrier frame or abandoned assembly may fail, but it does not
 reorder other completed Messages. The initial wire model defines ordering
@@ -99,9 +109,5 @@ Context scope, and closed-schema compatibility rules are consolidated in the
 ## Open Design Choices
 
 - A coordinated stable OSC number.
-- Relative display ordering between a completed protocol Message and adjacent
-  ordinary terminal output, including when Block rendering is asynchronous.
-- How ordinary output interleaved between managed Blocks is represented in
-  terminal-owned history.
 - Which terminal reset mechanisms discard incomplete frame assemblies.
 - Authentication, provenance, and authority to mutate existing Blocks.

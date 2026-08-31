@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operation semantics](operations.md), [Content representation](content-representation.md) |
+| Related drafts | [Operation semantics](operations.md), [Protocol Contexts](contexts.md), [Wire requirements](wire-requirements.md), [Content representation](content-representation.md) |
 
 This document defines the initial observable behavior of terminal-native
 history, reading, and interaction when protocol Operations change Block
@@ -139,6 +139,32 @@ composition. The terminal may scroll while tail following to keep current
 input visible, but physical layout changes do not move the logical input
 position.
 
+## 11. Mixed Ordinary Output
+
+Ordinary terminal output that appends at the logical tail remains unmanaged
+terminal history at its byte-stream position. It does not become part of an
+adjacent Block and does not change Block content, lifecycle, content-state
+identity, or Context authority. A later Append creates its Block after that
+unmanaged output.
+
+When an Operation changes the rendered height of an earlier Block, later
+unmanaged output and later Blocks move together without being duplicated,
+dropped, or reordered while that content remains retained under the terminal's
+normal capacity policy. If the user is reading a logical position in that
+unmanaged output, the terminal keeps the same content at the same
+viewport-relative row while it remains retained. This internal identity is
+terminal-owned and is not exposed to the TUI.
+
+A managed Block and adjacent unmanaged output do not share one logical line.
+If the preceding logical region does not already end at a line boundary, the
+terminal supplies one. Copying a selection across that boundary represents it
+as one newline.
+
+Frame-external terminal traffic retains its normal terminal meaning. If its
+realized effect makes a managed Block's rendering or reliable range no longer
+trustworthy, it follows the Context invalidation boundary defined by [Protocol
+Context Semantics](contexts.md#8-frame-external-invalidation).
+
 ## Experimental Evidence
 
 The executable evidence for this draft is recorded in the linked prototype
@@ -148,7 +174,8 @@ limitations:
 - The [xterm protocol endpoint](../../prototypes/integration/xterm-protocol-endpoint/README.md)
   composes the codec, Session, terminal adapter, and private xterm.js history
   path. It exercises reading anchors, tail following, resize and reflow, a
-  narrow complete-Block capacity boundary, and a narrow parser bridge.
+  narrow complete-Block capacity boundary, a narrow parser bridge, and tested
+  mixed output with one full-line-erase invalidation boundary.
 - The browser-hosted [selection and copy](../../prototypes/integration/xterm-browser-selection/README.md),
   [search](../../prototypes/integration/xterm-browser-search/README.md),
   [content metadata](../../prototypes/integration/xterm-browser-metadata/README.md),
@@ -172,6 +199,11 @@ terminal shortcuts, search navigation policy, visual presentation, or internal
 data structures. Detailed behavior for optional content representations
 remains part of each representation's definition.
 
-The physical ownership and display ordering of ordinary terminal output
-interleaved between managed Blocks also remains open and is tracked by the
-[Wire Format Requirements](wire-requirements.md).
+The initial mixed-output boundary covers ordinary traffic that appends at the
+logical tail. It does not attempt to redefine the terminal's native control
+language. The effect of frame-external traffic on Context authority is
+governed by the Context invalidation rule, while the exact reset effect on an
+incomplete protocol frame assembly remains a framing question.
+
+The current prototypes do not yet test the reading-anchor guarantee for
+unmanaged output or selection and copy across a managed/unmanaged boundary.

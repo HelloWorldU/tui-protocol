@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Protocol Contexts](contexts.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md) |
+| Related drafts | [Protocol Contexts](contexts.md), [Terminal-native behavior](terminal-native-behavior.md), [Content representation](content-representation.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md) |
 
 This document defines the observable semantics for discovering support for the
 Block Operations protocol. Message schemas and JSON serialization are defined
@@ -33,6 +33,9 @@ the queried version. For the initial version, that baseline includes:
 - the baseline `text/plain` content representation;
 - logical state atomicity;
 - history integrity and reading-anchor guarantees in their defined scope;
+- ordered coexistence with tail-appending ordinary output;
+- Context invalidation when frame-external terminal traffic makes a managed
+  Block's rendering or reliable range no longer trustworthy;
 - failure isolation for invalid Operations.
 
 Recognizing or parsing an Operation without implementing all baseline

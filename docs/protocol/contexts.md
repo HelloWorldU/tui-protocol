@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
-| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md) |
+| Related drafts | [Operations](operations.md), [Capabilities](capabilities.md), [Terminal-native behavior](terminal-native-behavior.md), [Wire requirements](wire-requirements.md), [Logical wire message model](wire-format.md), [JSON serialization](serialization.md), [OSC framing](framing.md), [Error codes](error-codes.md) |
 
 This document defines the lifecycle and addressing scope for a TUI's Block
 state. A Protocol Context is not a third content primitive and its control
@@ -94,24 +94,45 @@ change, allowing the TUI to retry after losing a response. Closing a Context
 that never existed is invalid. This idempotency is specific to Context closure
 and does not change the initial non-idempotent Seal semantics.
 
-## 8. One-Way Lifecycle and Explicit End Conditions
+## 8. Frame-External Invalidation
+
+Native terminal traffic outside protocol frames retains its normal terminal
+semantics. If the realized effect of that traffic overwrites or clears a
+managed Block, or otherwise makes that Block's rendering or reliable range no
+longer trustworthy, every open Context that owns an affected Block becomes
+invalidated at that byte-stream position. An effect confined to unmanaged tail
+content leaves all Contexts open.
+
+Invalidation is not a successful Context closure. It permanently revokes the
+TUI's mutation authority but does not imply that affected content was retained
+or that its Blocks completed a Seal transition. The terminal sends no
+unsolicited protocol response for the frame-external traffic. A later
+otherwise valid Block Operation or closure request carrying the invalidated
+Context ID reports `context_not_open`, and the Context ID is never reused.
+
+This rule applies to the realized effect of native terminal traffic outside
+protocol frames. Protocol Operations, resize and reflow, and normal
+scrollback-capacity trimming retain their separately defined behavior and do
+not invalidate a Context under this rule.
+
+## 9. One-Way Lifecycle and Explicit End Conditions
 
 A Context has a one-way lifecycle:
 
 ```text
-nonexistent -> open -> closed
+nonexistent -> open -> { closed | invalidated }
 ```
 
-A closed Context cannot be reopened, and its ID cannot be assigned to a later
-Context on the same connection. Normal termination is expressed by an explicit
-closure request. Ending the end-to-end terminal connection closes all of its
-remaining open Contexts.
+A closed or invalidated Context cannot be reopened, and its ID cannot be
+assigned to a later Context on the same connection. Normal termination is
+expressed by an explicit closure request. Ending the end-to-end terminal
+connection closes all of its remaining open Contexts.
 
 The initial protocol does not infer closure from inactivity, viewport state,
 or other presentation events. A TUI may legitimately remain silent while
 waiting for input or long-running work.
 
-## 9. Abnormal Termination
+## 10. Abnormal Termination
 
 If a TUI disappears without closing its Context while the underlying terminal
 connection remains alive, the initial protocol does not guess that the Context
@@ -122,7 +143,7 @@ Implementations may enforce resource limits, but a timeout or resource policy
 does not silently create a successful semantic closure. Recovery, eviction,
 and error reporting for abandoned Contexts remain open design questions.
 
-## 10. Ordered Closure Boundary
+## 11. Ordered Closure Boundary
 
 Within one terminal byte stream, valid Block Operations before a closure
 request are applied before the Context closes. The positive closure response
@@ -138,4 +159,3 @@ streams remains undefined.
 
 - Recovery and resource policy for abandoned Contexts.
 - Authentication, provenance, and authority within a shared byte stream.
-- Context behavior across terminal reset mechanisms.

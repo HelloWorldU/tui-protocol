@@ -51,6 +51,9 @@ It composes:
   request without reliable identity produces no wire response.
 - Ending the tested byte stream rejects an incomplete Message, closes all open
   Contexts, seals their mutable Blocks, and prevents later input.
+- The endpoint exposes a host-side decoded-event and Context-invalidation seam
+  used by the xterm mixed-stream experiment; neither seam creates a new wire
+  Message.
 
 ## Experimental Boundaries
 
@@ -70,6 +73,8 @@ It composes:
   responses.
 - Incoming bytes are fed directly to the protocol-only decoder. Ordinary
   terminal data is neither returned nor rendered by this harness.
+- Context invalidation depends on a terminal adapter identifying affected
+  rendered content; this protocol-only endpoint cannot make that judgment.
 - Session state is observed through in-memory snapshots and is not connected
   to a Terminal renderer or history implementation.
 

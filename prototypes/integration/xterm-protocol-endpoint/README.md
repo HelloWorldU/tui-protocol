@@ -23,6 +23,11 @@ An optional experimental parser addon registers OSC `9002` with the xterm.js
 parser and forwards completed payloads to the same endpoint. It is a narrow
 bridge experiment, not yet a complete mixed-stream ingress implementation.
 
+A separate experimental raw mixed-stream ingress asks the reference decoder
+to preserve ordinary bytes, then executes ordinary xterm.js writes and
+completed protocol events through one asynchronous queue. Its current native-
+control observer covers only the tested full-line erase (`CSI 2 K`) boundary.
+
 ## Proven
 
 - Tested Capability and Context control bytes establish a supported protocol
@@ -36,6 +41,22 @@ bridge experiment, not yet a complete mixed-stream ingress implementation.
   both Session state and rendered history.
 - A tested invalid OSC `9002` payload produces a framing diagnostic, is not
   displayed, and does not prevent later ordinary output from being displayed.
+- In one tested raw chunk, Append A renders before following ordinary text,
+  Append B starts on a terminal-supplied line boundary after that text, and
+  explicit Block ranges exclude the intervening unmanaged row. A later Update
+  of A moves the ordinary row and B together without replacing either one.
+- Two tested mixed-stream `push()` calls retain the same order even when the
+  caller starts the second before awaiting completion of the first render.
+- A tested full-line erase and rewrite confined to the unmanaged tail executes
+  normally, leaves its Context open, and permits a later Update.
+- A tested cursor move followed by full-line erase of a managed Block executes
+  normally, invalidates that Block's Context without sealing it, and causes an
+  Update later in the same mixed chunk to return `context_not_open`.
+- When two tested Contexts own different Block rows, erasing one row
+  invalidates only its owning Context and the other Context can still Update.
+- Closing an invalidated Context through the same mixed ingress returns a
+  correlated `context.close.response` with `context_not_open` and does not
+  Seal its mutable Block.
 - In a tested pair of Contexts, the same Block ID produces separate rendered
   ranges, and updating one Context's Block leaves the other unchanged.
 - Tested Append and Update Messages decoded from one input chunk retain their
@@ -117,22 +138,38 @@ implementation.
   and would continue rather than interrupt that assembly. The positive tests
   therefore use single-frame Messages, and this addon is not a complete
   mixed-stream ingress.
-- The OSC handler returns synchronously while accepted Block rendering is
-  deferred. The experiment does not prove relative display order when one
-  xterm.js write contains both a protocol frame and later ordinary output.
-- The private history fixture still assumes that it owns writes after managed
-  Blocks begin. The parser test places ordinary output before the first Block;
-  arbitrary ordinary output after or between Blocks is not yet safely indexed
-  or tested.
+- The synchronous OSC addon still does not prove ordering against adjacent
+  ordinary bytes. Only the separate raw mixed-stream ingress waits for each
+  accepted Block render before executing later stream traffic.
+- The explicit private Block ranges exclude the one tested intervening
+  unmanaged row. Arbitrary terminal controls, styled or image output,
+  non-ASCII boundary cases, and mixed output under capacity pressure remain
+  untested.
+- The mixed-stream ingress and the protocol-only `push()` entry point are not
+  designed for concurrent use on one endpoint; doing so would bypass the
+  mixed ingress's single ordering queue.
+- The private renderer does not yet define a safe physical projection for
+  control characters inside `text/plain`. Such payloads are outside this
+  experiment and must not be mistaken for frame-external native traffic.
 - Known Update, Extend, and ReplaceSuffix capacity exhaustion is checked before
   Session commit, but accepted Operations still render asynchronously
   afterward. The prototype does not provide general failure atomicity,
   recovery, backpressure, or partial-rendering handling for other renderer
   failures.
+- Capacity preflight does not yet account for unmanaged rows between Blocks.
+  A mixed stream near the xterm.js capacity limit can therefore reach an
+  unsupported post-commit renderer failure and is deliberately not claimed as
+  proven.
 - The adapter combines Context and Block IDs into an internal rendering key.
   The key is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
   later Operations remain enforced by the Session.
+- Native-control invalidation is demonstrated only for `CSI 2 K`. Other erase
+  modes, line insertion or deletion, scrolling regions, screen or scrollback
+  clears, reset sequences, and alternate-buffer changes are not detected by
+  this experimental observer and are not claimed as proven.
+- The mixed-stream tests do not yet exercise a reading anchor inside unmanaged
+  output or selection and copy across a managed/unmanaged boundary.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.
