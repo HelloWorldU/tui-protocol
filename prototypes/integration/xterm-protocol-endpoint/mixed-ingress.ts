@@ -40,12 +40,33 @@ export class XtermMixedStreamIngress implements IDisposable {
     this.#onDiagnostic = options.onDiagnostic;
     this.#registrations = [
       terminal.parser.registerCsiHandler({ final: "K" }, (params) => {
-        const first = params[0];
-        const mode = typeof first === "number" ? first : 0;
-        if (mode === 2) {
-          const buffer = terminal.buffer.active;
-          const row = buffer.baseY + buffer.cursorY;
-          this.#endpoint.invalidateContextsIntersectingRows(row, row + 1);
+        const mode = firstParameter(params);
+        if (mode >= 0 && mode <= 2) {
+          this.#invalidateActiveRows(currentRow(terminal), 1);
+        }
+        return false;
+      }),
+      terminal.parser.registerCsiHandler({ final: "J" }, (params) => {
+        const mode = firstParameter(params);
+        const buffer = terminal.buffer.active;
+        if (
+          buffer.type === "normal" &&
+          mode === 2 &&
+          !terminal.options.scrollOnEraseInDisplay
+        ) {
+          this.#invalidateActiveRows(buffer.baseY, terminal.rows);
+        } else if (buffer.type === "normal" && mode === 3) {
+          this.#invalidateActiveRows(
+            0,
+            Math.max(0, buffer.length - terminal.rows),
+          );
+        }
+        return false;
+      }),
+      terminal.parser.registerEscHandler({ final: "c" }, () => {
+        const normal = terminal.buffer.normal;
+        if (normal.length > 0) {
+          this.#endpoint.invalidateContextsIntersectingRows(0, normal.length);
         }
         return false;
       }),
@@ -108,6 +129,26 @@ export class XtermMixedStreamIngress implements IDisposable {
       this.#onResponseFrame(frame);
     }
   }
+
+  #invalidateActiveRows(start: number, lineCount: number): void {
+    if (this.#terminal.buffer.active.type !== "normal" || lineCount <= 0) {
+      return;
+    }
+    this.#endpoint.invalidateContextsIntersectingRows(
+      start,
+      start + lineCount,
+    );
+  }
+}
+
+function firstParameter(params: readonly (number | number[])[]): number {
+  const first = params[0];
+  return typeof first === "number" ? first : 0;
+}
+
+function currentRow(terminal: Terminal): number {
+  const buffer = terminal.buffer.active;
+  return buffer.baseY + buffer.cursorY;
 }
 
 function write(terminal: Terminal, data: Uint8Array): Promise<void> {

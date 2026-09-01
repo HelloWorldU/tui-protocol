@@ -18,6 +18,7 @@ export interface XtermBlockHistory extends IDisposable {
   accept(operation: Operation): void;
   renderAccepted(operation: Operation): Promise<void>;
   range(id: string): Readonly<RenderedBlockRange> | undefined;
+  retire(id: string): void;
 }
 
 /**
@@ -59,6 +60,12 @@ export class XtermTerminalAdapter
     blockId: string,
   ): Readonly<RenderedBlockRange> | undefined {
     return this.#history.range(renderBlockId(contextId, blockId));
+  }
+
+  retireContextBlocks(contextId: string, blockIds: readonly string[]): void {
+    for (const blockId of blockIds) {
+      this.#history.retire(renderBlockId(contextId, blockId));
+    }
   }
 
   dispose(): void {

@@ -25,8 +25,9 @@ bridge experiment, not yet a complete mixed-stream ingress implementation.
 
 A separate experimental raw mixed-stream ingress asks the reference decoder
 to preserve ordinary bytes, then executes ordinary xterm.js writes and
-completed protocol events through one asynchronous queue. Its current native-
-control observer covers only the tested full-line erase (`CSI 2 K`) boundary.
+completed protocol events through one asynchronous queue. Its experimental
+native-control observer covers the bounded line erase, display erase,
+scrollback clear, and full-reset cases listed below.
 
 ## Proven
 
@@ -47,13 +48,38 @@ control observer covers only the tested full-line erase (`CSI 2 K`) boundary.
   of A moves the ordinary row and B together without replacing either one.
 - Two tested mixed-stream `push()` calls retain the same order even when the
   caller starts the second before awaiting completion of the first render.
+- In one tested near-capacity stream containing two Blocks and intervening
+  unmanaged rows, an unsafe earlier-Block growth returns `resource_exhausted`
+  without changing the Block snapshot or xterm.js rows; a later fitting Update
+  still succeeds. The same result is tested with repeated wide CJK characters.
 - A tested full-line erase and rewrite confined to the unmanaged tail executes
   normally, leaves its Context open, and permits a later Update.
+- Erasing a tested alternate-screen row does not invalidate a Context whose
+  Block remains in normal-screen history; that Block can still be updated.
 - A tested cursor move followed by full-line erase of a managed Block executes
   normally, invalidates that Block's Context without sealing it, and causes an
   Update later in the same mixed chunk to return `context_not_open`.
-- When two tested Contexts own different Block rows, erasing one row
-  invalidates only its owning Context and the other Context can still Update.
+- A tested erase from the cursor to the end of a managed row preserves the
+  row's prefix, invalidates its Context, and causes a following Update to
+  return `context_not_open`.
+- A tested erase from the start of a managed row through the cursor preserves
+  the row's suffix, invalidates its Context, and causes a following Update to
+  return `context_not_open`.
+- With Blocks from two Contexts interleaved, erasing one Context's first Block
+  invalidates that Context and retires both of its managed ranges. The other
+  Context retains its range and can still Update, while the unaffected sibling
+  content remains visible as unmanaged history.
+- In separate tested cases, clearing a normal-screen viewport invalidates a
+  Context whose Block it erases, while clearing scrollback invalidates the
+  Context whose old Block is removed and leaves a current viewport Block's
+  Context usable for both a fitting Update and a later correlated capacity
+  rejection. The removed Block is retired from the managed range index.
+- Clearing scrollback also retires the removed Block range of an already closed
+  Context without changing its closed state or poisoning a later capacity
+  check for another open Context.
+- A tested full terminal reset invalidates both Contexts that own the two
+  rendered Blocks, retires both managed ranges, clears the tested xterm.js
+  Buffer, and does not Seal either Block.
 - Closing an invalidated Context through the same mixed ingress returns a
   correlated `context.close.response` with `context_not_open` and does not
   Seal its mutable Block.
@@ -81,13 +107,14 @@ control observer covers only the tested full-line erase (`CSI 2 K`) boundary.
 - A tested Update rejected because its Block is sealed returns correlated
   `protocol.error` bytes and does not change rendered history.
 - When a tested Update would grow xterm.js history beyond its available
-  capacity, it returns correlated `resource_exhausted` bytes before changing
-  either Session state or rendered history; a later fitting Update still
-  succeeds.
-- The same tested capacity rejection for Extend leaves both states unchanged
-  and leaves the prior content base usable by a later fitting Extend.
-- The equivalent tested rejection for ReplaceSuffix leaves both states
-  unchanged and leaves the prior content base usable by a fitting replacement.
+  capacity, it returns correlated `resource_exhausted` bytes without changing
+  Block content or rendered history; a later fitting Update still succeeds.
+- The same tested capacity rejection for Extend leaves Block content and
+  rendered history unchanged and leaves the prior content base usable by a
+  later fitting Extend.
+- The equivalent tested rejection for ReplaceSuffix leaves Block content and
+  rendered history unchanged and leaves the prior content base usable by a
+  fitting replacement.
 - In one tested capacity-aligned Update, the required trim removes exactly one
   complete oldest Block. A later history row being read stays at the viewport
   top, and a following Extend from the same input chunk still renders.
@@ -104,13 +131,20 @@ Behavior](../../../docs/protocol/terminal-native-behavior.md).
 Capacity-limited tests deliberately grow a Block through Update, Extend, and
 ReplaceSuffix beyond what the private xterm.js history spike can materialize.
 The integration checks this known limit while the Operation is prepared,
-rejects it with `resource_exhausted`, and leaves both Session state and
-xterm.js Buffer rows unchanged.
+rejects it with `resource_exhausted`, and leaves Block content and xterm.js
+Buffer rows unchanged. As with other rejected Operations, its Operation ID
+remains used under the protocol replay rules.
 
-The check uses the current plain-text Block layout model to predict the row
-growth before Session commit. It closes the previously observed split-state
-case for the tested ASCII content and dimensions; it is not evidence that all
-renderer failures are detected before commit.
+When no earlier render is pending, the check projects the replacement against
+the xterm.js Buffer's current physical row count, including unmanaged rows.
+If the exact excess cannot be removed as complete leading Blocks, it rejects
+the Operation before Block mutation. Non-ASCII scalars use a conservative
+two-cell upper bound so the check cannot undercount the tested wide-character
+case. If that upper bound alone crosses capacity, the Operation is rejected
+rather than using an inexact count to schedule trimming. This closes the
+previously observed split-state cases for the tested ASCII and repeated-CJK
+content and dimensions; it is not evidence that all renderer failures are
+detected before Block mutation.
 
 A separate tested path permits normal trimming only when the exact required
 row count consists of complete oldest Blocks and the changed Block remains
@@ -142,32 +176,40 @@ implementation.
   ordinary bytes. Only the separate raw mixed-stream ingress waits for each
   accepted Block render before executing later stream traffic.
 - The explicit private Block ranges exclude the one tested intervening
-  unmanaged row. Arbitrary terminal controls, styled or image output,
-  non-ASCII boundary cases, and mixed output under capacity pressure remain
-  untested.
-- The mixed-stream ingress and the protocol-only `push()` entry point are not
-  designed for concurrent use on one endpoint; doing so would bypass the
-  mixed ingress's single ordering queue.
+  unmanaged row. Arbitrary terminal controls, styled or image output, and
+  Unicode layout beyond the listed repeated-CJK case remain untested.
+- The mixed-stream ingress and the protocol-only `push()` entry point must not
+  be mixed on one endpoint, either concurrently or sequentially. Protocol-only
+  pushes bypass the mixed ingress's single ordering queue and can enter a
+  planned-only capacity check while unmanaged rows are present.
 - The private renderer does not yet define a safe physical projection for
-  control characters inside `text/plain`. Such payloads are outside this
-  experiment and must not be mistaken for frame-external native traffic.
+  C0 or C1 controls inside `text/plain`, apart from its modeled CR/LF line
+  breaks. Such payloads are outside this experiment and must not be mistaken
+  for frame-external native traffic.
 - Known Update, Extend, and ReplaceSuffix capacity exhaustion is checked before
   Session commit, but accepted Operations still render asynchronously
   afterward. The prototype does not provide general failure atomicity,
   recovery, backpressure, or partial-rendering handling for other renderer
   failures.
-- Capacity preflight does not yet account for unmanaged rows between Blocks.
-  A mixed stream near the xterm.js capacity limit can therefore reach an
-  unsupported post-commit renderer failure and is deliberately not claimed as
-  proven.
+- The capacity preflight accounts for current unmanaged rows in the tested
+  no-pending-render case, but it does not implement or prove safe eviction of
+  unmanaged rows. Mixed capacity layouts beyond the listed conservative
+  rejection remain unproven. Its current non-ASCII upper bound may reject a
+  layout that xterm.js could fit, and capacity preflight conservatively rejects
+  a mutation whose resulting `text/plain` contains unsupported C0 or C1
+  controls other than the modeled CR/LF line breaks.
 - The adapter combines Context and Block IDs into an internal rendering key.
   The key is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
   later Operations remain enforced by the Session.
-- Native-control invalidation is demonstrated only for `CSI 2 K`. Other erase
-  modes, line insertion or deletion, scrolling regions, screen or scrollback
-  clears, reset sequences, and alternate-buffer changes are not detected by
-  this experimental observer and are not claimed as proven.
+- Native-control invalidation is demonstrated only for the listed `CSI 0 K`,
+  `CSI 1 K`, `CSI 2 K`, `CSI 2 J`, `CSI 3 J`, and `ESC c` sequences and the tested
+  alternate-screen isolation case. The line-erase observer is deliberately
+  row-granular rather than cell-exact, so erasing only unchanged blank cells on
+  a managed row can conservatively invalidate its Context. `CSI 0 J`, `CSI 1 J`,
+  selective erase, character or line insertion and deletion, scrolling
+  regions, printable overwrite, soft reset, `scrollOnEraseInDisplay: true`, and
+  other alternate-buffer effects remain unproven.
 - The mixed-stream tests do not yet exercise a reading anchor inside unmanaged
   output or selection and copy across a managed/unmanaged boundary.
 - The positive Capability result remains a configured host assertion, not

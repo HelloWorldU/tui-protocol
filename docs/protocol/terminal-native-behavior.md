@@ -174,8 +174,10 @@ limitations:
 - The [xterm protocol endpoint](../../prototypes/integration/xterm-protocol-endpoint/README.md)
   composes the codec, Session, terminal adapter, and private xterm.js history
   path. It exercises reading anchors, tail following, resize and reflow, a
-  narrow complete-Block capacity boundary, a narrow parser bridge, and tested
-  mixed output with one full-line-erase invalidation boundary.
+  narrow complete-Block capacity boundary, a narrow parser bridge, ordered
+  mixed output, one conservative mixed-capacity rejection, and bounded
+  line-erase, display-erase, scrollback-clear, and full-reset invalidation
+  cases.
 - The browser-hosted [selection and copy](../../prototypes/integration/xterm-browser-selection/README.md),
   [search](../../prototypes/integration/xterm-browser-search/README.md),
   [content metadata](../../prototypes/integration/xterm-browser-metadata/README.md),
@@ -189,7 +191,8 @@ Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
 compatibility, a public terminal API, arbitrary mixed-stream ingress,
 partial-Block or Append-driven eviction, non-ASCII position mapping, or
-production renderer failure atomicity.
+production renderer failure atomicity. Successful capacity eviction across
+mixed managed and unmanaged history is also not demonstrated.
 
 ## Current Scope
 

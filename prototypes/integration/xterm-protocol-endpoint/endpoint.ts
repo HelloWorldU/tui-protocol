@@ -61,9 +61,6 @@ export class XtermProtocolEndpoint implements IDisposable {
     }
     const affected: string[] = [];
     for (const context of this.#endpoint.contexts()) {
-      if (context.state !== "open") {
-        continue;
-      }
       const intersects = context.blocks.some((block) => {
         const range = this.#adapter.range(context.id, block.id);
         return (
@@ -72,9 +69,19 @@ export class XtermProtocolEndpoint implements IDisposable {
           start < range.start + range.lineCount
         );
       });
-      if (intersects && this.#endpoint.invalidateContext(context.id)) {
+      if (!intersects) {
+        continue;
+      }
+      if (
+        context.state === "open" &&
+        this.#endpoint.invalidateContext(context.id)
+      ) {
         affected.push(context.id);
       }
+      this.#adapter.retireContextBlocks(
+        context.id,
+        context.blocks.map((block) => block.id),
+      );
     }
     return affected;
   }

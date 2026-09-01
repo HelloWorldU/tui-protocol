@@ -3,7 +3,6 @@ import type { IDisposable, Terminal } from "@xterm/headless";
 
 import {
   TerminalPrototype,
-  layoutBlocks,
   type Block,
   type BlockId,
   type Operation,
@@ -35,6 +34,11 @@ type TargetAnchorMapping =
 interface CapacityTrimPlan {
   readonly entryCount: number;
   readonly blockIds: readonly BlockId[];
+}
+
+interface TextLineCount {
+  readonly count: number;
+  readonly exact: boolean;
 }
 
 interface PrivateBufferLine {
@@ -174,6 +178,19 @@ export class PrivateCoreBlockHistory implements IDisposable {
     return { ...this.#rangeAt(index) };
   }
 
+  /** Stops treating a rendered Block as managed after native traffic owns it. */
+  retire(id: BlockId): void {
+    const index = this.#entryIndexes.get(id);
+    if (index === undefined) {
+      return;
+    }
+    const [entry] = this.#entries.splice(index, 1);
+    entry.startMarker.dispose();
+    entry.endMarker.dispose();
+    this.#plannedTrimmedBlockIds.add(id);
+    this.#rebuildEntryIndexes();
+  }
+
   wouldExceedCapacity(operation: Operation): boolean {
     if (
       operation.type !== "update" &&
@@ -194,10 +211,6 @@ export class PrivateCoreBlockHistory implements IDisposable {
     if (this.#plannedTrimmedBlockIds.has(operation.id)) {
       return true;
     }
-    const currentLineCount = layoutBlocks(
-      [block],
-      this.#terminal.cols,
-    ).length;
     let replacementContent: string;
     switch (operation.type) {
       case "update":
@@ -214,28 +227,54 @@ export class PrivateCoreBlockHistory implements IDisposable {
         );
         break;
     }
-    const replacementLineCount = layoutBlocks(
-      [
-        {
-          id: operation.id,
-          lifecycle: "mutable",
-          content: replacementContent,
-        },
-      ],
+    const replacementLayout = conservativeTextLineCount(
+      replacementContent,
       this.#terminal.cols,
-    ).length;
+    );
+    if (replacementLayout === undefined) {
+      return true;
+    }
     const retainedBlocks = this.#plannedModel
       .blocks()
       .filter((candidate) => !this.#plannedTrimmedBlockIds.has(candidate.id));
-    const plannedLineCount =
-      layoutBlocks(retainedBlocks, this.#terminal.cols).length -
-      currentLineCount +
-      replacementLineCount;
     const lines = this.#bufferService.buffer.lines;
-    const excess =
-      Math.max(this.#terminal.rows, plannedLineCount + 1) - lines.maxLength;
+    let excess: number;
+    let estimateIsExact = replacementLayout.exact;
+    if (this.#acceptedRenderCount === 0) {
+      const renderedRange = this.range(operation.id);
+      if (renderedRange === undefined) {
+        return true;
+      }
+      excess = Math.max(
+        0,
+        lines.length -
+          renderedRange.lineCount +
+          replacementLayout.count -
+          lines.maxLength,
+      );
+    } else {
+      let plannedLineCount = 0;
+      for (const candidate of retainedBlocks) {
+        const layout = conservativeTextLineCount(
+          candidate.id === operation.id
+            ? replacementContent
+            : candidate.content,
+          this.#terminal.cols,
+        );
+        if (layout === undefined) {
+          return true;
+        }
+        plannedLineCount += layout.count;
+        estimateIsExact &&= layout.exact;
+      }
+      excess =
+        Math.max(this.#terminal.rows, plannedLineCount + 1) - lines.maxLength;
+    }
     if (excess <= 0) {
       return false;
+    }
+    if (!estimateIsExact) {
+      return true;
     }
     const trimPlan = this.#capacityTrimPlan(excess, operation.id);
     if (trimPlan === undefined) {
@@ -448,6 +487,10 @@ export class PrivateCoreBlockHistory implements IDisposable {
       entry.endMarker.dispose();
       this.#plannedTrimmedBlockIds.add(entry.id);
     }
+    this.#rebuildEntryIndexes();
+  }
+
+  #rebuildEntryIndexes(): void {
     this.#entryIndexes.clear();
     for (const [index, entry] of this.#entries.entries()) {
       this.#entryIndexes.set(entry.id, index);
@@ -549,6 +592,50 @@ function replaceSuffixText(
   replacement: string,
 ): string {
   return `${Array.from(content).slice(0, retain).join("")}${replacement}`;
+}
+
+/**
+ * Returns a safe upper bound for the current plain-text spike. Printable ASCII
+ * uses its known single-cell width. Until text/plain Unicode projection is
+ * specified, every other printable scalar is conservatively treated as a
+ * two-cell glyph so capacity preflight cannot undercount wide characters.
+ */
+function conservativeTextLineCount(
+  content: string,
+  width: number,
+): TextLineCount | undefined {
+  const normalized = content.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  let total = 0;
+  let exact = true;
+
+  for (const line of normalized.split("\n")) {
+    let rows = 1;
+    let column = 0;
+    for (const character of line) {
+      const codePoint = character.codePointAt(0);
+      if (
+        codePoint === undefined ||
+        codePoint < 0x20 ||
+        (codePoint >= 0x7f && codePoint <= 0x9f) ||
+        (codePoint >= 0xd800 && codePoint <= 0xdfff)
+      ) {
+        return undefined;
+      }
+      const cellWidth = codePoint <= 0x7e ? 1 : 2;
+      exact &&= codePoint <= 0x7e;
+      if (cellWidth > width) {
+        return undefined;
+      }
+      if (column + cellWidth > width) {
+        rows += 1;
+        column = 0;
+      }
+      column += cellWidth;
+    }
+    total += rows;
+  }
+
+  return { count: total, exact };
 }
 
 function mapTargetAnchor(

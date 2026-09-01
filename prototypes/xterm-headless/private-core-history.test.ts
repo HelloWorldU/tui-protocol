@@ -170,6 +170,45 @@ test("a Block range follows xterm's realized wide-character wrapping so Update r
   xterm.dispose();
 });
 
+test("a conservative narrow-Unicode capacity rejection does not mark a visible leading Block as trimmed", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 4,
+    rows: 3,
+    scrollback: 1,
+  });
+  const history = new PrivateCoreBlockHistory(xterm);
+
+  await history.apply(append("old", "old", "mutable"));
+  await history.apply(append("target", "t", "mutable"));
+  await history.apply(append("tail", "tail", "mutable"));
+
+  assert.equal(
+    history.wouldExceedCapacity({
+      type: "update",
+      id: "target",
+      content: "ééé",
+    }),
+    true,
+  );
+  assert.deepEqual(history.range("old"), { start: 0, lineCount: 1 });
+  assert.equal(
+    history.wouldExceedCapacity({
+      type: "update",
+      id: "old",
+      content: "OLD",
+    }),
+    false,
+  );
+
+  await history.apply({ type: "update", id: "old", content: "OLD" });
+
+  assert.deepEqual(bufferRows(xterm), ["OLD", "t", "tail", ""]);
+
+  history.dispose();
+  xterm.dispose();
+});
+
 function append(
   id: string,
   content: string,

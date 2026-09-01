@@ -130,8 +130,10 @@ replace a more specific code or expose implementation exceptions as new
 protocol codes.
 
 Both failures preserve the protocol's atomicity and failure-isolation rules:
-the rejected request or Operation changes no protocol state. Neither code
-promises that retrying will succeed.
+the rejected request or Operation applies no requested Context or Block state
+change. Correlation and Operation IDs remain subject to their replay rules,
+including non-reuse of a failed Operation's ID. Neither code promises that
+retrying will succeed.
 
 ## 7. Processing and Recovery
 

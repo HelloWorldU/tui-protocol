@@ -33,8 +33,10 @@ It composes:
   Operation adapter in byte-stream order; rejected Operations are not
   accepted.
 - A tested synchronous adapter preparation step can reject an otherwise valid
-  Update with `resource_exhausted` before Session state changes; the Update
-  produces a correlated error and is not accepted by the adapter.
+  Update with `resource_exhausted` before Block content changes; the Update
+  produces a correlated error and is not accepted by the adapter. Operation-ID
+  reuse remains governed by the separately tested
+  [Session](../../protocol-session/README.md) rules.
 - A tested exception from adapter preparation produces a local host diagnostic
   and correlated `internal_error`, leaves Block state unchanged, and does not
   prevent the next Operation from being processed.

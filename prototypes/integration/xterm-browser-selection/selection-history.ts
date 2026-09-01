@@ -124,6 +124,10 @@ export class BrowserSelectionHistory {
     return this.#history.range(id);
   }
 
+  retire(id: string): void {
+    this.#history.retire(id);
+  }
+
   dispose(): void {
     this.#history.dispose();
   }

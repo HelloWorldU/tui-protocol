@@ -89,8 +89,11 @@ can be designed.
   control exchanges or Context IDs on Operations.
 - Plain text only; terminal control sequences are not part of the experiment.
 - The standalone spike assumes a dedicated terminal. The composed xterm
-  endpoint separately tests one narrow unmanaged-output gap; arbitrary mixed
-  output remains outside this spike.
+  endpoint separately tests one narrow unmanaged-output gap and rejects one
+  unsafe near-capacity growth against the Buffer's physical row count before
+  Block mutation. A conservative non-ASCII width bound covers one repeated-CJK
+  case. Safe eviction across mixed managed and unmanaged history and arbitrary
+  mixed output remain outside this spike.
 - Complete Update of the Block containing the viewport anchor remains
   undefined; the xterm integration separately exercises ReplaceSuffix's
   narrower mapping.

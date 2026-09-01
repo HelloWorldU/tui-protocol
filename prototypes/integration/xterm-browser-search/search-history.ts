@@ -56,6 +56,10 @@ export class BrowserSearchHistory {
     return this.#history.range(id);
   }
 
+  retire(id: string): void {
+    this.#history.retire(id);
+  }
+
   dispose(): void {
     this.#search.dispose();
     this.#history.dispose();
