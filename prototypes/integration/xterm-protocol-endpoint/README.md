@@ -46,6 +46,10 @@ scrollback clear, and full-reset cases listed below.
   Append B starts on a terminal-supplied line boundary after that text, and
   explicit Block ranges exclude the intervening unmanaged row. A later Update
   of A moves the ordinary row and B together without replacing either one.
+- In one retained ASCII fixture, the user places a complete unmanaged row at
+  the viewport top while reading history. Growing and then shrinking an earlier
+  Block keeps that same row at the viewport top, moves the later Block range by
+  the corresponding row delta, and leaves the Context open.
 - Two tested mixed-stream `push()` calls retain the same order even when the
   caller starts the second before awaiting completion of the first render.
 - In one tested near-capacity stream containing two Blocks and intervening
@@ -210,8 +214,10 @@ implementation.
   selective erase, character or line insertion and deletion, scrolling
   regions, printable overwrite, soft reset, `scrollOnEraseInDisplay: true`, and
   other alternate-buffer effects remain unproven.
-- The mixed-stream tests do not yet exercise a reading anchor inside unmanaged
-  output or selection and copy across a managed/unmanaged boundary.
+- The mixed-stream reading-anchor evidence is limited to one retained ASCII
+  row at the viewport top while an earlier Block grows and shrinks. Other
+  unmanaged anchor positions, resize/reflow and capacity interactions, and
+  selection and copy across a managed/unmanaged boundary remain untested.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.

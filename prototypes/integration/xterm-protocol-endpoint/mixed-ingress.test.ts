@@ -66,6 +66,87 @@ test("one mixed chunk renders Block A, ordinary output, and Block B in order, an
   fixture.dispose();
 });
 
+test("growing and shrinking an earlier Block keeps the unmanaged row being read at the viewport top", async () => {
+  const fixture = createFixture({ rows: 3, scrollback: 100 });
+  const contextId = await openContext(fixture);
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "a", "A"), 3),
+      text("read-1\r\nread-2"),
+      encodeInput(append(contextId, "2", "b", "B"), 4),
+    ]),
+  );
+
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "A",
+    "read-1",
+    "read-2",
+    "B",
+    "",
+  ]);
+  assert.deepEqual(fixture.endpoint.range(contextId, "b"), {
+    start: 3,
+    lineCount: 1,
+  });
+  fixture.terminal.scrollToLine(1);
+  assert.equal(fixture.terminal.buffer.active.viewportY, 1);
+  assert.notEqual(
+    fixture.terminal.buffer.active.viewportY,
+    fixture.terminal.buffer.active.baseY,
+  );
+  assert.equal(viewportTopText(fixture.terminal), "read-1");
+
+  await fixture.ingress.push(
+    encodeInput(update(contextId, "3", "a", "A1\nA2\nA3"), 5),
+  );
+
+  assert.equal(fixture.terminal.buffer.active.viewportY, 3);
+  assert.notEqual(
+    fixture.terminal.buffer.active.viewportY,
+    fixture.terminal.buffer.active.baseY,
+  );
+  assert.equal(viewportTopText(fixture.terminal), "read-1");
+  assert.deepEqual(fixture.endpoint.range(contextId, "b"), {
+    start: 5,
+    lineCount: 1,
+  });
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "A1",
+    "A2",
+    "A3",
+    "read-1",
+    "read-2",
+    "B",
+    "",
+  ]);
+
+  await fixture.ingress.push(
+    encodeInput(update(contextId, "4", "a", "final"), 6),
+  );
+
+  assert.equal(fixture.terminal.buffer.active.viewportY, 1);
+  assert.notEqual(
+    fixture.terminal.buffer.active.viewportY,
+    fixture.terminal.buffer.active.baseY,
+  );
+  assert.equal(viewportTopText(fixture.terminal), "read-1");
+  assert.deepEqual(fixture.endpoint.range(contextId, "b"), {
+    start: 3,
+    lineCount: 1,
+  });
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "final",
+    "read-1",
+    "read-2",
+    "B",
+    "",
+  ]);
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+  assert.deepEqual(fixture.responseFrames, []);
+  assert.deepEqual(fixture.diagnostics, []);
+  fixture.dispose();
+});
+
 test("a second mixed-stream push cannot overtake an earlier push that is still rendering", async () => {
   const fixture = createFixture();
   const contextId = await openContext(fixture);
@@ -847,4 +928,12 @@ function bufferRows(terminal: HeadlessTerminal): string[] {
     );
   }
   return rows;
+}
+
+function viewportTopText(terminal: HeadlessTerminal): string {
+  return (
+    terminal.buffer.active
+      .getLine(terminal.buffer.active.viewportY)
+      ?.translateToString(true) ?? ""
+  );
 }

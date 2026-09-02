@@ -175,9 +175,9 @@ limitations:
   composes the codec, Session, terminal adapter, and private xterm.js history
   path. It exercises reading anchors, tail following, resize and reflow, a
   narrow complete-Block capacity boundary, a narrow parser bridge, ordered
-  mixed output, one conservative mixed-capacity rejection, and bounded
-  line-erase, display-erase, scrollback-clear, and full-reset invalidation
-  cases.
+  mixed output, one retained ASCII unmanaged-output reading position, one
+  conservative mixed-capacity rejection, and bounded line-erase,
+  display-erase, scrollback-clear, and full-reset invalidation cases.
 - The browser-hosted [selection and copy](../../prototypes/integration/xterm-browser-selection/README.md),
   [search](../../prototypes/integration/xterm-browser-search/README.md),
   [content metadata](../../prototypes/integration/xterm-browser-metadata/README.md),
@@ -208,5 +208,7 @@ language. The effect of frame-external traffic on Context authority is
 governed by the Context invalidation rule, while the exact reset effect on an
 incomplete protocol frame assembly remains a framing question.
 
-The current prototypes do not yet test the reading-anchor guarantee for
-unmanaged output or selection and copy across a managed/unmanaged boundary.
+The current prototypes test the unmanaged-output reading-anchor guarantee only
+for one retained ASCII row at the viewport top while an earlier Block grows and
+shrinks. Other unmanaged positions and interactions, plus selection and copy
+across a managed/unmanaged boundary, remain untested.
