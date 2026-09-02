@@ -19,6 +19,10 @@ import {
   runExtendSelectionAndReadingScenario,
 } from "./scenarios/extend.ts";
 import {
+  runEarlierUpdatePreservesMixedSelectionScenario,
+  runSelectedUpdateClearsMixedSelectionScenario,
+} from "./scenarios/mixed-ingress.ts";
+import {
   runReplaceSuffixActiveInputAndCompositionScenario,
   runReplaceSuffixRemovedSelectionScenario,
   runReplaceSuffixRetainedSelectionAndReadingScenario,
@@ -91,6 +95,8 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runCapacityRetainsSearchMatchScenario(),
     await runCapacityEvictsSearchMatchScenario(),
     await runCapacityActiveInputScenario(),
+    await runEarlierUpdatePreservesMixedSelectionScenario(),
+    await runSelectedUpdateClearsMixedSelectionScenario(),
   ];
 }
 

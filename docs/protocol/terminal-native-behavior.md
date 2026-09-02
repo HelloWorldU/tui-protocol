@@ -185,7 +185,10 @@ limitations:
   fixtures provide bounded evidence for their corresponding sections above.
 - The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
   composes all five current Block Operations with the tested browser states,
-  resize and reflow, and the same narrow complete-Block capacity boundary.
+  resize and reflow, and the same narrow complete-Block capacity boundary. It
+  also exercises two 20-column fixtures with unwrapped printable-ASCII
+  selections, each across a single managed/unmanaged boundary, through the raw
+  mixed-ingress path.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
@@ -210,5 +213,10 @@ incomplete protocol frame assembly remains a framing question.
 
 The current prototypes test the unmanaged-output reading-anchor guarantee only
 for one retained ASCII row at the viewport top while an earlier Block grows and
-shrinks. Other unmanaged positions and interactions, plus selection and copy
-across a managed/unmanaged boundary, remain untested.
+shrinks. Cross-boundary selection evidence is limited to two 20-column fixtures
+with unwrapped printable-ASCII content: one preserves the
+selection through an earlier Block Update, and one clears it when Update
+replaces selected managed content. Other Block Operations, including
+ReplaceSuffix, positions, multiple boundaries, Unicode, resize/reflow, capacity
+interactions, mouse selection, and operating-system clipboard behavior remain
+untested for a cross-boundary selection.

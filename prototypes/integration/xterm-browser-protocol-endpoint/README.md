@@ -2,8 +2,9 @@
 
 This browser-host experiment asks whether all five current Block Operation
 Messages can traverse OSC `9002`, the codec, Session, and mutable xterm.js
-history path while preserving the terminal-native state already demonstrated
-by separate browser fixtures.
+history path while preserving the tested terminal-native states. Separate
+browser fixtures supply earlier evidence for the non-mixed selection, search,
+and active-input cases; the mixed-boundary cases are exercised only here.
 
 It composes:
 
@@ -19,8 +20,11 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Twenty-four browser scenarios first negotiate the baseline capability and open a
-Context through encoded OSC Messages. They then demonstrate that:
+Twenty-six browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Twenty-four use the protocol-only
+endpoint path. Each of two additional scenarios uses an independent raw
+mixed-ingress path for both the Messages and ordinary terminal bytes. Together
+they demonstrate that:
 
 - an OSC Update grows an earlier Block while a later reading position and
   selection move with their unchanged Block and retain the same copied text;
@@ -62,6 +66,13 @@ Context through encoded OSC Messages. They then demonstrate that:
   without following the tail, and leaves retained text searchable; and
 - complete-Block capacity eviction leaves current input text, cursor, and focus
   unchanged.
+- when a selection crosses from a managed Block into one following unmanaged
+  ASCII row, growing and then shrinking an earlier Block moves the selection
+  with the same content and preserves a copy result containing exactly one
+  normalized newline at the boundary; and
+- when a selection crosses from an unmanaged ASCII row into a managed Block,
+  an Update of that Block clears the complete selection and subsequent copy
+  source while leaving the Context open.
 
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
@@ -93,9 +104,15 @@ requirements.
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
   experimental fixtures, not a proposed public Terminal API.
-- Arbitrary ordinary terminal output interleaved with protocol frames through
-  one mixed-stream ingress, a real PTY and TUI process, multiplexers, remote
-  transport, other terminals, and cross-browser behavior are not tested.
+- The mixed-stream selection evidence covers two 20-column fixtures with
+  unwrapped printable-ASCII content on both sides of one adjacent boundary, and
+  synthetic browser copy events. Cross-boundary behavior for other Block
+  Operations, including ReplaceSuffix, other positions, multiple boundaries,
+  Unicode, resize/reflow, capacity interactions, mouse selection, and the
+  operating-system clipboard remain untested.
+- Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
+  remote transport, other terminals, and cross-browser behavior are not
+  tested.
 
 ## Run
 

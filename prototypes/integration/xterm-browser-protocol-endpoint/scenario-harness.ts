@@ -1,3 +1,4 @@
+import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import { Terminal } from "@xterm/xterm";
 
 import {
@@ -5,7 +6,15 @@ import {
   encodeMessageFrames,
   type Message,
 } from "../../reference-codec/index.ts";
-import type { EndpointResult } from "../protocol-endpoint/index.ts";
+import type {
+  EndpointDiagnostic,
+  EndpointResult,
+} from "../protocol-endpoint/index.ts";
+import { BrowserSearchHistory } from "../xterm-browser-search/search-history.ts";
+import {
+  XtermMixedStreamIngress,
+  XtermProtocolEndpoint,
+} from "../xterm-protocol-endpoint/index.ts";
 import { BrowserXtermProtocolEndpoint } from "./browser-endpoint.ts";
 
 export interface ScenarioResult {
@@ -24,6 +33,20 @@ export interface FixtureOptions {
   readonly cols?: number;
   readonly rows?: number;
   readonly scrollback?: number;
+}
+
+export interface MixedFixture {
+  readonly contextId: string;
+  readonly endpoint: XtermProtocolEndpoint;
+  readonly ingress: XtermMixedStreamIngress;
+  readonly terminal: Terminal;
+  takeResult(): EndpointResult;
+  dispose(): void;
+}
+
+interface ObservableFixture {
+  readonly contextId: string;
+  readonly endpoint: Pick<XtermProtocolEndpoint, "context" | "range">;
 }
 
 export interface InputSnapshot {
@@ -49,6 +72,105 @@ export function createFixture(options: FixtureOptions = {}): Fixture {
     endpoint,
     terminal: fixtureTerminal,
     dispose(): void {
+      endpoint.dispose();
+      fixtureTerminal.dispose();
+      host.remove();
+    },
+  };
+}
+
+export async function createMixedFixture(
+  options: FixtureOptions = {},
+): Promise<MixedFixture> {
+  const host = document.createElement("div");
+  host.className = "isolated-terminal";
+  document.body.appendChild(host);
+  const fixtureTerminal = new Terminal({
+    cols: options.cols ?? 20,
+    rows: options.rows ?? 4,
+    scrollback: options.scrollback ?? 100,
+  });
+  fixtureTerminal.open(host);
+  const history = new BrowserSearchHistory(fixtureTerminal);
+  const endpoint = new XtermProtocolEndpoint(
+    fixtureTerminal as unknown as HeadlessTerminal,
+    {
+      completeBaselineSupported: true,
+      history,
+    },
+  );
+  const responseFrames: Uint8Array[] = [];
+  const diagnostics: EndpointDiagnostic[] = [];
+  const ingress = new XtermMixedStreamIngress(
+    fixtureTerminal as unknown as HeadlessTerminal,
+    endpoint,
+    {
+      onResponseFrame(frame): void {
+        responseFrames.push(frame);
+      },
+      onDiagnostic(diagnostic): void {
+        diagnostics.push(diagnostic);
+      },
+    },
+  );
+  const takeResult = (): EndpointResult => ({
+    responseFrames: responseFrames.splice(0),
+    diagnostics: diagnostics.splice(0),
+  });
+
+  await ingress.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "capability.query",
+        request_id: "capability-1",
+        body: {},
+      },
+      1,
+    ),
+  );
+  const [capabilityResponse] = decodeResponses(takeResult());
+  assertEqual(
+    capabilityResponse?.kind,
+    "capability.response",
+    "mixed capability response kind",
+  );
+  if (capabilityResponse?.kind !== "capability.response") {
+    throw new Error("Expected a mixed capability.response Message.");
+  }
+  assertEqual(
+    capabilityResponse.body.outcome,
+    "supported",
+    "mixed capability outcome",
+  );
+
+  await ingress.push(
+    encodeInput(
+      {
+        version: 1,
+        kind: "context.open",
+        request_id: "open-1",
+        body: {},
+      },
+      2,
+    ),
+  );
+  const [openResponse] = decodeResponses(takeResult());
+  if (
+    openResponse?.kind !== "context.open.response" ||
+    !("context_id" in openResponse)
+  ) {
+    throw new Error("Expected a successful mixed context.open.response Message.");
+  }
+
+  return {
+    contextId: openResponse.context_id,
+    endpoint,
+    ingress,
+    terminal: fixtureTerminal,
+    takeResult,
+    dispose(): void {
+      ingress.dispose();
       endpoint.dispose();
       fixtureTerminal.dispose();
       host.remove();
@@ -219,7 +341,7 @@ export function decodeResponses(result: EndpointResult): readonly Message[] {
 }
 
 export function requiredRange(
-  fixture: Fixture,
+  fixture: ObservableFixture,
   blockId: string,
 ): { readonly start: number; readonly lineCount: number } {
   const range = fixture.endpoint.range(fixture.contextId, blockId);
@@ -230,7 +352,7 @@ export function requiredRange(
 }
 
 export function assertBlockContent(
-  fixture: Fixture,
+  fixture: ObservableFixture,
   blockId: string,
   expected: string,
 ): void {
@@ -315,7 +437,11 @@ export function nextTurn(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
+export function text(data: string): Uint8Array {
+  return new TextEncoder().encode(data);
+}
+
+export function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
   const size = chunks.reduce((total, chunk) => total + chunk.length, 0);
   const result = new Uint8Array(size);
   let offset = 0;

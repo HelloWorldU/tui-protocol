@@ -216,8 +216,11 @@ implementation.
   other alternate-buffer effects remain unproven.
 - The mixed-stream reading-anchor evidence is limited to one retained ASCII
   row at the viewport top while an earlier Block grows and shrinks. Other
-  unmanaged anchor positions, resize/reflow and capacity interactions, and
-  selection and copy across a managed/unmanaged boundary remain untested.
+  unmanaged anchor positions and resize/reflow or capacity interactions remain
+  untested. A separate [browser endpoint
+  composition](../xterm-browser-protocol-endpoint/README.md) exercises two
+  20-column selection-and-copy fixtures with unwrapped printable-ASCII content,
+  each across one managed/unmanaged boundary.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.
@@ -233,8 +236,9 @@ implementation.
   not yet establish a protocol lifecycle for forgotten Blocks or demonstrate
   complete memory reclamation.
 - `@xterm/headless` 6.0.0 exposes no selection service or selection API, so
-  selection and copying are not exercised by this endpoint integration. A
-  separate [browser-host experiment](../xterm-browser-selection/README.md)
+  selection and copying are not exercised by the headless tests in this
+  integration. A separate [browser-host
+  experiment](../xterm-browser-selection/README.md)
   exercises complete-Update and single-line ASCII ReplaceSuffix selection
   cases, two resize/reflow cases, both complete-Block capacity eviction
   outcomes, and selection preservation across Extend, Append, and Seal without
@@ -249,7 +253,7 @@ implementation.
   selection, search, tail-following, lifecycle rejection, and active input
   checks. It also composes those browser states with the tested resize/reflow
   and Update-driven complete-Block capacity boundary. Selection evidence is
-  limited to single-line ASCII content and the tested dimensions.
+  limited to the listed printable-ASCII fixtures and tested dimensions.
 
 ## Run
 

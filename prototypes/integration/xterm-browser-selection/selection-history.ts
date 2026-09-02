@@ -1,13 +1,22 @@
 import type { Terminal as HeadlessTerminal } from "@xterm/headless";
-import type { Terminal } from "@xterm/xterm";
+import type { IMarker, Terminal } from "@xterm/xterm";
 
 import type { Operation } from "../../block-model/model.ts";
 import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
 
 interface SelectionSnapshot {
   readonly column: number;
+  readonly endColumn: number;
+  readonly endRow: number;
   readonly row: number;
   readonly length: number;
+}
+
+interface MarkerSelectionSnapshot {
+  readonly endColumn: number;
+  readonly endMarker: IMarker;
+  readonly startColumn: number;
+  readonly startMarker: IMarker;
 }
 
 interface LogicalSelectionSnapshot {
@@ -18,7 +27,7 @@ interface LogicalSelectionSnapshot {
 
 /**
  * A browser-only experiment around the private xterm history renderer. It is
- * deliberately limited to the tested single-Block ASCII selection behavior.
+ * deliberately limited to the tested printable-ASCII selection behavior.
  */
 export class BrowserSelectionHistory {
   readonly #terminal: Terminal;
@@ -89,8 +98,6 @@ export class BrowserSelectionHistory {
       await this.#history.renderAccepted(operation);
       return;
     }
-    const logicalSelection = this.#logicalSelectionSnapshot();
-
     const selectionStart =
       selection.row * this.#terminal.cols + selection.column;
     const selectionEnd = selectionStart + selection.length;
@@ -101,9 +108,13 @@ export class BrowserSelectionHistory {
     const intersectsTarget =
       selectionStart < targetEnd && selectionEnd > targetStart;
     if (intersectsTarget) {
+      const logicalSelection =
+        operation.type === "replaceSuffix"
+          ? this.#blockLogicalSelectionSnapshot()
+          : undefined;
       if (
         operation.type === "replaceSuffix" &&
-        logicalSelection.blockId === operation.id &&
+        logicalSelection?.blockId === operation.id &&
         logicalSelection.endOffset <= operation.retain
       ) {
         await this.#history.renderAccepted(operation);
@@ -116,8 +127,14 @@ export class BrowserSelectionHistory {
       return;
     }
 
-    await this.#history.renderAccepted(operation);
-    this.#restoreLogicalSelection(logicalSelection);
+    const markerSelection = this.#markerSelectionSnapshot(selection);
+    try {
+      await this.#history.renderAccepted(operation);
+      this.#restoreMarkerSelection(markerSelection);
+    } finally {
+      markerSelection.startMarker.dispose();
+      markerSelection.endMarker.dispose();
+    }
   }
 
   range(id: string): Readonly<{ start: number; lineCount: number }> | undefined {
@@ -141,12 +158,25 @@ export class BrowserSelectionHistory {
     const end = position.end.y * this.#terminal.cols + position.end.x;
     return {
       column: position.start.x,
+      endColumn: position.end.x,
+      endRow: position.end.y,
       row: position.start.y,
       length: end - start,
     };
   }
 
   #logicalSelectionSnapshot(): LogicalSelectionSnapshot {
+    const selection = this.#blockLogicalSelectionSnapshot();
+    if (selection !== undefined) {
+      return selection;
+    }
+
+    throw new Error(
+      "Resize selection mapping requires one selection inside one retained Block.",
+    );
+  }
+
+  #blockLogicalSelectionSnapshot(): LogicalSelectionSnapshot | undefined {
     const position = this.#selectionSnapshot();
     if (position === undefined) {
       throw new Error("The terminal reported a selection without coordinates.");
@@ -180,8 +210,40 @@ export class BrowserSelectionHistory {
       return { blockId: block.id, startOffset, endOffset };
     }
 
-    throw new Error(
-      "Resize selection mapping requires one selection inside one retained Block.",
+    return undefined;
+  }
+
+  #markerSelectionSnapshot(
+    selection: SelectionSnapshot,
+  ): MarkerSelectionSnapshot {
+    const buffer = this.#terminal.buffer.active;
+    const cursorRow = buffer.baseY + buffer.cursorY;
+    return {
+      startColumn: selection.column,
+      startMarker: this.#terminal.registerMarker(selection.row - cursorRow),
+      endColumn: selection.endColumn,
+      endMarker: this.#terminal.registerMarker(selection.endRow - cursorRow),
+    };
+  }
+
+  #restoreMarkerSelection(selection: MarkerSelectionSnapshot): void {
+    if (selection.startMarker.isDisposed || selection.endMarker.isDisposed) {
+      this.#terminal.clearSelection();
+      return;
+    }
+    const length =
+      (selection.endMarker.line - selection.startMarker.line) *
+        this.#terminal.cols +
+      selection.endColumn -
+      selection.startColumn;
+    if (length <= 0) {
+      this.#terminal.clearSelection();
+      return;
+    }
+    this.#terminal.select(
+      selection.startColumn,
+      selection.startMarker.line,
+      length,
     );
   }
 

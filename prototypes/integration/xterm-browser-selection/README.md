@@ -77,11 +77,20 @@ These cases exercise one single-line ASCII selection and do not require a
 special logical remapping because none of the Operations replaces the selected
 content.
 
+The selection wrapper is also composed by the [browser protocol endpoint
+prototype](../xterm-browser-protocol-endpoint/README.md). That experiment uses
+the raw mixed-ingress path to exercise two 20-column fixtures with unwrapped
+printable-ASCII selections, each crossing one managed/unmanaged boundary; those
+scenarios are not part of this standalone browser run.
+
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
   selection, and cross-browser behavior are not exercised.
 - A selection spanning multiple Blocks is not implemented or tested.
+- Mixed-boundary resize/reflow is not implemented or tested. Capacity eviction,
+  Unicode, multiple managed/unmanaged boundaries, and non-Update Operations are
+  also untested for a cross-boundary selection.
 - Partial-Block capacity eviction and Append-driven eviction remain outside the
   selection experiment.
 - Resize selection mapping for line breaks, wide or combining characters, and
