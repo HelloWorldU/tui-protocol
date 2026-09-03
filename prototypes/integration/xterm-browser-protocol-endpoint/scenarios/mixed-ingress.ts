@@ -8,6 +8,7 @@ import {
   copySelection,
   createMixedFixture,
   encodeInput,
+  extend,
   requiredRange,
   text,
   update,
@@ -172,6 +173,106 @@ export async function runEarlierUpdatePreservesMixedSelectionScenario(): Promise
   }
 }
 
+export async function runExtendIncludesFragmentInMixedSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createMixedFixture({ cols: 20, rows: 4 });
+  try {
+    await fixture.ingress.push(
+      concatenate([
+        encodeInput(
+          append(fixture.contextId, "1", "managed", "managed", "mutable"),
+          3,
+        ),
+        text("ordinary\r\n"),
+        encodeInput(
+          append(fixture.contextId, "2", "tail", "tail", "sealed"),
+          4,
+        ),
+      ]),
+    );
+    assertNoMixedErrors(fixture, "initial Extend boundary stream");
+
+    const managedBefore = requiredRange(fixture, "managed");
+    const ordinaryBefore = managedBefore.start + managedBefore.lineCount;
+    assertEqual(managedBefore.lineCount, 1, "managed rows before Extend");
+    selectAcrossRows(
+      fixture.terminal,
+      3,
+      managedBefore.start,
+      "ordi".length,
+      ordinaryBefore,
+    );
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      managedBefore.start,
+      "ordi".length,
+      ordinaryBefore,
+      "mixed selection before Extend",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "aged\nordi",
+      "mixed selection before Extend",
+    );
+
+    const fragment = "-0123456789abcdef";
+    await fixture.ingress.push(
+      encodeInput(
+        extend(fixture.contextId, "3", "managed", "1", fragment),
+        5,
+      ),
+    );
+    assertNoMixedErrors(fixture, "cross-boundary Extend");
+
+    const managedAfter = requiredRange(fixture, "managed");
+    const ordinaryAfter = managedAfter.start + managedAfter.lineCount;
+    assertEqual(
+      managedAfter.start,
+      managedBefore.start,
+      "managed start after Extend",
+    );
+    assertEqual(managedAfter.lineCount, 2, "managed rows after Extend");
+    assertEqual(
+      ordinaryAfter,
+      ordinaryBefore + 1,
+      "unmanaged row after Extend",
+    );
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      managedAfter.start,
+      "ordi".length,
+      ordinaryAfter,
+      "mixed selection after Extend",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      `aged${fragment}\nordi`,
+      "mixed selection after Extend",
+    );
+    assertBufferRows(fixture.terminal, [
+      "managed-0123456789ab",
+      "cdef",
+      "ordinary",
+      "tail",
+      "",
+    ]);
+    assertBlockContent(fixture, "managed", `managed${fragment}`);
+    assertEqual(
+      fixture.endpoint.context(fixture.contextId)?.state,
+      "open",
+      "Context after extending the mixed selection",
+    );
+    return {
+      name: "Extend Adds Its Fragment to a Managed-to-Unmanaged Selection",
+      detail:
+        "both endpoints stayed attached while the appended fragment entered the copy result",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
 export async function runSelectedUpdateClearsMixedSelectionScenario(): Promise<ScenarioResult> {
   const fixture = await createMixedFixture({ cols: 20, rows: 4 });
   try {
@@ -284,6 +385,21 @@ function assertSelectionAndCopy(
     expected,
     `${label} copy event`,
   );
+}
+
+function assertSelectionPosition(
+  terminal: Terminal,
+  startColumn: number,
+  startRow: number,
+  endColumn: number,
+  endRow: number,
+  label: string,
+): void {
+  const position = terminal.getSelectionPosition();
+  assertEqual(position?.start.x, startColumn, `${label} start column`);
+  assertEqual(position?.start.y, startRow, `${label} start row`);
+  assertEqual(position?.end.x, endColumn, `${label} end column`);
+  assertEqual(position?.end.y, endRow, `${label} end row`);
 }
 
 function assertNoMixedErrors(fixture: MixedFixture, label: string): void {

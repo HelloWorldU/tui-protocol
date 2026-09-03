@@ -218,9 +218,10 @@ implementation.
   row at the viewport top while an earlier Block grows and shrinks. Other
   unmanaged anchor positions and resize/reflow or capacity interactions remain
   untested. A separate [browser endpoint
-  composition](../xterm-browser-protocol-endpoint/README.md) exercises two
-  20-column selection-and-copy fixtures with unwrapped printable-ASCII content,
-  each across one managed/unmanaged boundary.
+  composition](../xterm-browser-protocol-endpoint/README.md) exercises three
+  20-column printable-ASCII selection-and-copy fixtures, each across one
+  managed/unmanaged boundary. Its two Update fixtures are unwrapped, while its
+  Extend fixture introduces one soft wrap.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.

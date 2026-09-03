@@ -79,9 +79,9 @@ content.
 
 The selection wrapper is also composed by the [browser protocol endpoint
 prototype](../xterm-browser-protocol-endpoint/README.md). That experiment uses
-the raw mixed-ingress path to exercise two 20-column fixtures with unwrapped
-printable-ASCII selections, each crossing one managed/unmanaged boundary; those
-scenarios are not part of this standalone browser run.
+the raw mixed-ingress path to exercise three 20-column printable-ASCII fixtures,
+each crossing one managed/unmanaged boundary. Its Extend fixture introduces one
+soft wrap; these scenarios are not part of this standalone browser run.
 
 ## Not Proven
 
@@ -89,8 +89,9 @@ scenarios are not part of this standalone browser run.
   selection, and cross-browser behavior are not exercised.
 - A selection spanning multiple Blocks is not implemented or tested.
 - Mixed-boundary resize/reflow is not implemented or tested. Capacity eviction,
-  Unicode, multiple managed/unmanaged boundaries, and non-Update Operations are
-  also untested for a cross-boundary selection.
+  Unicode, embedded line breaks within either side of the selection, multiple
+  wraps, multiple managed/unmanaged boundaries, and cross-boundary
+  ReplaceSuffix, Append, and Seal are also untested.
 - Partial-Block capacity eviction and Append-driven eviction remain outside the
   selection experiment.
 - Resize selection mapping for line breaks, wide or combining characters, and

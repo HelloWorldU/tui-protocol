@@ -20,9 +20,9 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Twenty-six browser scenarios negotiate the baseline capability and open a
+Twenty-seven browser scenarios negotiate the baseline capability and open a
 Context through encoded OSC Messages. Twenty-four use the protocol-only
-endpoint path. Each of two additional scenarios uses an independent raw
+endpoint path. Each of three additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
 
@@ -72,7 +72,10 @@ they demonstrate that:
   normalized newline at the boundary; and
 - when a selection crosses from an unmanaged ASCII row into a managed Block,
   an Update of that Block clears the complete selection and subsequent copy
-  source while leaving the Context open.
+  source while leaving the Context open; and
+- when a selection crosses from a managed Block into a following unmanaged
+  ASCII row, Extend preserves both endpoints while its appended fragment makes
+  the Block one physical row taller and becomes part of the copy result.
 
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
@@ -104,12 +107,14 @@ requirements.
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
   experimental fixtures, not a proposed public Terminal API.
-- The mixed-stream selection evidence covers two 20-column fixtures with
-  unwrapped printable-ASCII content on both sides of one adjacent boundary, and
-  synthetic browser copy events. Cross-boundary behavior for other Block
-  Operations, including ReplaceSuffix, other positions, multiple boundaries,
-  Unicode, resize/reflow, capacity interactions, mouse selection, and the
-  operating-system clipboard remain untested.
+- The mixed-stream selection evidence covers three 20-column printable-ASCII
+  fixtures and synthetic browser copy events. The two Update fixtures are
+  unwrapped; the Extend fixture introduces exactly one soft wrap.
+  Cross-boundary behavior for other Block Operations, including ReplaceSuffix,
+  other positions, multiple boundaries, Unicode, embedded line breaks within
+  either side of the selection, multiple wraps, resize/reflow, capacity
+  interactions, mouse selection, and the operating-system clipboard remain
+  untested.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

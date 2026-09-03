@@ -98,9 +98,11 @@ If an Update replaces any Block intersected by the selection, the terminal
 clears the complete selection. The initial complete-snapshot model provides
 no mapping from selected positions in the old content to the replacement.
 ReplaceSuffix preserves a selection entirely within its retained prefix and
-clears a selection that intersects its removed suffix. Extend does not
-invalidate a selection of pre-existing content. Scrollback-capacity
-trimming that removes any selected content has the same effect.
+clears a selection that intersects its removed suffix. Extend preserves both
+logical endpoints of an existing selection. If its appended fragment falls
+between those endpoints, the fragment becomes part of the current selection
+and copy result. Scrollback-capacity trimming that removes any selected content
+has the same effect.
 
 Clearing a selection removes its highlight and copy target; it does not remove
 Block content. Copying returns only the content of a current valid selection,
@@ -158,7 +160,9 @@ terminal-owned and is not exposed to the TUI.
 A managed Block and adjacent unmanaged output do not share one logical line.
 If the preceding logical region does not already end at a line boundary, the
 terminal supplies one. Copying a selection across that boundary represents it
-as one newline.
+as one newline. When a selection spans that boundary, Extend follows the
+logical-endpoint rule defined in
+[Selection and Copying](#7-selection-and-copying).
 
 Frame-external terminal traffic retains its normal terminal meaning. If its
 realized effect makes a managed Block's rendering or reliable range no longer
@@ -186,9 +190,9 @@ limitations:
 - The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
   composes all five current Block Operations with the tested browser states,
   resize and reflow, and the same narrow complete-Block capacity boundary. It
-  also exercises two 20-column fixtures with unwrapped printable-ASCII
-  selections, each across a single managed/unmanaged boundary, through the raw
-  mixed-ingress path.
+  also exercises three 20-column printable-ASCII selection fixtures, each
+  across a single managed/unmanaged boundary, through the raw mixed-ingress
+  path. The Extend fixture introduces one soft wrap.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
@@ -213,10 +217,12 @@ incomplete protocol frame assembly remains a framing question.
 
 The current prototypes test the unmanaged-output reading-anchor guarantee only
 for one retained ASCII row at the viewport top while an earlier Block grows and
-shrinks. Cross-boundary selection evidence is limited to two 20-column fixtures
-with unwrapped printable-ASCII content: one preserves the
-selection through an earlier Block Update, and one clears it when Update
-replaces selected managed content. Other Block Operations, including
-ReplaceSuffix, positions, multiple boundaries, Unicode, resize/reflow, capacity
-interactions, mouse selection, and operating-system clipboard behavior remain
-untested for a cross-boundary selection.
+shrinks. Cross-boundary selection evidence is limited to three 20-column
+printable-ASCII fixtures: one preserves the selection through an earlier Block
+Update, one clears it when Update replaces selected managed content, and one
+preserves both endpoints while Extend introduces exactly one soft wrap. Other
+Block Operations, including ReplaceSuffix, positions, multiple boundaries,
+Unicode, embedded line breaks within either side of the selection, multiple
+wraps, resize/reflow, capacity interactions, mouse selection, and
+operating-system clipboard behavior remain untested for a cross-boundary
+selection.

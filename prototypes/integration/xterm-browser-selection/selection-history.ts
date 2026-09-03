@@ -19,6 +19,23 @@ interface MarkerSelectionSnapshot {
   readonly startMarker: IMarker;
 }
 
+type SelectionEndpointAnchor =
+  | {
+      readonly kind: "block";
+      readonly blockId: string;
+      readonly offset: number;
+    }
+  | {
+      readonly kind: "marker";
+      readonly column: number;
+      readonly marker: IMarker;
+    };
+
+interface EndpointSelectionSnapshot {
+  readonly end: SelectionEndpointAnchor;
+  readonly start: SelectionEndpointAnchor;
+}
+
 interface LogicalSelectionSnapshot {
   readonly blockId: string;
   readonly startOffset: number;
@@ -85,7 +102,9 @@ export class BrowserSelectionHistory {
 
   async #renderAccepted(operation: Operation): Promise<void> {
     if (
-      (operation.type !== "update" && operation.type !== "replaceSuffix") ||
+      (operation.type !== "update" &&
+        operation.type !== "extend" &&
+        operation.type !== "replaceSuffix") ||
       !this.#terminal.hasSelection()
     ) {
       await this.#history.renderAccepted(operation);
@@ -104,6 +123,25 @@ export class BrowserSelectionHistory {
     const targetStart = targetBefore.start * this.#terminal.cols;
     const targetEnd =
       (targetBefore.start + targetBefore.lineCount) * this.#terminal.cols;
+
+    if (operation.type === "extend") {
+      if (selectionStart >= targetStart && selectionEnd <= targetEnd) {
+        await this.#history.renderAccepted(operation);
+        return;
+      }
+      const endpointSelection = this.#endpointSelectionSnapshot(
+        operation.id,
+        targetBefore,
+        selection,
+      );
+      try {
+        await this.#history.renderAccepted(operation);
+        this.#restoreEndpointSelection(endpointSelection);
+      } finally {
+        this.#disposeEndpointSelection(endpointSelection);
+      }
+      return;
+    }
 
     const intersectsTarget =
       selectionStart < targetEnd && selectionEnd > targetStart;
@@ -224,6 +262,101 @@ export class BrowserSelectionHistory {
       endColumn: selection.endColumn,
       endMarker: this.#terminal.registerMarker(selection.endRow - cursorRow),
     };
+  }
+
+  #endpointSelectionSnapshot(
+    blockId: string,
+    range: Readonly<{ start: number; lineCount: number }>,
+    selection: SelectionSnapshot,
+  ): EndpointSelectionSnapshot {
+    return {
+      start: this.#selectionEndpointAnchor(
+        blockId,
+        range,
+        selection.column,
+        selection.row,
+      ),
+      end: this.#selectionEndpointAnchor(
+        blockId,
+        range,
+        selection.endColumn,
+        selection.endRow,
+      ),
+    };
+  }
+
+  #selectionEndpointAnchor(
+    blockId: string,
+    range: Readonly<{ start: number; lineCount: number }>,
+    column: number,
+    row: number,
+  ): SelectionEndpointAnchor {
+    if (row >= range.start && row < range.start + range.lineCount) {
+      const block = this.#history
+        .blocks()
+        .find((candidate) => candidate.id === blockId);
+      const offset = (row - range.start) * this.#terminal.cols + column;
+      if (
+        block !== undefined &&
+        /^[\x20-\x7e]*$/.test(block.content) &&
+        offset <= Array.from(block.content).length
+      ) {
+        return { kind: "block", blockId, offset };
+      }
+    }
+
+    const buffer = this.#terminal.buffer.active;
+    const cursorRow = buffer.baseY + buffer.cursorY;
+    return {
+      kind: "marker",
+      column,
+      marker: this.#terminal.registerMarker(row - cursorRow),
+    };
+  }
+
+  #restoreEndpointSelection(selection: EndpointSelectionSnapshot): void {
+    const start = this.#resolveSelectionEndpoint(selection.start);
+    const end = this.#resolveSelectionEndpoint(selection.end);
+    if (start === undefined || end === undefined) {
+      this.#terminal.clearSelection();
+      return;
+    }
+    const length =
+      (end.row - start.row) * this.#terminal.cols +
+      end.column -
+      start.column;
+    if (length <= 0) {
+      this.#terminal.clearSelection();
+      return;
+    }
+    this.#terminal.select(start.column, start.row, length);
+  }
+
+  #resolveSelectionEndpoint(
+    endpoint: SelectionEndpointAnchor,
+  ): { readonly column: number; readonly row: number } | undefined {
+    if (endpoint.kind === "marker") {
+      return endpoint.marker.isDisposed
+        ? undefined
+        : { column: endpoint.column, row: endpoint.marker.line };
+    }
+    const range = this.#history.range(endpoint.blockId);
+    if (range === undefined) {
+      return undefined;
+    }
+    return {
+      column: endpoint.offset % this.#terminal.cols,
+      row: range.start + Math.floor(endpoint.offset / this.#terminal.cols),
+    };
+  }
+
+  #disposeEndpointSelection(selection: EndpointSelectionSnapshot): void {
+    if (selection.start.kind === "marker") {
+      selection.start.marker.dispose();
+    }
+    if (selection.end.kind === "marker") {
+      selection.end.marker.dispose();
+    }
   }
 
   #restoreMarkerSelection(selection: MarkerSelectionSnapshot): void {

@@ -20,6 +20,7 @@ import {
 } from "./scenarios/extend.ts";
 import {
   runEarlierUpdatePreservesMixedSelectionScenario,
+  runExtendIncludesFragmentInMixedSelectionScenario,
   runSelectedUpdateClearsMixedSelectionScenario,
 } from "./scenarios/mixed-ingress.ts";
 import {
@@ -97,6 +98,7 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runCapacityActiveInputScenario(),
     await runEarlierUpdatePreservesMixedSelectionScenario(),
     await runSelectedUpdateClearsMixedSelectionScenario(),
+    await runExtendIncludesFragmentInMixedSelectionScenario(),
   ];
 }
 
