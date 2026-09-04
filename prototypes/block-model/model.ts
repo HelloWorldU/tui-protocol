@@ -305,6 +305,9 @@ export function layoutBlocks(
 function layoutBlock(block: Block, width: number): readonly RenderedRow[] {
   const rows: RenderedRow[] = [];
   const logicalLines = block.content.split("\n");
+  if (block.content.endsWith("\n")) {
+    logicalLines.pop();
+  }
   let lineOffset = 0;
 
   for (const [lineIndex, logicalLine] of logicalLines.entries()) {

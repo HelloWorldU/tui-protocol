@@ -218,12 +218,13 @@ implementation.
   row at the viewport top while an earlier Block grows and shrinks. Other
   unmanaged anchor positions and resize/reflow or capacity interactions remain
   untested. A separate [browser endpoint
-  composition](../xterm-browser-protocol-endpoint/README.md) exercises twelve
-  printable-ASCII selection-and-copy fixtures: seven
-  single-boundary-crossing Operation fixtures, one exact-tail Extend fixture,
-  one two-boundary multi-wrap Extend fixture, one mixed-boundary resize round
-  trip, and two capacity fixtures whose trim matches one complete leading
-  managed Block.
+  composition](../xterm-browser-protocol-endpoint/README.md) exercises two
+  protocol-only ASCII adjacent-managed-Block copy fixtures. Its raw
+  mixed-ingress path exercises twelve more printable-ASCII selection-and-copy
+  fixtures: seven single-boundary-crossing Operation fixtures, one exact-tail
+  Extend fixture, one two-boundary multi-wrap Extend fixture, one mixed-boundary
+  resize round trip, and two capacity fixtures whose trim matches one complete
+  leading managed Block.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.

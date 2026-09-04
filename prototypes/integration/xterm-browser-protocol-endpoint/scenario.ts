@@ -7,6 +7,10 @@ import {
   runAppendTailFollowingScenario,
 } from "./scenarios/append.ts";
 import {
+  runAdjacentManagedBlocksCopyOneSuppliedNewlineScenario,
+  runTrailingNewlineDoesNotDuplicateAdjacentManagedCopyBoundaryScenario,
+} from "./scenarios/adjacent-managed-selection.ts";
+import {
   runCapacityActiveInputScenario,
   runCapacityEvictsSearchMatchScenario,
   runCapacityEvictsSelectedBlockScenario,
@@ -107,6 +111,8 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runCapacityRetainsSearchMatchScenario(),
     await runCapacityEvictsSearchMatchScenario(),
     await runCapacityActiveInputScenario(),
+    await runAdjacentManagedBlocksCopyOneSuppliedNewlineScenario(),
+    await runTrailingNewlineDoesNotDuplicateAdjacentManagedCopyBoundaryScenario(),
     await runEarlierUpdatePreservesMixedSelectionScenario(),
     await runSelectedUpdateClearsMixedSelectionScenario(),
     await runExtendIncludesFragmentInMixedSelectionScenario(),

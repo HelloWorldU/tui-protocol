@@ -29,7 +29,7 @@ interface BlockEntry {
 type TargetAnchorMapping =
   | "reject"
   | "preserve"
-  | { readonly retainedLineCount: number };
+  | { readonly retainedBoundaryRow: number };
 
 interface CapacityTrimPlan {
   readonly entryCount: number;
@@ -437,10 +437,14 @@ export class PrivateCoreBlockHistory implements IDisposable {
       .slice(0, retain)
       .join("");
     const retainedLines = await this.#materialize(retainedPrefix);
+    const retainedBoundaryRow = Math.max(
+      0,
+      retainedLines.length - (endsWithLogicalNewline(retainedPrefix) ? 0 : 1),
+    );
     await this.#update(
       id,
       `${retainedPrefix}${replacement}`,
-      { retainedLineCount: retainedLines.length },
+      { retainedBoundaryRow },
     );
   }
 
@@ -567,9 +571,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
 function toTerminalText(content: string): string {
   const normalized = content
     .replaceAll("\r\n", "\n")
-    .replaceAll("\r", "\n")
-    .replaceAll("\n", "\r\n");
-  return `${normalized}\r\n`;
+    .replaceAll("\r", "\n");
+  const projected = normalized.replaceAll("\n", "\r\n");
+  return normalized.endsWith("\n") ? projected : `${projected}\r\n`;
 }
 
 function appendBoundary(buffer: PrivateBuffer): string {
@@ -580,6 +584,10 @@ function appendBoundary(buffer: PrivateBuffer): string {
     return "\r\n";
   }
   return buffer.x === 0 ? "" : "\r";
+}
+
+function endsWithLogicalNewline(content: string): boolean {
+  return content.endsWith("\n") || content.endsWith("\r");
 }
 
 function write(terminal: Terminal, data: string): Promise<void> {
@@ -605,10 +613,15 @@ function conservativeTextLineCount(
   width: number,
 ): TextLineCount | undefined {
   const normalized = content.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  const logicalLines = normalized.split("\n");
+  if (normalized.endsWith("\n")) {
+    logicalLines.pop();
+  }
+
   let total = 0;
   let exact = true;
 
-  for (const line of normalized.split("\n")) {
+  for (const line of logicalLines) {
     let rows = 1;
     let column = 0;
     for (const character of line) {
@@ -650,7 +663,7 @@ function mapTargetAnchor(
   if (mapping === "preserve") {
     return rowOffset;
   }
-  return Math.min(rowOffset, Math.max(0, mapping.retainedLineCount - 1));
+  return Math.min(rowOffset, mapping.retainedBoundaryRow);
 }
 
 function assertNever(value: never): never {

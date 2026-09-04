@@ -112,6 +112,12 @@ Clearing a selection removes its highlight and copy target; it does not remove
 Block content. Copying returns only the content of a current valid selection,
 never content retained from a replaced snapshot.
 
+When a selection crosses a boundary between adjacent managed Blocks, or between
+managed and unmanaged output, the copy result represents that boundary with
+exactly one normalized LF (`\n`). If the earlier logical region already ends
+with a line break, that existing break supplies the boundary and no additional
+LF is inserted.
+
 ## 8. Search
 
 Terminal-native search operates on the current searchable text projection of
@@ -163,10 +169,9 @@ terminal-owned and is not exposed to the TUI.
 
 A managed Block and adjacent unmanaged output do not share one logical line.
 If the preceding logical region does not already end at a line boundary, the
-terminal supplies one. Copying a selection across that boundary represents it
-as one newline. When a selection spans that boundary, Operations affecting the
-managed side follow the rules defined in
-[Selection and Copying](#7-selection-and-copying).
+terminal supplies one. When a selection spans that boundary, copying and
+Operations affecting the managed side follow the rules defined in [Selection
+and Copying](#7-selection-and-copying).
 
 Frame-external terminal traffic retains its normal terminal meaning. If its
 realized effect makes a managed Block's rendering or reliable range no longer
@@ -194,11 +199,11 @@ limitations:
 - The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
   composes all five current Block Operations with the tested browser states,
   resize and reflow, and the same narrow complete-Block capacity boundary. It
-  also exercises twelve printable-ASCII mixed-selection fixtures through the
-  raw mixed-ingress path: seven single-boundary-crossing Operation fixtures, one
-  exact-old-tail Extend fixture, one two-boundary multi-wrap Extend fixture,
-  one mixed-boundary resize round trip, and two exact complete-leading-Block
-  capacity fixtures.
+  also exercises two protocol-only ASCII adjacent-Block copy fixtures and
+  twelve printable-ASCII mixed-selection fixtures through the raw mixed-ingress
+  path: seven single-boundary-crossing Operation fixtures, one exact-old-tail
+  Extend fixture, one two-boundary multi-wrap Extend fixture, one mixed-boundary
+  resize round trip, and two exact complete-leading-Block capacity fixtures.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
@@ -223,15 +228,15 @@ incomplete protocol frame assembly remains a framing question.
 
 The current prototypes test the unmanaged-output reading-anchor guarantee only
 for one retained ASCII row at the viewport top while an earlier Block grows and
-shrinks. Mixed-boundary selection evidence is limited to twelve printable-ASCII
-fixtures: seven single-boundary-crossing Operation fixtures, one Extend fixture
-whose endpoint is exactly at the old Block tail, one two-boundary Extend fixture
-with two soft wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two
-capacity fixtures whose trim exactly matches one complete leading managed
-Block. Unicode, embedded line breaks within either selected side, other resize
-dimensions, capacity trimming that reaches unmanaged or partial-Block rows,
-mouse selection, and operating-system clipboard behavior remain untested.
-
-This draft does not yet define which separator copying uses between adjacent
-managed Blocks. That case requires a protocol decision before corresponding
-behavior can be claimed.
+shrinks. Adjacent-Block copy evidence is limited to two protocol-only ASCII
+fixtures: one whose earlier Block lacks a trailing line break and one whose
+earlier Block already ends with one. Mixed-boundary selection evidence is
+limited to twelve printable-ASCII fixtures: seven
+single-boundary-crossing Operation fixtures, one Extend fixture whose endpoint
+is exactly at the old Block tail, one two-boundary Extend fixture with two soft
+wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity
+fixtures whose trim exactly matches one complete leading managed Block.
+Unicode, line breaks within selected content other than the tested trailing LF
+at an adjacent-Block boundary, other resize dimensions, capacity trimming that
+reaches unmanaged or partial-Block rows, mouse selection, and operating-system
+clipboard behavior remain untested.

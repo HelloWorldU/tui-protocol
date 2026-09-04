@@ -78,19 +78,20 @@ special logical remapping because none of the Operations replaces the selected
 content.
 
 The selection wrapper is also composed by the [browser protocol endpoint
-prototype](../xterm-browser-protocol-endpoint/README.md). That experiment uses
-the raw mixed-ingress path to exercise twelve printable-ASCII fixtures: seven
-single-boundary-crossing Operation fixtures at `20` columns, one exact-tail
-Extend fixture, one two-boundary Extend fixture with two soft wraps, one
-`20`-to-`10`-to-`20`-column resize round trip, and two capacity fixtures whose
-trim exactly matches one complete leading managed Block. These scenarios are
-not part of this standalone browser run.
+prototype](../xterm-browser-protocol-endpoint/README.md). Its protocol-only path
+exercises two ASCII adjacent-managed-Block copy fixtures, one with and one
+without an existing trailing line break. Its raw mixed-ingress path
+exercises twelve more printable-ASCII fixtures: seven single-boundary-crossing
+Operation fixtures at `20` columns, one exact-tail Extend fixture, one
+two-boundary Extend fixture with two soft wraps, one `20`-to-`10`-to-`20`-column
+resize round trip, and two capacity fixtures whose trim exactly matches one
+complete leading managed Block. These scenarios are not part of this standalone
+browser run.
 
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
   selection, and cross-browser behavior are not exercised.
-- Copying between adjacent managed Blocks is not defined or tested.
 - Mixed-boundary resize/reflow is limited to one
   `20`-to-`10`-to-`20`-column round trip. Mixed capacity evidence is limited to
   trimming exactly one complete leading managed Block and does not exercise a

@@ -20,8 +20,8 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Thirty-six browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Twenty-four use the protocol-only
+Thirty-eight browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Twenty-six use the protocol-only
 endpoint path. Each of twelve additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
@@ -66,6 +66,11 @@ they demonstrate that:
   without following the tail, and leaves retained text searchable;
 - complete-Block capacity eviction leaves current input text, cursor, and focus
   unchanged;
+- when a selection spans adjacent managed Blocks and the earlier Block has no
+  trailing line break, copying represents their boundary with one normalized
+  newline;
+- when the earlier selected Block already ends with a line break, copying does
+  not add a second newline at the adjacent managed-Block boundary;
 - when a selection crosses from a managed Block into one following unmanaged
   ASCII row, growing and then shrinking an earlier Block moves the selection
   with the same content and preserves a copy result containing exactly one
@@ -116,8 +121,9 @@ requirements.
   optional styled content representation.
 - The protocol-only scenarios exercise all five current Block Operation kinds,
   one fixed `20`-to-`10`-column resize, and one Update-driven complete-Block
-  capacity eviction with printable ASCII fixtures, but only the outcomes listed
-  above.
+  capacity eviction with ASCII fixtures. They also exercise two
+  adjacent-managed-Block copy fixtures, one with and one without an existing
+  trailing line break, but only the outcomes listed above.
 - Partial-Block trimming, Append-driven eviction, other dimensions, and
   non-ASCII content remain outside this composed experiment.
 - Capacity eviction removes the tested Block's rendered range while Session
@@ -138,11 +144,10 @@ requirements.
   fixtures at `20` columns, one exact-tail Extend fixture, one two-boundary
   Extend fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize
   round trip, and two capacity fixtures whose trim exactly matches one complete
-  leading managed Block. Copying between adjacent managed Blocks is not yet
-  defined or tested. Unicode, embedded line breaks within either selected side,
-  other resize dimensions, capacity trimming that reaches unmanaged or
-  partial-Block rows, mouse selection, and the operating-system clipboard
-  remain untested.
+  leading managed Block. Unicode, line breaks within selected content other
+  than the tested trailing LF at an adjacent-managed-Block boundary, other
+  resize dimensions, capacity trimming that reaches unmanaged or partial-Block
+  rows, mouse selection, and the operating-system clipboard remain untested.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

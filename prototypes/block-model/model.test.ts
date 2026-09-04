@@ -135,6 +135,22 @@ test("resizing the terminal keeps the same character position in the anchored Bl
   assert.equal(terminal.viewportRows()[0]?.startOffset, 8);
 });
 
+test("a trailing newline ends its Block without inserting an empty row before the next Block", () => {
+  const terminal = new TerminalPrototype({ width: 20, height: 3 });
+
+  terminal.apply(append("first", "alpha\n", "sealed"));
+  terminal.apply(append("second", "bravo", "sealed"));
+
+  assert.deepEqual(
+    terminal.allRows().map(({ blockId, text }) => ({ blockId, text })),
+    [
+      { blockId: "first", text: "alpha" },
+      { blockId: "second", text: "bravo" },
+    ],
+  );
+  assert.equal(terminal.blocks()[0]?.content, "alpha\n");
+});
+
 function append(
   id: string,
   content: string,
