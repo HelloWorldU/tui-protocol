@@ -79,18 +79,18 @@ content.
 
 The selection wrapper is also composed by the [browser protocol endpoint
 prototype](../xterm-browser-protocol-endpoint/README.md). That experiment uses
-the raw mixed-ingress path to exercise eleven printable-ASCII fixtures: seven
-single-boundary Operation fixtures at `20` columns, one two-boundary Extend
-fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize round trip,
-and two capacity fixtures whose trim exactly matches one complete leading
-managed Block. These scenarios are not part of this standalone browser run.
+the raw mixed-ingress path to exercise twelve printable-ASCII fixtures: seven
+single-boundary-crossing Operation fixtures at `20` columns, one exact-tail
+Extend fixture, one two-boundary Extend fixture with two soft wraps, one
+`20`-to-`10`-to-`20`-column resize round trip, and two capacity fixtures whose
+trim exactly matches one complete leading managed Block. These scenarios are
+not part of this standalone browser run.
 
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
   selection, and cross-browser behavior are not exercised.
-- Selection endpoint affinity at a terminal-supplied managed/unmanaged boundary
-  and copying between adjacent managed Blocks are not defined or tested.
+- Copying between adjacent managed Blocks is not defined or tested.
 - Mixed-boundary resize/reflow is limited to one
   `20`-to-`10`-to-`20`-column round trip. Mixed capacity evidence is limited to
   trimming exactly one complete leading managed Block and does not exercise a

@@ -100,10 +100,13 @@ no mapping from selected positions in the old content to the replacement.
 ReplaceSuffix preserves a selection when its intersection with the target Block
 lies entirely within the retained prefix, and clears the selection when that
 intersection includes any part of the removed suffix. Extend preserves both
-logical endpoints of an existing selection. If its appended fragment falls
-between those endpoints, the fragment becomes part of the current selection and
-copy result. Scrollback-capacity trimming that removes any selected content has
-the same effect.
+logical endpoints of an existing selection. An endpoint at the target Block's
+old logical end remains at that pre-Extend position, before the appended
+fragment; it does not follow the new logical end. A selection ending there
+therefore does not expand to include the fragment. If the appended fragment
+lies strictly between the preserved endpoints, it becomes part of the current
+selection and copy result. Scrollback-capacity trimming that removes any
+selected content has the same effect.
 
 Clearing a selection removes its highlight and copy target; it does not remove
 Block content. Copying returns only the content of a current valid selection,
@@ -191,10 +194,11 @@ limitations:
 - The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
   composes all five current Block Operations with the tested browser states,
   resize and reflow, and the same narrow complete-Block capacity boundary. It
-  also exercises eleven printable-ASCII mixed-selection fixtures through the
-  raw mixed-ingress path: seven single-boundary Operation fixtures, one
-  two-boundary multi-wrap Extend fixture, one mixed-boundary resize round trip,
-  and two exact complete-leading-Block capacity fixtures.
+  also exercises twelve printable-ASCII mixed-selection fixtures through the
+  raw mixed-ingress path: seven single-boundary-crossing Operation fixtures, one
+  exact-old-tail Extend fixture, one two-boundary multi-wrap Extend fixture,
+  one mixed-boundary resize round trip, and two exact complete-leading-Block
+  capacity fixtures.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
@@ -219,17 +223,15 @@ incomplete protocol frame assembly remains a framing question.
 
 The current prototypes test the unmanaged-output reading-anchor guarantee only
 for one retained ASCII row at the viewport top while an earlier Block grows and
-shrinks. Cross-boundary selection evidence is limited to eleven printable-ASCII
-fixtures: seven single-boundary Operation fixtures, one two-boundary Extend
-fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize round trip,
-and two capacity fixtures whose trim exactly matches one complete leading
-managed Block. Unicode, embedded line breaks within either selected side,
-other resize dimensions, capacity trimming that reaches unmanaged or
-partial-Block rows, mouse selection, and operating-system clipboard behavior
-remain untested.
+shrinks. Mixed-boundary selection evidence is limited to twelve printable-ASCII
+fixtures: seven single-boundary-crossing Operation fixtures, one Extend fixture
+whose endpoint is exactly at the old Block tail, one two-boundary Extend fixture
+with two soft wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two
+capacity fixtures whose trim exactly matches one complete leading managed
+Block. Unicode, embedded line breaks within either selected side, other resize
+dimensions, capacity trimming that reaches unmanaged or partial-Block rows,
+mouse selection, and operating-system clipboard behavior remain untested.
 
-This draft does not yet define whether a selection endpoint exactly at a
-terminal-supplied managed/unmanaged boundary stays before or after content
-inserted at that position. It also does not define which separator copying uses
-between adjacent managed Blocks. These cases require protocol decisions before
-corresponding behavior can be claimed.
+This draft does not yet define which separator copying uses between adjacent
+managed Blocks. That case requires a protocol decision before corresponding
+behavior can be claimed.

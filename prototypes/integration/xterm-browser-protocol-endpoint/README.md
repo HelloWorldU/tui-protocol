@@ -20,9 +20,9 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Thirty-five browser scenarios negotiate the baseline capability and open a
+Thirty-six browser scenarios negotiate the baseline capability and open a
 Context through encoded OSC Messages. Twenty-four use the protocol-only
-endpoint path. Each of eleven additional scenarios uses an independent raw
+endpoint path. Each of twelve additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
 
@@ -87,6 +87,9 @@ they demonstrate that:
   selection and copy source; and
 - sealing the managed side of a cross-boundary selection and then appending a
   later Block changes neither endpoint nor the copy result;
+- when a selection ends exactly at a managed Block's old logical tail, Extend
+  leaves that endpoint before the appended fragment, so the existing selection
+  and copy result do not expand;
 - when a selection crosses two managed/unmanaged boundaries, Extend can add two
   soft wraps between its endpoints without adding copied newlines for those
   wraps, while each managed/unmanaged boundary contributes one copied newline;
@@ -130,16 +133,16 @@ requirements.
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
   experimental fixtures, not a proposed public Terminal API.
-- The mixed-stream selection evidence covers eleven printable-ASCII fixtures
-  and synthetic browser copy events: seven single-boundary Operation fixtures
-  at `20` columns, one two-boundary Extend fixture with two soft wraps, one
-  `20`-to-`10`-to-`20`-column resize round trip, and two capacity fixtures whose
-  trim exactly matches one complete leading managed Block. Selection endpoint
-  affinity at a terminal-supplied boundary and copying between adjacent managed
-  Blocks are not yet defined or tested. Unicode, embedded line breaks within
-  either selected side, other resize dimensions, capacity trimming that reaches
-  unmanaged or partial-Block rows, mouse selection, and the operating-system
-  clipboard remain untested.
+- The mixed-stream selection evidence covers twelve printable-ASCII fixtures
+  and synthetic browser copy events: seven single-boundary-crossing Operation
+  fixtures at `20` columns, one exact-tail Extend fixture, one two-boundary
+  Extend fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize
+  round trip, and two capacity fixtures whose trim exactly matches one complete
+  leading managed Block. Copying between adjacent managed Blocks is not yet
+  defined or tested. Unicode, embedded line breaks within either selected side,
+  other resize dimensions, capacity trimming that reaches unmanaged or
+  partial-Block rows, mouse selection, and the operating-system clipboard
+  remain untested.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

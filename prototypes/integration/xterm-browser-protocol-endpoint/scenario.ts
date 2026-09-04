@@ -32,6 +32,7 @@ import {
   runCapacityEvictsSelectedBlockAndClearsMixedSelectionScenario,
 } from "./scenarios/mixed-selection-capacity.ts";
 import { runExtendIncludesFragmentAcrossTwoMixedBoundariesScenario } from "./scenarios/mixed-selection-layout.ts";
+import { runExtendExcludesFragmentFromSelectionEndingAtOldManagedTailScenario } from "./scenarios/mixed-selection-managed-tail.ts";
 import { runResizePreservesMixedSelectionScenario } from "./scenarios/mixed-selection-resize.ts";
 import {
   runReplaceSuffixActiveInputAndCompositionScenario,
@@ -114,6 +115,7 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runReplaceSuffixClearsMixedRemovedSuffixSelectionScenario(),
     await runAppendAndSealPreserveMixedSelectionScenario(),
     await runExtendIncludesFragmentAcrossTwoMixedBoundariesScenario(),
+    await runExtendExcludesFragmentFromSelectionEndingAtOldManagedTailScenario(),
     await runResizePreservesMixedSelectionScenario(),
     await runCapacityEvictsEarlierBlockAndPreservesMixedSelectionScenario(),
     await runCapacityEvictsSelectedBlockAndClearsMixedSelectionScenario(),
