@@ -198,19 +198,22 @@ limitations:
   fixtures provide bounded evidence for their corresponding sections above.
 - The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
   composes all five current Block Operations with the tested browser states,
-  resize and reflow, and the same narrow complete-Block capacity boundary. It
-  also exercises two protocol-only ASCII adjacent-Block copy fixtures and
-  twelve printable-ASCII mixed-selection fixtures through the raw mixed-ingress
-  path: seven single-boundary-crossing Operation fixtures, one exact-old-tail
-  Extend fixture, one two-boundary multi-wrap Extend fixture, one mixed-boundary
-  resize round trip, and two exact complete-leading-Block capacity fixtures.
+  resize and reflow, the same narrow Update-driven complete-Block capacity
+  boundary, and one protocol-only Append-driven fixture whose trim exactly
+  matches one complete leading managed Block. It also exercises two
+  protocol-only ASCII adjacent-Block copy fixtures and twelve printable-ASCII
+  mixed-selection fixtures through the raw mixed-ingress path: seven
+  single-boundary-crossing Operation fixtures, one exact-old-tail Extend
+  fixture, one two-boundary multi-wrap Extend fixture, one mixed-boundary resize
+  round trip, and two exact complete-leading-Block capacity fixtures.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
 compatibility, a public terminal API, arbitrary mixed-stream ingress,
-partial-Block or Append-driven eviction, non-ASCII position mapping, or
-production renderer failure atomicity. Capacity eviction that must remove
-unmanaged rows is also not demonstrated.
+partial-Block eviction, Append-driven eviction beyond that one exact
+complete-leading-Block fixture, non-ASCII position mapping, or production
+renderer failure atomicity. Capacity eviction that must remove unmanaged rows
+is also not demonstrated.
 
 ## Current Scope
 
@@ -230,8 +233,11 @@ The current prototypes test the unmanaged-output reading-anchor guarantee only
 for one retained ASCII row at the viewport top while an earlier Block grows and
 shrinks. Adjacent-Block copy evidence is limited to two protocol-only ASCII
 fixtures: one whose earlier Block lacks a trailing line break and one whose
-earlier Block already ends with one. Mixed-boundary selection evidence is
-limited to twelve printable-ASCII fixtures: seven
+earlier Block already ends with one. Append-driven browser
+reading-and-selection evidence is limited to one protocol-only fixture whose
+trim exactly matches one complete leading managed Block containing the reading
+position and selection. Mixed-boundary selection evidence is limited to twelve
+printable-ASCII fixtures: seven
 single-boundary-crossing Operation fixtures, one Extend fixture whose endpoint
 is exactly at the old Block tail, one two-boundary Extend fixture with two soft
 wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity

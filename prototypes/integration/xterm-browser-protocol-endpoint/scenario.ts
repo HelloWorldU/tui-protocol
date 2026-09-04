@@ -7,6 +7,9 @@ import {
   runAppendTailFollowingScenario,
 } from "./scenarios/append.ts";
 import {
+  runAppendCapacityEvictsSelectedOldestBlockScenario,
+} from "./scenarios/append-capacity.ts";
+import {
   runAdjacentManagedBlocksCopyOneSuppliedNewlineScenario,
   runTrailingNewlineDoesNotDuplicateAdjacentManagedCopyBoundaryScenario,
 } from "./scenarios/adjacent-managed-selection.ts";
@@ -100,6 +103,7 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runAppendHistoryReadingAndSelectionScenario(),
     await runAppendTailFollowingScenario(),
     await runAppendSearchScenario(),
+    await runAppendCapacityEvictsSelectedOldestBlockScenario(),
     await runSealSelectionAndRejectionScenario(),
     await runSealSearchScenario(),
     await runResizeReadingSelectionAndUpdateScenario(),

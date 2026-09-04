@@ -108,19 +108,40 @@ export class BrowserSelectionHistory {
   }
 
   async #renderAccepted(operation: Operation): Promise<void> {
+    if (!this.#terminal.hasSelection()) {
+      await this.#history.renderAccepted(operation);
+      return;
+    }
+
+    const selection = this.#selectionSnapshot();
+    if (selection === undefined) {
+      await this.#history.renderAccepted(operation);
+      return;
+    }
+
+    if (operation.type === "append") {
+      const markerSelection = this.#markerSelectionSnapshot(selection);
+      try {
+        await this.#history.renderAccepted(operation);
+        this.#restoreMarkerSelection(markerSelection);
+      } finally {
+        markerSelection.startMarker.dispose();
+        markerSelection.endMarker.dispose();
+      }
+      return;
+    }
+
     if (
-      (operation.type !== "update" &&
-        operation.type !== "extend" &&
-        operation.type !== "replaceSuffix") ||
-      !this.#terminal.hasSelection()
+      operation.type !== "update" &&
+      operation.type !== "extend" &&
+      operation.type !== "replaceSuffix"
     ) {
       await this.#history.renderAccepted(operation);
       return;
     }
 
     const targetBefore = this.#history.range(operation.id);
-    const selection = this.#selectionSnapshot();
-    if (targetBefore === undefined || selection === undefined) {
+    if (targetBefore === undefined) {
       await this.#history.renderAccepted(operation);
       return;
     }

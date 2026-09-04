@@ -88,6 +88,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #plannedModel: TerminalPrototype;
   readonly #entries: BlockEntry[] = [];
   readonly #entryIndexes = new Map<BlockId, number>();
+  readonly #plannedAppendTrims = new Map<BlockId, CapacityTrimPlan>();
   readonly #plannedTrimmedBlockIds = new Set<BlockId>();
   readonly #registrations: IDisposable[] = [];
   #readingAnchor: PrivateMarker | undefined;
@@ -192,6 +193,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   wouldExceedCapacity(operation: Operation): boolean {
+    if (operation.type === "append") {
+      return this.#appendWouldExceedCapacity(operation.block);
+    }
     if (
       operation.type !== "update" &&
       operation.type !== "extend" &&
@@ -298,10 +302,13 @@ export class PrivateCoreBlockHistory implements IDisposable {
     }
     this.#entries.length = 0;
     this.#entryIndexes.clear();
+    this.#plannedAppendTrims.clear();
     this.#plannedTrimmedBlockIds.clear();
   }
 
   async #append(block: Block): Promise<void> {
+    const trimPlan = this.#plannedAppendTrims.get(block.id);
+    this.#plannedAppendTrims.delete(block.id);
     const lines = await this.#materialize(block.content);
     this.#model.apply({ type: "append", block });
 
@@ -315,10 +322,100 @@ export class PrivateCoreBlockHistory implements IDisposable {
     if (start < 0) {
       throw new Error("The appended Block was trimmed before it could be indexed.");
     }
+    if (trimPlan !== undefined) {
+      this.#dropLeadingEntries(trimPlan.entryCount);
+    }
     const startMarker = buffer.addMarker(start);
     const endMarker = buffer.addMarker(end);
     this.#entryIndexes.set(block.id, this.#entries.length);
     this.#entries.push({ id: block.id, startMarker, endMarker });
+  }
+
+  #appendWouldExceedCapacity(block: Block): boolean {
+    const layout = conservativeTextLineCount(block.content, this.#terminal.cols);
+    if (layout === undefined) {
+      return true;
+    }
+
+    const buffer = this.#bufferService.buffer;
+    const lines = buffer.lines;
+    const cursorLine = buffer.ybase + buffer.y;
+    const boundaryLineCount =
+      (lines.get(cursorLine)?.translateToString(true).length ?? 0) > 0 ? 1 : 0;
+    if (this.#acceptedRenderCount > 0) {
+      let plannedLineCount = layout.count;
+      for (const candidate of this.#plannedModel.blocks()) {
+        if (this.#plannedTrimmedBlockIds.has(candidate.id)) {
+          continue;
+        }
+        const candidateLayout = conservativeTextLineCount(
+          candidate.content,
+          this.#terminal.cols,
+        );
+        if (candidateLayout === undefined) {
+          return true;
+        }
+        plannedLineCount += candidateLayout.count;
+      }
+      let renderedLineCount = 0;
+      for (const entry of this.#entries) {
+        const range = this.range(entry.id);
+        if (range === undefined) {
+          return true;
+        }
+        renderedLineCount += range.lineCount;
+      }
+      const projectedLineCount = Math.max(
+        this.#terminal.rows,
+        lines.length,
+        cursorLine +
+          boundaryLineCount +
+          plannedLineCount -
+          renderedLineCount +
+          1,
+      );
+      return projectedLineCount > lines.maxLength;
+    }
+
+    const projectedLineCount = Math.max(
+      this.#terminal.rows,
+      cursorLine + boundaryLineCount + layout.count + 1,
+    );
+    const excess = projectedLineCount - lines.maxLength;
+    if (excess <= 0) {
+      return false;
+    }
+    if (!layout.exact || !this.#hasDedicatedManagedAppendLayout(cursorLine)) {
+      return true;
+    }
+
+    const trimPlan = this.#capacityTrimPlan(excess, block.id);
+    if (trimPlan === undefined) {
+      return true;
+    }
+    for (const id of trimPlan.blockIds) {
+      this.#plannedTrimmedBlockIds.add(id);
+    }
+    this.#plannedAppendTrims.set(block.id, trimPlan);
+    return false;
+  }
+
+  #hasDedicatedManagedAppendLayout(cursorLine: number): boolean {
+    let expectedStart = 0;
+    for (const entry of this.#entries) {
+      const range = this.range(entry.id);
+      if (range === undefined || range.start !== expectedStart) {
+        return false;
+      }
+      expectedStart = range.start + range.lineCount;
+    }
+
+    const cursor = this.#bufferService.buffer.lines.get(cursorLine);
+    return (
+      expectedStart === cursorLine &&
+      this.#bufferService.buffer.x === 0 &&
+      cursor?.translateToString(true).length === 0
+    );
   }
 
   async #update(
@@ -463,7 +560,10 @@ export class PrivateCoreBlockHistory implements IDisposable {
       if (entry.id === targetId) {
         return undefined;
       }
-      const range = this.#rangeAt(index);
+      const range = this.range(entry.id);
+      if (range === undefined) {
+        return undefined;
+      }
       if (range.start !== expectedStart) {
         return undefined;
       }

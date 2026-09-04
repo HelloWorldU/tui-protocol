@@ -80,13 +80,14 @@ content.
 The selection wrapper is also composed by the [browser protocol endpoint
 prototype](../xterm-browser-protocol-endpoint/README.md). Its protocol-only path
 exercises two ASCII adjacent-managed-Block copy fixtures, one with and one
-without an existing trailing line break. Its raw mixed-ingress path
-exercises twelve more printable-ASCII fixtures: seven single-boundary-crossing
-Operation fixtures at `20` columns, one exact-tail Extend fixture, one
-two-boundary Extend fixture with two soft wraps, one `20`-to-`10`-to-`20`-column
-resize round trip, and two capacity fixtures whose trim exactly matches one
-complete leading managed Block. These scenarios are not part of this standalone
-browser run.
+without an existing trailing line break, and one Append-driven capacity fixture
+whose trim exactly matches one complete leading managed Block containing the
+selection. Its raw mixed-ingress path exercises twelve more printable-ASCII
+fixtures: seven single-boundary-crossing Operation fixtures at `20` columns,
+one exact-tail Extend fixture, one two-boundary Extend fixture with two soft
+wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity
+fixtures whose trim exactly matches one complete leading managed Block. These
+scenarios are not part of this standalone browser run.
 
 ## Not Proven
 
@@ -98,8 +99,9 @@ browser run.
   trim that reaches unmanaged rows.
 - Unicode, embedded line breaks within either side of the selection, other
   resize dimensions, and other selection positions remain untested.
-- Partial-Block capacity eviction and Append-driven eviction remain outside the
-  selection experiment.
+- Partial-Block capacity eviction remains outside the selection experiment. The
+  standalone browser run does not exercise Append-driven eviction; the composed
+  endpoint covers only the one exact complete-leading-Block fixture above.
 - Resize selection mapping for line breaks, wide or combining characters, and
   other non-ASCII text is not implemented or tested.
 - ReplaceSuffix selection mapping for wrapped lines, line breaks, wide or

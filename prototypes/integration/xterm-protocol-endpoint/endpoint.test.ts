@@ -648,6 +648,237 @@ test("when an Update fills xterm history, one complete oldest Block is trimmed, 
   xterm.dispose();
 });
 
+test("an Append can trim one complete oldest Block before a later capacity-planned Update trims the next Block", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 7,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  endpoint.push(
+    concatenate([
+      encodeInput(
+        append(contextId, "1", "oldest", "old-1\nold-2", "sealed"),
+        3,
+      ),
+      encodeInput(append(contextId, "2", "next", "next", "sealed"), 4),
+      encodeInput(
+        append(contextId, "3", "growing", "draft", "mutable"),
+        5,
+      ),
+      encodeInput(
+        append(
+          contextId,
+          "4",
+          "tail",
+          "tail-1\ntail-2\ntail-3\ntail-4",
+          "sealed",
+        ),
+        6,
+      ),
+    ]),
+  );
+  await endpoint.drain();
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        append(
+          contextId,
+          "5",
+          "new-tail",
+          "new-1\nnew-2\nnew-3",
+          "sealed",
+        ),
+        7,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  assert.equal(endpoint.range(contextId, "oldest"), undefined);
+  assert.deepEqual(requiredRange(endpoint, contextId, "next"), {
+    start: 0,
+    lineCount: 1,
+  });
+
+  assert.deepEqual(
+    endpoint.push(
+      encodeInput(
+        update(contextId, "6", "growing", "target-1\ntarget-2"),
+        8,
+      ),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+
+  assert.equal(endpoint.range(contextId, "next"), undefined);
+  assert.deepEqual(requiredRange(endpoint, contextId, "growing"), {
+    start: 0,
+    lineCount: 2,
+  });
+  assert.equal(
+    endpoint.context(contextId)?.blocks.find(
+      (block) => block.id === "growing",
+    )?.content.data,
+    "target-1\ntarget-2",
+  );
+  assert.deepEqual(bufferRows(xterm), [
+    "target-1",
+    "target-2",
+    "tail-1",
+    "tail-2",
+    "tail-3",
+    "tail-4",
+    "new-1",
+    "new-2",
+    "new-3",
+    "",
+  ]);
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
+test("an Append that would trim only part of the oldest Block is rejected before changing Session or xterm history", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 7,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+
+  assert.deepEqual(
+    endpoint.push(
+      concatenate([
+        encodeInput(
+          append(contextId, "1", "oldest", "old-1\nold-2", "sealed"),
+          3,
+        ),
+        encodeInput(append(contextId, "2", "next", "next", "sealed"), 4),
+        encodeInput(
+          append(
+            contextId,
+            "3",
+            "tail",
+            "tail-1\ntail-2\ntail-3\ntail-4\ntail-5",
+            "sealed",
+          ),
+          5,
+        ),
+      ]),
+    ),
+    emptyResult(),
+  );
+  await endpoint.drain();
+  const before = bufferRows(xterm);
+
+  const rejected = endpoint.push(
+    encodeInput(
+      append(contextId, "4", "too-large", "new-1\nnew-2", "sealed"),
+      6,
+    ),
+  );
+  assert.deepEqual(decodeResponses(rejected), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "4",
+      context_id: contextId,
+      body: { code: "resource_exhausted" },
+    },
+  ]);
+  await endpoint.drain();
+
+  assert.deepEqual(bufferRows(xterm), before);
+  assert.deepEqual(requiredRange(endpoint, contextId, "oldest"), {
+    start: 0,
+    lineCount: 2,
+  });
+  assert.equal(
+    endpoint.context(contextId)?.blocks.some(
+      (block) => block.id === "too-large",
+    ),
+    false,
+  );
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
+test("when two Appends are queued after ordinary output, the second is rejected before it can evict that output", async () => {
+  const xterm = new Terminal({
+    allowProposedApi: true,
+    cols: 10,
+    rows: 3,
+    scrollback: 7,
+  });
+  const endpoint = new XtermProtocolEndpoint(xterm, {
+    completeBaselineSupported: true,
+  });
+  const contextId = negotiateAndOpen(endpoint);
+  await write(xterm, "u1\r\nu2\r\nu3\r\nu4\r\nu5\r\nu6\r\n");
+
+  const result = endpoint.push(
+    concatenate([
+      encodeInput(
+        append(contextId, "1", "first", "first-1\nfirst-2", "sealed"),
+        3,
+      ),
+      encodeInput(
+        append(contextId, "2", "second", "second-1\nsecond-2", "sealed"),
+        4,
+      ),
+    ]),
+  );
+  assert.deepEqual(result.diagnostics, []);
+  assert.deepEqual(decodeResponses(result), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "2",
+      context_id: contextId,
+      body: { code: "resource_exhausted" },
+    },
+  ]);
+  await endpoint.drain();
+
+  assert.deepEqual(bufferRows(xterm), [
+    "u1",
+    "u2",
+    "u3",
+    "u4",
+    "u5",
+    "u6",
+    "first-1",
+    "first-2",
+    "",
+  ]);
+  assert.deepEqual(requiredRange(endpoint, contextId, "first"), {
+    start: 6,
+    lineCount: 2,
+  });
+  assert.equal(endpoint.range(contextId, "second"), undefined);
+  assert.deepEqual(
+    endpoint.context(contextId)?.blocks.map((block) => block.id),
+    ["first"],
+  );
+
+  endpoint.dispose();
+  xterm.dispose();
+});
+
 test("when capacity trimming removes the complete Block being read, the viewport moves to the next retained Block and does not follow the tail", async () => {
   const xterm = new Terminal({
     allowProposedApi: true,
@@ -1184,6 +1415,10 @@ function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
     offset += chunk.length;
   }
   return result;
+}
+
+function write(terminal: HeadlessTerminal, data: string): Promise<void> {
+  return new Promise((resolve) => terminal.write(data, resolve));
 }
 
 function viewportTopText(terminal: HeadlessTerminal): string {

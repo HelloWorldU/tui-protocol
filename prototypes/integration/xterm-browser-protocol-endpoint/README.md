@@ -20,8 +20,8 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Thirty-eight browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Twenty-six use the protocol-only
+Thirty-nine browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Twenty-seven use the protocol-only
 endpoint path. Each of twelve additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
@@ -66,6 +66,11 @@ they demonstrate that:
   without following the tail, and leaves retained text searchable;
 - complete-Block capacity eviction leaves current input text, cursor, and focus
   unchanged;
+- in one protocol-only capacity fixture, an OSC Append evicts exactly one
+  complete leading managed Block containing the reading position and selection;
+  the selection and copy source clear, the viewport moves to the next retained
+  Block without following the tail, and the new Block appears once at the
+  logical tail;
 - when a selection spans adjacent managed Blocks and the earlier Block has no
   trailing line break, copying represents their boundary with one normalized
   newline;
@@ -120,12 +125,14 @@ requirements.
 - Content metadata is not composed because the protocol has not defined an
   optional styled content representation.
 - The protocol-only scenarios exercise all five current Block Operation kinds,
-  one fixed `20`-to-`10`-column resize, and one Update-driven complete-Block
-  capacity eviction with ASCII fixtures. They also exercise two
+  one fixed `20`-to-`10`-column resize, one Update-driven complete-Block
+  capacity boundary, and one Append-driven fixture whose trim exactly matches
+  one complete leading managed Block. They also exercise two
   adjacent-managed-Block copy fixtures, one with and one without an existing
   trailing line break, but only the outcomes listed above.
-- Partial-Block trimming, Append-driven eviction, other dimensions, and
-  non-ASCII content remain outside this composed experiment.
+- Partial-Block trimming, Append-driven eviction outside that one exact
+  complete-leading-Block fixture, other dimensions, and non-ASCII content
+  remain outside this composed experiment.
 - Capacity eviction removes the tested Block's rendered range while Session
   retains its logical snapshot. The experiment does not define forgotten-Block
   lifecycle or prove complete memory reclamation.

@@ -100,9 +100,16 @@ can be designed.
 - The private range index supports one tested trimming boundary: exact removal
   of complete oldest Blocks. It preserves a surviving reading position and
   moves a removed one to the next retained Block without following the tail.
-  Append-driven trimming, partial-Block trimming, and later mutation of a
-  fully trimmed Block remain unsupported. The composed Session also retains
-  the logical snapshot after this private range index drops rendered rows.
+  Its Append path accepts trimming only with no pending render, a dedicated
+  contiguous managed layout, an exact ASCII row count, and an excess composed
+  exactly of complete leading Block ranges. The composed endpoint tests one
+  such Block, followed by an Update that trims the next Block after stale range
+  bookkeeping has been removed. When trimming would be required, Append layouts
+  that fail those preconditions use the conservative `resource_exhausted` path;
+  other exact Append arrangements remain unproven. Partial-Block trimming and
+  later mutation of a fully trimmed Block remain unsupported. The composed
+  Session also retains the logical snapshot after this private range index
+  drops rendered rows.
 - Browser rendering and selection behavior are not exercised by headless
   tests. The separate [browser selection
   experiment](../integration/xterm-browser-selection/README.md) exercises

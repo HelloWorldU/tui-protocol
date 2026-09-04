@@ -125,6 +125,10 @@ scrollback clear, and full-reset cases listed below.
 - When the same complete-Block trim removes the Block being read, the tested
   viewport moves to the next retained Block and remains in history-reading
   state instead of following the tail.
+- In one no-pending-render, dedicated managed-history fixture, an ASCII Append
+  trims exactly one complete oldest Block. A later capacity-aligned Update
+  trims the next complete Block, demonstrating that the first trim removed its
+  stale range entry before the second trim was planned and rendered.
 
 These results provide experimental evidence for the reading-anchor and
 tail-following requirements in [Terminal-Native
@@ -151,12 +155,15 @@ content and dimensions; it is not evidence that all renderer failures are
 detected before Block mutation.
 
 A separate tested path permits normal trimming only when the exact required
-row count consists of complete oldest Blocks and the changed Block remains
-retained. The private xterm range index removes those Block ranges, preserves
-a surviving history-reading position, or moves a removed position to the next
-retained Block without following the tail. Later queued rendering remains
-ordered. This is a narrow feasibility result, not a general trimming
-implementation.
+row count consists of complete oldest Blocks and the changed or newly appended
+Block remains retained. The private xterm range index removes those Block
+ranges, preserves a surviving history-reading position, or moves a removed
+position to the next retained Block without following the tail. The accepted
+Append fixture additionally requires no earlier render to be pending, a
+dedicated contiguous managed layout, and an exact ASCII row count. It trims one
+complete leading Block; a following tested Update trims the next one. Later
+queued rendering remains ordered. This is a narrow feasibility result, not a
+general trimming implementation.
 
 ## Experimental Boundaries
 
@@ -228,11 +235,14 @@ implementation.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.
-- Append-driven trimming, partial-Block trimming, and mutating a fully trimmed
-  Block remain unsupported and outside the current evidence. The preflight
-  permits trimming only within the tested complete-Block replacement boundary
-  and requires no earlier render to be pending. Other detected capacity cases
-  continue through the existing `resource_exhausted` path. Complete Update of
+- Accepted Append-driven trimming requires no pending render, a dedicated
+  contiguous managed layout, an exact ASCII row count, and an excess composed
+  exactly of complete leading Block ranges; the current evidence covers one
+  such Block. When trimming would be required, Append layouts that fail those
+  preconditions, including layouts containing unmanaged rows, use the
+  conservative `resource_exhausted` path; other exact Append arrangements
+  remain unproven. Partial-Block trimming and mutating a fully trimmed Block
+  also remain unsupported. Complete Update of
   the Block containing the reading anchor remains unsupported independently of
   capacity.
 - The xterm.js Buffer and range index discard a trimmed Block's rendered rows,
@@ -255,9 +265,12 @@ implementation.
   experiment](../xterm-browser-protocol-endpoint/README.md) composes all five
   current Block Operation Messages encoded in OSC with reading position,
   selection, search, tail-following, lifecycle rejection, and active input
-  checks. It also composes those browser states with the tested resize/reflow
-  and Update-driven complete-Block capacity boundary. Selection evidence is
-  limited to the listed printable-ASCII fixtures and tested dimensions.
+  checks. It composes those browser states with the tested resize/reflow and
+  Update-driven complete-Block capacity boundary. A separate Append-driven
+  capacity fixture covers only reading position, selection and copy, and the
+  new Block's single appearance at the tail when one complete leading Block is
+  removed. Selection evidence is limited to the listed ASCII fixtures and
+  tested dimensions.
 
 ## Run
 
