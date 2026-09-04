@@ -9,6 +9,7 @@ import {
   createMixedFixture,
   encodeInput,
   extend,
+  replaceSuffix,
   requiredRange,
   text,
   update,
@@ -267,6 +268,232 @@ export async function runExtendIncludesFragmentInMixedSelectionScenario(): Promi
       name: "Extend Adds Its Fragment to a Managed-to-Unmanaged Selection",
       detail:
         "both endpoints stayed attached while the appended fragment entered the copy result",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+export async function runReplaceSuffixPreservesMixedPrefixSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createMixedFixture({ cols: 20, rows: 4 });
+  try {
+    await fixture.ingress.push(
+      concatenate([
+        text("ordinary\r\n"),
+        encodeInput(
+          append(
+            fixture.contextId,
+            "1",
+            "managed",
+            "prefix-old",
+            "mutable",
+          ),
+          3,
+        ),
+        encodeInput(
+          append(fixture.contextId, "2", "tail", "tail", "sealed"),
+          4,
+        ),
+      ]),
+    );
+    assertNoMixedErrors(fixture, "initial retained-prefix boundary stream");
+
+    const managedBefore = requiredRange(fixture, "managed");
+    const tailBefore = requiredRange(fixture, "tail");
+    assertEqual(managedBefore.start, 1, "managed start before ReplaceSuffix");
+    assertEqual(managedBefore.lineCount, 1, "managed rows before ReplaceSuffix");
+    assertEqual(tailBefore.start, 2, "tail start before ReplaceSuffix");
+    assertBufferRows(fixture.terminal, [
+      "ordinary",
+      "prefix-old",
+      "tail",
+      "",
+    ]);
+
+    selectAcrossRows(fixture.terminal, 3, 0, 6, managedBefore.start);
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      0,
+      6,
+      managedBefore.start,
+      "retained-prefix selection before ReplaceSuffix",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "inary\nprefix",
+      "retained-prefix selection before ReplaceSuffix",
+    );
+
+    await fixture.ingress.push(
+      encodeInput(
+        replaceSuffix(
+          fixture.contextId,
+          "3",
+          "managed",
+          "1",
+          6,
+          "-replacement",
+        ),
+        5,
+      ),
+    );
+    assertNoMixedErrors(fixture, "unselected suffix replacement");
+
+    const managedAfter = requiredRange(fixture, "managed");
+    const tailAfter = requiredRange(fixture, "tail");
+    assertEqual(managedAfter.start, 1, "managed start after ReplaceSuffix");
+    assertEqual(managedAfter.lineCount, 1, "managed rows after ReplaceSuffix");
+    assertEqual(tailAfter.start, 2, "tail start after ReplaceSuffix");
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      0,
+      6,
+      managedAfter.start,
+      "retained-prefix selection after ReplaceSuffix",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "inary\nprefix",
+      "retained-prefix selection after ReplaceSuffix",
+    );
+    assertBufferRows(fixture.terminal, [
+      "ordinary",
+      "prefix-replacement",
+      "tail",
+      "",
+    ]);
+    assertBlockContent(fixture, "managed", "prefix-replacement");
+    assertEqual(
+      fixture.endpoint.context(fixture.contextId)?.state,
+      "open",
+      "Context after preserving the retained-prefix selection",
+    );
+    return {
+      name:
+        "ReplaceSuffix Preserves an Unmanaged-to-Managed Selection Ending in the Retained Prefix",
+      detail:
+        "replacing the unselected suffix left both endpoints and copied text unchanged",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+export async function runReplaceSuffixClearsMixedRemovedSuffixSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createMixedFixture({ cols: 20, rows: 4 });
+  try {
+    await fixture.ingress.push(
+      concatenate([
+        encodeInput(
+          append(
+            fixture.contextId,
+            "1",
+            "managed",
+            "prefix-old",
+            "mutable",
+          ),
+          3,
+        ),
+        text("ordinary\r\n"),
+        encodeInput(
+          append(fixture.contextId, "2", "tail", "tail", "sealed"),
+          4,
+        ),
+      ]),
+    );
+    assertNoMixedErrors(fixture, "initial removed-suffix boundary stream");
+
+    const managedBefore = requiredRange(fixture, "managed");
+    const tailBefore = requiredRange(fixture, "tail");
+    assertEqual(managedBefore.start, 0, "managed start before ReplaceSuffix");
+    assertEqual(managedBefore.lineCount, 1, "managed rows before ReplaceSuffix");
+    assertEqual(tailBefore.start, 2, "tail start before ReplaceSuffix");
+    assertBufferRows(fixture.terminal, [
+      "prefix-old",
+      "ordinary",
+      "tail",
+      "",
+    ]);
+
+    selectAcrossRows(fixture.terminal, 3, managedBefore.start, 4, 1);
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      managedBefore.start,
+      4,
+      1,
+      "removed-suffix selection before ReplaceSuffix",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "fix-old\nordi",
+      "removed-suffix selection before ReplaceSuffix",
+    );
+
+    await fixture.ingress.push(
+      encodeInput(
+        replaceSuffix(
+          fixture.contextId,
+          "3",
+          "managed",
+          "1",
+          6,
+          "-replacement",
+        ),
+        5,
+      ),
+    );
+    assertNoMixedErrors(fixture, "selected suffix replacement");
+
+    assertEqual(
+      fixture.terminal.hasSelection(),
+      false,
+      "selection after replacing its selected suffix",
+    );
+    assertEqual(
+      fixture.terminal.getSelectionPosition(),
+      undefined,
+      "selection position after replacing its selected suffix",
+    );
+    assertEqual(
+      fixture.terminal.getSelection(),
+      "",
+      "selection text after replacing its selected suffix",
+    );
+    assertEqual(
+      copySelection(fixture.terminal),
+      undefined,
+      "copy event after replacing its selected suffix",
+    );
+    assertBufferRows(fixture.terminal, [
+      "prefix-replacement",
+      "ordinary",
+      "tail",
+      "",
+    ]);
+    assertBlockContent(fixture, "managed", "prefix-replacement");
+    assertEqual(
+      requiredRange(fixture, "managed").start,
+      0,
+      "managed start after ReplaceSuffix",
+    );
+    assertEqual(
+      requiredRange(fixture, "tail").start,
+      2,
+      "tail start after ReplaceSuffix",
+    );
+    assertEqual(
+      fixture.endpoint.context(fixture.contextId)?.state,
+      "open",
+      "Context after clearing the removed-suffix selection",
+    );
+    return {
+      name:
+        "ReplaceSuffix Clears a Managed-to-Unmanaged Selection That Includes the Removed Suffix",
+      detail:
+        "replacing selected suffix content cleared the complete cross-boundary copy source",
     };
   } finally {
     fixture.dispose();

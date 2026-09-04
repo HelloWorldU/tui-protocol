@@ -21,6 +21,8 @@ import {
 import {
   runEarlierUpdatePreservesMixedSelectionScenario,
   runExtendIncludesFragmentInMixedSelectionScenario,
+  runReplaceSuffixClearsMixedRemovedSuffixSelectionScenario,
+  runReplaceSuffixPreservesMixedPrefixSelectionScenario,
   runSelectedUpdateClearsMixedSelectionScenario,
 } from "./scenarios/mixed-ingress.ts";
 import {
@@ -99,6 +101,8 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runEarlierUpdatePreservesMixedSelectionScenario(),
     await runSelectedUpdateClearsMixedSelectionScenario(),
     await runExtendIncludesFragmentInMixedSelectionScenario(),
+    await runReplaceSuffixPreservesMixedPrefixSelectionScenario(),
+    await runReplaceSuffixClearsMixedRemovedSuffixSelectionScenario(),
   ];
 }
 

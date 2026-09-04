@@ -159,6 +159,28 @@ export class BrowserSelectionHistory {
         this.#restoreLogicalSelection(logicalSelection);
         return;
       }
+      if (
+        operation.type === "replaceSuffix" &&
+        this.#selectionEndsInRetainedPrefix(
+          operation.id,
+          targetBefore,
+          operation.retain,
+          selection,
+        )
+      ) {
+        const endpointSelection = this.#endpointSelectionSnapshot(
+          operation.id,
+          targetBefore,
+          selection,
+        );
+        try {
+          await this.#history.renderAccepted(operation);
+          this.#restoreEndpointSelection(endpointSelection);
+        } finally {
+          this.#disposeEndpointSelection(endpointSelection);
+        }
+        return;
+      }
 
       this.#terminal.clearSelection();
       await this.#history.renderAccepted(operation);
@@ -249,6 +271,29 @@ export class BrowserSelectionHistory {
     }
 
     return undefined;
+  }
+
+  #selectionEndsInRetainedPrefix(
+    blockId: string,
+    range: Readonly<{ start: number; lineCount: number }>,
+    retain: number,
+    selection: SelectionSnapshot,
+  ): boolean {
+    const block = this.#history
+      .blocks()
+      .find((candidate) => candidate.id === blockId);
+    if (
+      block === undefined ||
+      !/^[\x20-\x7e]*$/.test(block.content) ||
+      retain > Array.from(block.content).length
+    ) {
+      return false;
+    }
+
+    const selectionEnd =
+      selection.endRow * this.#terminal.cols + selection.endColumn;
+    const retainedEnd = range.start * this.#terminal.cols + retain;
+    return selectionEnd <= retainedEnd;
   }
 
   #markerSelectionSnapshot(
