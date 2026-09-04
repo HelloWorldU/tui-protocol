@@ -26,8 +26,8 @@ type SelectionEndpointAnchor =
       readonly offset: number;
     }
   | {
-      readonly kind: "marker";
-      readonly column: number;
+      readonly kind: "logicalLine";
+      readonly offset: number;
       readonly marker: IMarker;
     };
 
@@ -76,24 +76,31 @@ export class BrowserSelectionHistory {
   }
 
   resize(cols: number, rows: number): void {
-    const selection = this.#terminal.hasSelection()
-      ? this.#logicalSelectionSnapshot()
+    const position = this.#terminal.hasSelection()
+      ? this.#selectionSnapshot()
       : undefined;
+    const logicalSelection =
+      position === undefined
+        ? undefined
+        : this.#blockLogicalSelectionSnapshot(position);
+    const endpointSelection =
+      position === undefined || logicalSelection !== undefined
+        ? undefined
+        : this.#retainedEndpointSelectionSnapshot(position);
 
-    this.#terminal.resize(cols, rows);
+    try {
+      this.#terminal.resize(cols, rows);
 
-    if (selection !== undefined) {
-      const range = this.#history.range(selection.blockId);
-      if (range === undefined) {
+      if (logicalSelection !== undefined) {
+        this.#restoreLogicalSelection(logicalSelection);
+      } else if (endpointSelection !== undefined) {
+        this.#restoreEndpointSelection(endpointSelection);
+      } else if (position !== undefined) {
         this.#terminal.clearSelection();
-      } else {
-        const rowOffset = Math.floor(selection.startOffset / cols);
-        const column = selection.startOffset % cols;
-        this.#terminal.select(
-          column,
-          range.start + rowOffset,
-          selection.endOffset - selection.startOffset,
-        );
+      }
+    } finally {
+      if (endpointSelection !== undefined) {
+        this.#disposeEndpointSelection(endpointSelection);
       }
     }
 
@@ -134,6 +141,11 @@ export class BrowserSelectionHistory {
         targetBefore,
         selection,
       );
+      if (endpointSelection === undefined) {
+        this.#terminal.clearSelection();
+        await this.#history.renderAccepted(operation);
+        return;
+      }
       try {
         await this.#history.renderAccepted(operation);
         this.#restoreEndpointSelection(endpointSelection);
@@ -148,7 +160,7 @@ export class BrowserSelectionHistory {
     if (intersectsTarget) {
       const logicalSelection =
         operation.type === "replaceSuffix"
-          ? this.#blockLogicalSelectionSnapshot()
+          ? this.#blockLogicalSelectionSnapshot(selection)
           : undefined;
       if (
         operation.type === "replaceSuffix" &&
@@ -173,6 +185,11 @@ export class BrowserSelectionHistory {
           targetBefore,
           selection,
         );
+        if (endpointSelection === undefined) {
+          this.#terminal.clearSelection();
+          await this.#history.renderAccepted(operation);
+          return;
+        }
         try {
           await this.#history.renderAccepted(operation);
           this.#restoreEndpointSelection(endpointSelection);
@@ -225,22 +242,9 @@ export class BrowserSelectionHistory {
     };
   }
 
-  #logicalSelectionSnapshot(): LogicalSelectionSnapshot {
-    const selection = this.#blockLogicalSelectionSnapshot();
-    if (selection !== undefined) {
-      return selection;
-    }
-
-    throw new Error(
-      "Resize selection mapping requires one selection inside one retained Block.",
-    );
-  }
-
-  #blockLogicalSelectionSnapshot(): LogicalSelectionSnapshot | undefined {
-    const position = this.#selectionSnapshot();
-    if (position === undefined) {
-      throw new Error("The terminal reported a selection without coordinates.");
-    }
+  #blockLogicalSelectionSnapshot(
+    position: SelectionSnapshot,
+  ): LogicalSelectionSnapshot | undefined {
     const selectionStart =
       position.row * this.#terminal.cols + position.column;
     const selectionEnd = selectionStart + position.length;
@@ -271,6 +275,53 @@ export class BrowserSelectionHistory {
     }
 
     return undefined;
+  }
+
+  #retainedEndpointSelectionSnapshot(
+    selection: SelectionSnapshot,
+  ): EndpointSelectionSnapshot | undefined {
+    const start = this.#selectionEndpointAnchorForAnyBlock(
+      selection.column,
+      selection.row,
+    );
+    let end: SelectionEndpointAnchor | undefined;
+    try {
+      end = this.#selectionEndpointAnchorForAnyBlock(
+        selection.endColumn,
+        selection.endRow,
+      );
+    } catch (error) {
+      this.#disposeSelectionEndpoint(start);
+      throw error;
+    }
+    if (start === undefined || end === undefined) {
+      this.#disposeSelectionEndpoint(start);
+      this.#disposeSelectionEndpoint(end);
+      return undefined;
+    }
+    return { start, end };
+  }
+
+  #selectionEndpointAnchorForAnyBlock(
+    column: number,
+    row: number,
+  ): SelectionEndpointAnchor | undefined {
+    for (const block of this.#history.blocks()) {
+      const range = this.#history.range(block.id);
+      if (
+        range !== undefined &&
+        row >= range.start &&
+        row < range.start + range.lineCount
+      ) {
+        return this.#blockSelectionEndpointAnchor(
+          block.id,
+          range,
+          column,
+          row,
+        );
+      }
+    }
+    return this.#logicalLineSelectionEndpointAnchor(column, row);
   }
 
   #selectionEndsInRetainedPrefix(
@@ -313,21 +364,31 @@ export class BrowserSelectionHistory {
     blockId: string,
     range: Readonly<{ start: number; lineCount: number }>,
     selection: SelectionSnapshot,
-  ): EndpointSelectionSnapshot {
-    return {
-      start: this.#selectionEndpointAnchor(
-        blockId,
-        range,
-        selection.column,
-        selection.row,
-      ),
-      end: this.#selectionEndpointAnchor(
+  ): EndpointSelectionSnapshot | undefined {
+    const start = this.#selectionEndpointAnchor(
+      blockId,
+      range,
+      selection.column,
+      selection.row,
+    );
+    let end: SelectionEndpointAnchor | undefined;
+    try {
+      end = this.#selectionEndpointAnchor(
         blockId,
         range,
         selection.endColumn,
         selection.endRow,
-      ),
-    };
+      );
+    } catch (error) {
+      this.#disposeSelectionEndpoint(start);
+      throw error;
+    }
+    if (start === undefined || end === undefined) {
+      this.#disposeSelectionEndpoint(start);
+      this.#disposeSelectionEndpoint(end);
+      return undefined;
+    }
+    return { start, end };
   }
 
   #selectionEndpointAnchor(
@@ -335,28 +396,105 @@ export class BrowserSelectionHistory {
     range: Readonly<{ start: number; lineCount: number }>,
     column: number,
     row: number,
-  ): SelectionEndpointAnchor {
-    if (row >= range.start && row < range.start + range.lineCount) {
-      const block = this.#history
-        .blocks()
-        .find((candidate) => candidate.id === blockId);
-      const offset = (row - range.start) * this.#terminal.cols + column;
-      if (
-        block !== undefined &&
-        /^[\x20-\x7e]*$/.test(block.content) &&
-        offset <= Array.from(block.content).length
-      ) {
-        return { kind: "block", blockId, offset };
-      }
+  ): SelectionEndpointAnchor | undefined {
+    const blockAnchor = this.#blockSelectionEndpointAnchor(
+      blockId,
+      range,
+      column,
+      row,
+    );
+    if (blockAnchor !== undefined) {
+      return blockAnchor;
     }
 
+    return this.#logicalLineSelectionEndpointAnchor(column, row);
+  }
+
+  #blockSelectionEndpointAnchor(
+    blockId: string,
+    range: Readonly<{ start: number; lineCount: number }>,
+    column: number,
+    row: number,
+  ): SelectionEndpointAnchor | undefined {
+    if (row < range.start || row >= range.start + range.lineCount) {
+      return undefined;
+    }
+    const block = this.#history
+      .blocks()
+      .find((candidate) => candidate.id === blockId);
+    const offset = (row - range.start) * this.#terminal.cols + column;
+    return block !== undefined &&
+      /^[\x20-\x7e]*$/.test(block.content) &&
+      offset <= Array.from(block.content).length
+      ? { kind: "block", blockId, offset }
+      : undefined;
+  }
+
+  #logicalLineSelectionEndpointAnchor(
+    column: number,
+    row: number,
+  ): SelectionEndpointAnchor | undefined {
     const buffer = this.#terminal.buffer.active;
+    if (
+      row < 0 ||
+      row >= buffer.length ||
+      column < 0 ||
+      column > this.#terminal.cols
+    ) {
+      return undefined;
+    }
+
+    let firstRow = row;
+    let line = buffer.getLine(firstRow);
+    if (line === undefined) {
+      return undefined;
+    }
+    while (firstRow > 0 && line.isWrapped) {
+      firstRow -= 1;
+      line = buffer.getLine(firstRow);
+      if (line === undefined) {
+        return undefined;
+      }
+    }
+    if (line.isWrapped || !this.#logicalLineIsPrintableAscii(firstRow)) {
+      return undefined;
+    }
+
+    const endpointLine = buffer.getLine(row);
+    const nextLine = buffer.getLine(row + 1);
+    if (endpointLine === undefined) {
+      return undefined;
+    }
+    const endpointLength = endpointLine.translateToString(true).length;
+    if (!nextLine?.isWrapped && column > endpointLength) {
+      return undefined;
+    }
+
     const cursorRow = buffer.baseY + buffer.cursorY;
     return {
-      kind: "marker",
-      column,
-      marker: this.#terminal.registerMarker(row - cursorRow),
+      kind: "logicalLine",
+      offset: (row - firstRow) * this.#terminal.cols + column,
+      marker: this.#terminal.registerMarker(firstRow - cursorRow),
     };
+  }
+
+  #logicalLineIsPrintableAscii(firstRow: number): boolean {
+    const buffer = this.#terminal.buffer.active;
+    let row = firstRow;
+    while (true) {
+      const line = buffer.getLine(row);
+      if (
+        line === undefined ||
+        !/^[\x20-\x7e]*$/.test(line.translateToString(true))
+      ) {
+        return false;
+      }
+      const nextLine = buffer.getLine(row + 1);
+      if (!nextLine?.isWrapped) {
+        return true;
+      }
+      row += 1;
+    }
   }
 
   #restoreEndpointSelection(selection: EndpointSelectionSnapshot): void {
@@ -380,10 +518,8 @@ export class BrowserSelectionHistory {
   #resolveSelectionEndpoint(
     endpoint: SelectionEndpointAnchor,
   ): { readonly column: number; readonly row: number } | undefined {
-    if (endpoint.kind === "marker") {
-      return endpoint.marker.isDisposed
-        ? undefined
-        : { column: endpoint.column, row: endpoint.marker.line };
+    if (endpoint.kind === "logicalLine") {
+      return this.#resolveLogicalLineSelectionEndpoint(endpoint);
     }
     const range = this.#history.range(endpoint.blockId);
     if (range === undefined) {
@@ -395,12 +531,64 @@ export class BrowserSelectionHistory {
     };
   }
 
-  #disposeEndpointSelection(selection: EndpointSelectionSnapshot): void {
-    if (selection.start.kind === "marker") {
-      selection.start.marker.dispose();
+  #resolveLogicalLineSelectionEndpoint(
+    endpoint: Extract<SelectionEndpointAnchor, { readonly kind: "logicalLine" }>,
+  ): { readonly column: number; readonly row: number } | undefined {
+    if (endpoint.marker.isDisposed) {
+      return undefined;
     }
-    if (selection.end.kind === "marker") {
-      selection.end.marker.dispose();
+
+    const buffer = this.#terminal.buffer.active;
+    let row = endpoint.marker.line;
+    const firstLine = buffer.getLine(row);
+    if (
+      firstLine === undefined ||
+      firstLine.isWrapped ||
+      !this.#logicalLineIsPrintableAscii(row)
+    ) {
+      return undefined;
+    }
+
+    let remaining = endpoint.offset;
+    while (true) {
+      const line = buffer.getLine(row);
+      if (line === undefined) {
+        return undefined;
+      }
+      const nextLine = buffer.getLine(row + 1);
+      const continues = nextLine?.isWrapped === true;
+      if (remaining < this.#terminal.cols) {
+        const lineLength = line.translateToString(true).length;
+        return continues || remaining <= lineLength
+          ? { column: remaining, row }
+          : undefined;
+      }
+      if (remaining === this.#terminal.cols) {
+        if (continues) {
+          return { column: 0, row: row + 1 };
+        }
+        return line.translateToString(true).length === this.#terminal.cols
+          ? { column: this.#terminal.cols, row }
+          : undefined;
+      }
+      if (!continues) {
+        return undefined;
+      }
+      remaining -= this.#terminal.cols;
+      row += 1;
+    }
+  }
+
+  #disposeEndpointSelection(selection: EndpointSelectionSnapshot): void {
+    this.#disposeSelectionEndpoint(selection.start);
+    this.#disposeSelectionEndpoint(selection.end);
+  }
+
+  #disposeSelectionEndpoint(
+    endpoint: SelectionEndpointAnchor | undefined,
+  ): void {
+    if (endpoint?.kind === "logicalLine") {
+      endpoint.marker.dispose();
     }
   }
 

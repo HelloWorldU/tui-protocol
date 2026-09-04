@@ -40,6 +40,7 @@ export interface MixedFixture {
   readonly endpoint: XtermProtocolEndpoint;
   readonly ingress: XtermMixedStreamIngress;
   readonly terminal: Terminal;
+  resize(cols: number, rows: number): void;
   takeResult(): EndpointResult;
   dispose(): void;
 }
@@ -168,6 +169,9 @@ export async function createMixedFixture(
     endpoint,
     ingress,
     terminal: fixtureTerminal,
+    resize(cols: number, rows: number): void {
+      history.resize(cols, rows);
+    },
     takeResult,
     dispose(): void {
       ingress.dispose();
@@ -414,6 +418,77 @@ export function copySelection(source: Terminal): string | undefined {
   return copied;
 }
 
+export function selectAcrossRows(
+  terminal: Terminal,
+  startColumn: number,
+  startRow: number,
+  endColumn: number,
+  endRow: number,
+): void {
+  terminal.select(
+    startColumn,
+    startRow,
+    (endRow - startRow) * terminal.cols + endColumn - startColumn,
+  );
+}
+
+export function assertSelectionAndCopy(
+  terminal: Terminal,
+  expected: string,
+  label: string,
+): void {
+  assertEqual(
+    normalizeNewlines(terminal.getSelection()),
+    expected,
+    `${label} text`,
+  );
+  assertEqual(
+    normalizeNewlines(copySelection(terminal)),
+    expected,
+    `${label} copy event`,
+  );
+}
+
+export function assertSelectionPosition(
+  terminal: Terminal,
+  startColumn: number,
+  startRow: number,
+  endColumn: number,
+  endRow: number,
+  label: string,
+): void {
+  const position = terminal.getSelectionPosition();
+  assertEqual(position?.start.x, startColumn, `${label} start column`);
+  assertEqual(position?.start.y, startRow, `${label} start row`);
+  assertEqual(position?.end.x, endColumn, `${label} end column`);
+  assertEqual(position?.end.y, endRow, `${label} end row`);
+}
+
+export function assertNoMixedErrors(
+  fixture: MixedFixture,
+  label: string,
+): void {
+  const result = fixture.takeResult();
+  assertEqual(result.diagnostics.length, 0, `${label} diagnostics`);
+  assertEqual(result.responseFrames.length, 0, `${label} response frames`);
+}
+
+export function assertBufferRows(
+  terminal: Terminal,
+  expected: readonly string[],
+): void {
+  const buffer = terminal.buffer.normal;
+  const actual: string[] = [];
+  for (let index = 0; index < buffer.length; index += 1) {
+    actual.push(buffer.getLine(index)?.translateToString(true) ?? "");
+  }
+  assertEqual(
+    JSON.stringify(actual),
+    JSON.stringify(expected),
+    "normal Buffer rows",
+  );
+}
+
 export function requiredTextarea(source: Terminal): HTMLTextAreaElement {
   if (source.textarea === undefined) {
     throw new Error("xterm did not create its input textarea.");
@@ -464,4 +539,8 @@ export function assertTrue(value: boolean, label: string): void {
   if (!value) {
     throw new Error(`${label}: expected true, received false.`);
   }
+}
+
+function normalizeNewlines(value: string | undefined): string | undefined {
+  return value?.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
 }

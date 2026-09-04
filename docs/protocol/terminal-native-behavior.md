@@ -191,16 +191,17 @@ limitations:
 - The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
   composes all five current Block Operations with the tested browser states,
   resize and reflow, and the same narrow complete-Block capacity boundary. It
-  also exercises seven 20-column printable-ASCII selection fixtures, each
-  across a single managed/unmanaged boundary, through the raw mixed-ingress
-  path. Six are unwrapped; one Extend fixture introduces one soft wrap.
+  also exercises eleven printable-ASCII mixed-selection fixtures through the
+  raw mixed-ingress path: seven single-boundary Operation fixtures, one
+  two-boundary multi-wrap Extend fixture, one mixed-boundary resize round trip,
+  and two exact complete-leading-Block capacity fixtures.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
 compatibility, a public terminal API, arbitrary mixed-stream ingress,
 partial-Block or Append-driven eviction, non-ASCII position mapping, or
-production renderer failure atomicity. Successful capacity eviction across
-mixed managed and unmanaged history is also not demonstrated.
+production renderer failure atomicity. Capacity eviction that must remove
+unmanaged rows is also not demonstrated.
 
 ## Current Scope
 
@@ -218,12 +219,17 @@ incomplete protocol frame assembly remains a framing question.
 
 The current prototypes test the unmanaged-output reading-anchor guarantee only
 for one retained ASCII row at the viewport top while an earlier Block grows and
-shrinks. Cross-boundary selection evidence is limited to seven 20-column
-printable-ASCII fixtures: two exercise preserving or clearing through Update,
-two exercise whether an Extend fragment falls inside or outside the selection,
-two exercise preserving a retained-prefix intersection or clearing an
-intersection with a removed suffix through ReplaceSuffix, and one preserves the
-selection through Seal and a later Append. Other endpoint positions, multiple
-boundaries, Unicode, embedded line breaks within either side of the selection,
-multiple wraps, resize/reflow, capacity interactions, mouse selection, and
-operating-system clipboard behavior remain untested.
+shrinks. Cross-boundary selection evidence is limited to eleven printable-ASCII
+fixtures: seven single-boundary Operation fixtures, one two-boundary Extend
+fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize round trip,
+and two capacity fixtures whose trim exactly matches one complete leading
+managed Block. Unicode, embedded line breaks within either selected side,
+other resize dimensions, capacity trimming that reaches unmanaged or
+partial-Block rows, mouse selection, and operating-system clipboard behavior
+remain untested.
+
+This draft does not yet define whether a selection endpoint exactly at a
+terminal-supplied managed/unmanaged boundary stays before or after content
+inserted at that position. It also does not define which separator copying uses
+between adjacent managed Blocks. These cases require protocol decisions before
+corresponding behavior can be claimed.

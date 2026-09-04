@@ -1,10 +1,12 @@
-import type { Terminal } from "@xterm/xterm";
-
 import {
   append,
   assertBlockContent,
   assertBlockLifecycle,
+  assertBufferRows,
   assertEqual,
+  assertNoMixedErrors,
+  assertSelectionAndCopy,
+  assertSelectionPosition,
   concatenate,
   copySelection,
   createMixedFixture,
@@ -13,13 +15,11 @@ import {
   replaceSuffix,
   requiredRange,
   seal,
+  selectAcrossRows,
   text,
   update,
 } from "../scenario-harness.ts";
-import type {
-  MixedFixture,
-  ScenarioResult,
-} from "../scenario-harness.ts";
+import type { ScenarioResult } from "../scenario-harness.ts";
 
 export async function runEarlierUpdatePreservesMixedSelectionScenario(): Promise<ScenarioResult> {
   const fixture = await createMixedFixture({ cols: 20, rows: 4 });
@@ -763,73 +763,4 @@ export async function runSelectedUpdateClearsMixedSelectionScenario(): Promise<S
   } finally {
     fixture.dispose();
   }
-}
-
-function selectAcrossRows(
-  terminal: Terminal,
-  startColumn: number,
-  startRow: number,
-  endColumn: number,
-  endRow: number,
-): void {
-  terminal.select(
-    startColumn,
-    startRow,
-    (endRow - startRow) * terminal.cols + endColumn - startColumn,
-  );
-}
-
-function assertSelectionAndCopy(
-  terminal: Terminal,
-  expected: string,
-  label: string,
-): void {
-  assertEqual(
-    normalizeNewlines(terminal.getSelection()),
-    expected,
-    `${label} text`,
-  );
-  assertEqual(
-    normalizeNewlines(copySelection(terminal)),
-    expected,
-    `${label} copy event`,
-  );
-}
-
-function assertSelectionPosition(
-  terminal: Terminal,
-  startColumn: number,
-  startRow: number,
-  endColumn: number,
-  endRow: number,
-  label: string,
-): void {
-  const position = terminal.getSelectionPosition();
-  assertEqual(position?.start.x, startColumn, `${label} start column`);
-  assertEqual(position?.start.y, startRow, `${label} start row`);
-  assertEqual(position?.end.x, endColumn, `${label} end column`);
-  assertEqual(position?.end.y, endRow, `${label} end row`);
-}
-
-function assertNoMixedErrors(fixture: MixedFixture, label: string): void {
-  const result = fixture.takeResult();
-  assertEqual(result.diagnostics.length, 0, `${label} diagnostics`);
-  assertEqual(result.responseFrames.length, 0, `${label} response frames`);
-}
-
-function assertBufferRows(terminal: Terminal, expected: readonly string[]): void {
-  const buffer = terminal.buffer.normal;
-  const actual: string[] = [];
-  for (let index = 0; index < buffer.length; index += 1) {
-    actual.push(buffer.getLine(index)?.translateToString(true) ?? "");
-  }
-  assertEqual(
-    JSON.stringify(actual),
-    JSON.stringify(expected),
-    "normal Buffer rows",
-  );
-}
-
-function normalizeNewlines(value: string | undefined): string | undefined {
-  return value?.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
 }

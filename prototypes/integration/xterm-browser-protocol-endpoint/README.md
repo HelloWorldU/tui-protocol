@@ -20,9 +20,9 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Thirty-one browser scenarios negotiate the baseline capability and open a
+Thirty-five browser scenarios negotiate the baseline capability and open a
 Context through encoded OSC Messages. Twenty-four use the protocol-only
-endpoint path. Each of seven additional scenarios uses an independent raw
+endpoint path. Each of eleven additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
 
@@ -86,7 +86,18 @@ they demonstrate that:
   ASCII row and includes the removed suffix, ReplaceSuffix clears the complete
   selection and copy source; and
 - sealing the managed side of a cross-boundary selection and then appending a
-  later Block changes neither endpoint nor the copy result.
+  later Block changes neither endpoint nor the copy result;
+- when a selection crosses two managed/unmanaged boundaries, Extend can add two
+  soft wraps between its endpoints without adding copied newlines for those
+  wraps, while each managed/unmanaged boundary contributes one copied newline;
+- a tested `20`-to-`10`-to-`20`-column resize round trip reflows both managed
+  and unmanaged text while keeping both endpoints attached to the same logical
+  ASCII offsets and preserving the copy result;
+- capacity eviction that removes exactly one complete managed Block before a
+  mixed selection keeps both retained endpoints and the copy result attached;
+  and
+- capacity eviction that removes the managed start of a mixed selection clears
+  the complete selection and copy source while retaining its unmanaged row.
 
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
@@ -100,9 +111,10 @@ requirements.
   search addon presents its current match through the terminal selection.
 - Content metadata is not composed because the protocol has not defined an
   optional styled content representation.
-- The scenarios exercise all five current Block Operation kinds, one fixed
-  `20`-to-`10`-column resize, and one Update-driven complete-Block capacity
-  eviction with printable ASCII fixtures, but only the outcomes listed above.
+- The protocol-only scenarios exercise all five current Block Operation kinds,
+  one fixed `20`-to-`10`-column resize, and one Update-driven complete-Block
+  capacity eviction with printable ASCII fixtures, but only the outcomes listed
+  above.
 - Partial-Block trimming, Append-driven eviction, other dimensions, and
   non-ASCII content remain outside this composed experiment.
 - Capacity eviction removes the tested Block's rendered range while Session
@@ -118,12 +130,16 @@ requirements.
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
   experimental fixtures, not a proposed public Terminal API.
-- The mixed-stream selection evidence covers seven 20-column printable-ASCII
-  fixtures and synthetic browser copy events. Six fixtures are unwrapped; one
-  Extend fixture introduces exactly one soft wrap. Other endpoint positions,
-  multiple boundaries, Unicode, embedded line breaks within either side of the
-  selection, multiple wraps, resize/reflow, capacity interactions, mouse
-  selection, and the operating-system clipboard remain untested.
+- The mixed-stream selection evidence covers eleven printable-ASCII fixtures
+  and synthetic browser copy events: seven single-boundary Operation fixtures
+  at `20` columns, one two-boundary Extend fixture with two soft wraps, one
+  `20`-to-`10`-to-`20`-column resize round trip, and two capacity fixtures whose
+  trim exactly matches one complete leading managed Block. Selection endpoint
+  affinity at a terminal-supplied boundary and copying between adjacent managed
+  Blocks are not yet defined or tested. Unicode, embedded line breaks within
+  either selected side, other resize dimensions, capacity trimming that reaches
+  unmanaged or partial-Block rows, mouse selection, and the operating-system
+  clipboard remain untested.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

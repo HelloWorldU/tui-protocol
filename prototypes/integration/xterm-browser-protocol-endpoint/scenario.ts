@@ -28,6 +28,12 @@ import {
   runSelectedUpdateClearsMixedSelectionScenario,
 } from "./scenarios/mixed-ingress.ts";
 import {
+  runCapacityEvictsEarlierBlockAndPreservesMixedSelectionScenario,
+  runCapacityEvictsSelectedBlockAndClearsMixedSelectionScenario,
+} from "./scenarios/mixed-selection-capacity.ts";
+import { runExtendIncludesFragmentAcrossTwoMixedBoundariesScenario } from "./scenarios/mixed-selection-layout.ts";
+import { runResizePreservesMixedSelectionScenario } from "./scenarios/mixed-selection-resize.ts";
+import {
   runReplaceSuffixActiveInputAndCompositionScenario,
   runReplaceSuffixRemovedSelectionScenario,
   runReplaceSuffixRetainedSelectionAndReadingScenario,
@@ -107,6 +113,10 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runReplaceSuffixPreservesMixedPrefixSelectionScenario(),
     await runReplaceSuffixClearsMixedRemovedSuffixSelectionScenario(),
     await runAppendAndSealPreserveMixedSelectionScenario(),
+    await runExtendIncludesFragmentAcrossTwoMixedBoundariesScenario(),
+    await runResizePreservesMixedSelectionScenario(),
+    await runCapacityEvictsEarlierBlockAndPreservesMixedSelectionScenario(),
+    await runCapacityEvictsSelectedBlockAndClearsMixedSelectionScenario(),
   ];
 }
 

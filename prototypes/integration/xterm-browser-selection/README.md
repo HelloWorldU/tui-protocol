@@ -79,20 +79,24 @@ content.
 
 The selection wrapper is also composed by the [browser protocol endpoint
 prototype](../xterm-browser-protocol-endpoint/README.md). That experiment uses
-the raw mixed-ingress path to exercise seven 20-column printable-ASCII fixtures,
-each crossing one managed/unmanaged boundary. Six are unwrapped; one Extend
-fixture introduces one soft wrap. These scenarios are not part of this
-standalone browser run.
+the raw mixed-ingress path to exercise eleven printable-ASCII fixtures: seven
+single-boundary Operation fixtures at `20` columns, one two-boundary Extend
+fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize round trip,
+and two capacity fixtures whose trim exactly matches one complete leading
+managed Block. These scenarios are not part of this standalone browser run.
 
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
   selection, and cross-browser behavior are not exercised.
-- A selection spanning multiple Blocks is not implemented or tested.
-- Mixed-boundary resize/reflow is not implemented or tested. Capacity eviction,
-  Unicode, embedded line breaks within either side of the selection, multiple
-  wraps, multiple managed/unmanaged boundaries, and other selection positions
-  are also untested.
+- Selection endpoint affinity at a terminal-supplied managed/unmanaged boundary
+  and copying between adjacent managed Blocks are not defined or tested.
+- Mixed-boundary resize/reflow is limited to one
+  `20`-to-`10`-to-`20`-column round trip. Mixed capacity evidence is limited to
+  trimming exactly one complete leading managed Block and does not exercise a
+  trim that reaches unmanaged rows.
+- Unicode, embedded line breaks within either side of the selection, other
+  resize dimensions, and other selection positions remain untested.
 - Partial-Block capacity eviction and Append-driven eviction remain outside the
   selection experiment.
 - Resize selection mapping for line breaks, wide or combining characters, and
