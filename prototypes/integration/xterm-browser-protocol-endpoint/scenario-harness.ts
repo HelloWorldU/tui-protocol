@@ -363,7 +363,7 @@ export function assertBlockContent(
 }
 
 export function assertBlockLifecycle(
-  fixture: Fixture,
+  fixture: ObservableFixture,
   blockId: string,
   expected: "mutable" | "sealed",
 ): void {

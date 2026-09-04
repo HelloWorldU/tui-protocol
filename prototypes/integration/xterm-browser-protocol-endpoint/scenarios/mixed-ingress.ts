@@ -3,6 +3,7 @@ import type { Terminal } from "@xterm/xterm";
 import {
   append,
   assertBlockContent,
+  assertBlockLifecycle,
   assertEqual,
   concatenate,
   copySelection,
@@ -11,6 +12,7 @@ import {
   extend,
   replaceSuffix,
   requiredRange,
+  seal,
   text,
   update,
 } from "../scenario-harness.ts";
@@ -268,6 +270,186 @@ export async function runExtendIncludesFragmentInMixedSelectionScenario(): Promi
       name: "Extend Adds Its Fragment to a Managed-to-Unmanaged Selection",
       detail:
         "both endpoints stayed attached while the appended fragment entered the copy result",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+export async function runExtendExcludesFragmentAfterMixedSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createMixedFixture({ cols: 20, rows: 4 });
+  try {
+    await fixture.ingress.push(
+      concatenate([
+        text("ordinary\r\n"),
+        encodeInput(
+          append(fixture.contextId, "1", "managed", "managed", "mutable"),
+          3,
+        ),
+        encodeInput(
+          append(fixture.contextId, "2", "tail", "tail", "sealed"),
+          4,
+        ),
+      ]),
+    );
+    assertNoMixedErrors(fixture, "initial reverse Extend boundary stream");
+
+    const managedBefore = requiredRange(fixture, "managed");
+    selectAcrossRows(fixture.terminal, 3, 0, 4, managedBefore.start);
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      0,
+      4,
+      managedBefore.start,
+      "mixed selection before trailing Extend",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "inary\nmana",
+      "mixed selection before trailing Extend",
+    );
+
+    await fixture.ingress.push(
+      encodeInput(
+        extend(fixture.contextId, "3", "managed", "1", "-new"),
+        5,
+      ),
+    );
+    assertNoMixedErrors(fixture, "Extend after the selection endpoint");
+
+    const managedAfter = requiredRange(fixture, "managed");
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      0,
+      4,
+      managedAfter.start,
+      "mixed selection after trailing Extend",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "inary\nmana",
+      "mixed selection after trailing Extend",
+    );
+    assertBufferRows(fixture.terminal, [
+      "ordinary",
+      "managed-new",
+      "tail",
+      "",
+    ]);
+    assertBlockContent(fixture, "managed", "managed-new");
+    assertEqual(
+      fixture.endpoint.context(fixture.contextId)?.state,
+      "open",
+      "Context after extending beyond the mixed selection",
+    );
+    return {
+      name:
+        "Extend Preserves an Unmanaged-to-Managed Selection Ending Before the Appended Fragment",
+      detail:
+        "both endpoints and copied text stayed unchanged while the new fragment remained outside the selection",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+export async function runAppendAndSealPreserveMixedSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createMixedFixture({ cols: 20, rows: 4 });
+  try {
+    await fixture.ingress.push(
+      concatenate([
+        encodeInput(
+          append(fixture.contextId, "1", "managed", "managed", "mutable"),
+          3,
+        ),
+        text("ordinary\r\n"),
+        encodeInput(
+          append(fixture.contextId, "2", "tail", "tail", "sealed"),
+          4,
+        ),
+      ]),
+    );
+    assertNoMixedErrors(fixture, "initial Append and Seal boundary stream");
+
+    const managed = requiredRange(fixture, "managed");
+    const ordinaryRow = managed.start + managed.lineCount;
+    selectAcrossRows(fixture.terminal, 3, managed.start, 4, ordinaryRow);
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      managed.start,
+      4,
+      ordinaryRow,
+      "mixed selection before Seal",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "aged\nordi",
+      "mixed selection before Seal",
+    );
+
+    await fixture.ingress.push(
+      encodeInput(seal(fixture.contextId, "3", "managed"), 5),
+    );
+    assertNoMixedErrors(fixture, "selected Block Seal");
+    assertBlockLifecycle(fixture, "managed", "sealed");
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      managed.start,
+      4,
+      ordinaryRow,
+      "mixed selection after Seal",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "aged\nordi",
+      "mixed selection after Seal",
+    );
+
+    await fixture.ingress.push(
+      encodeInput(
+        append(fixture.contextId, "4", "later", "later", "sealed"),
+        6,
+      ),
+    );
+    assertNoMixedErrors(fixture, "tail Append after the mixed selection");
+    assertSelectionPosition(
+      fixture.terminal,
+      3,
+      managed.start,
+      4,
+      ordinaryRow,
+      "mixed selection after tail Append",
+    );
+    assertSelectionAndCopy(
+      fixture.terminal,
+      "aged\nordi",
+      "mixed selection after tail Append",
+    );
+    assertBufferRows(fixture.terminal, [
+      "managed",
+      "ordinary",
+      "tail",
+      "later",
+      "",
+    ]);
+    assertEqual(
+      requiredRange(fixture, "later").start,
+      3,
+      "later Block start after Append",
+    );
+    assertEqual(
+      fixture.endpoint.context(fixture.contextId)?.state,
+      "open",
+      "Context after preserving the selection through Seal and Append",
+    );
+    return {
+      name: "Seal and Tail Append Preserve a Managed-to-Unmanaged Selection",
+      detail:
+        "neither Operation changed the selection endpoints or copied text",
     };
   } finally {
     fixture.dispose();

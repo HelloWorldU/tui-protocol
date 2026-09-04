@@ -191,9 +191,9 @@ limitations:
 - The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
   composes all five current Block Operations with the tested browser states,
   resize and reflow, and the same narrow complete-Block capacity boundary. It
-  also exercises five 20-column printable-ASCII selection fixtures, each across
-  a single managed/unmanaged boundary, through the raw mixed-ingress path. Four
-  are unwrapped; the Extend fixture introduces one soft wrap.
+  also exercises seven 20-column printable-ASCII selection fixtures, each
+  across a single managed/unmanaged boundary, through the raw mixed-ingress
+  path. Six are unwrapped; one Extend fixture introduces one soft wrap.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
@@ -218,12 +218,12 @@ incomplete protocol frame assembly remains a framing question.
 
 The current prototypes test the unmanaged-output reading-anchor guarantee only
 for one retained ASCII row at the viewport top while an earlier Block grows and
-shrinks. Cross-boundary selection evidence is limited to five 20-column
+shrinks. Cross-boundary selection evidence is limited to seven 20-column
 printable-ASCII fixtures: two exercise preserving or clearing through Update,
-one preserves both endpoints while Extend introduces exactly one soft wrap, and
+two exercise whether an Extend fragment falls inside or outside the selection,
 two exercise preserving a retained-prefix intersection or clearing an
-intersection with a removed suffix through ReplaceSuffix. Cross-boundary Append
-and Seal, other positions, multiple boundaries, Unicode, embedded line breaks
-within either side of the selection, multiple wraps, resize/reflow, capacity
-interactions, mouse selection, and operating-system clipboard behavior remain
-untested.
+intersection with a removed suffix through ReplaceSuffix, and one preserves the
+selection through Seal and a later Append. Other endpoint positions, multiple
+boundaries, Unicode, embedded line breaks within either side of the selection,
+multiple wraps, resize/reflow, capacity interactions, mouse selection, and
+operating-system clipboard behavior remain untested.

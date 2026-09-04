@@ -19,7 +19,9 @@ import {
   runExtendSelectionAndReadingScenario,
 } from "./scenarios/extend.ts";
 import {
+  runAppendAndSealPreserveMixedSelectionScenario,
   runEarlierUpdatePreservesMixedSelectionScenario,
+  runExtendExcludesFragmentAfterMixedSelectionScenario,
   runExtendIncludesFragmentInMixedSelectionScenario,
   runReplaceSuffixClearsMixedRemovedSuffixSelectionScenario,
   runReplaceSuffixPreservesMixedPrefixSelectionScenario,
@@ -101,8 +103,10 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runEarlierUpdatePreservesMixedSelectionScenario(),
     await runSelectedUpdateClearsMixedSelectionScenario(),
     await runExtendIncludesFragmentInMixedSelectionScenario(),
+    await runExtendExcludesFragmentAfterMixedSelectionScenario(),
     await runReplaceSuffixPreservesMixedPrefixSelectionScenario(),
     await runReplaceSuffixClearsMixedRemovedSuffixSelectionScenario(),
+    await runAppendAndSealPreserveMixedSelectionScenario(),
   ];
 }
 

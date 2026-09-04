@@ -20,9 +20,9 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Twenty-nine browser scenarios negotiate the baseline capability and open a
+Thirty-one browser scenarios negotiate the baseline capability and open a
 Context through encoded OSC Messages. Twenty-four use the protocol-only
-endpoint path. Each of five additional scenarios uses an independent raw
+endpoint path. Each of seven additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
 
@@ -63,25 +63,30 @@ they demonstrate that:
   history-reading position, selection, copy source, and search match;
 - the same capacity boundary clears a selection or search match inside the
   evicted Block, moves an evicted reading position to the next retained Block
-  without following the tail, and leaves retained text searchable; and
+  without following the tail, and leaves retained text searchable;
 - complete-Block capacity eviction leaves current input text, cursor, and focus
-  unchanged.
+  unchanged;
 - when a selection crosses from a managed Block into one following unmanaged
   ASCII row, growing and then shrinking an earlier Block moves the selection
   with the same content and preserves a copy result containing exactly one
-  normalized newline at the boundary; and
+  normalized newline at the boundary;
 - when a selection crosses from an unmanaged ASCII row into a managed Block,
   an Update of that Block clears the complete selection and subsequent copy
-  source while leaving the Context open; and
+  source while leaving the Context open;
 - when a selection crosses from a managed Block into a following unmanaged
   ASCII row, Extend preserves both endpoints while its appended fragment makes
   the Block one physical row taller and becomes part of the copy result;
+- when a selection crosses from an unmanaged ASCII row into a managed Block and
+  ends before its logical tail, Extend preserves both endpoints while its
+  appended fragment remains outside the copy result;
 - when a selection crosses from an unmanaged ASCII row into a managed Block's
   retained prefix, ReplaceSuffix changes only the unselected suffix and leaves
-  both endpoints and the copy result unchanged; and
+  both endpoints and the copy result unchanged;
 - when a selection crosses from a managed Block into a following unmanaged
   ASCII row and includes the removed suffix, ReplaceSuffix clears the complete
-  selection and copy source.
+  selection and copy source; and
+- sealing the managed side of a cross-boundary selection and then appending a
+  later Block changes neither endpoint nor the copy result.
 
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
@@ -113,13 +118,12 @@ requirements.
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
   experimental fixtures, not a proposed public Terminal API.
-- The mixed-stream selection evidence covers five 20-column printable-ASCII
-  fixtures and synthetic browser copy events. Four fixtures are unwrapped; the
-  Extend fixture introduces exactly one soft wrap. Cross-boundary Append and
-  Seal, other positions, multiple boundaries, Unicode, embedded line breaks
-  within either side of the selection, multiple wraps, resize/reflow, capacity
-  interactions, mouse selection, and the operating-system clipboard remain
-  untested.
+- The mixed-stream selection evidence covers seven 20-column printable-ASCII
+  fixtures and synthetic browser copy events. Six fixtures are unwrapped; one
+  Extend fixture introduces exactly one soft wrap. Other endpoint positions,
+  multiple boundaries, Unicode, embedded line breaks within either side of the
+  selection, multiple wraps, resize/reflow, capacity interactions, mouse
+  selection, and the operating-system clipboard remain untested.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

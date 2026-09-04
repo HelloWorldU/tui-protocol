@@ -218,9 +218,9 @@ implementation.
   row at the viewport top while an earlier Block grows and shrinks. Other
   unmanaged anchor positions and resize/reflow or capacity interactions remain
   untested. A separate [browser endpoint
-  composition](../xterm-browser-protocol-endpoint/README.md) exercises five
+  composition](../xterm-browser-protocol-endpoint/README.md) exercises seven
   20-column printable-ASCII selection-and-copy fixtures, each across one
-  managed/unmanaged boundary. Four are unwrapped, while the Extend fixture
+  managed/unmanaged boundary. Six are unwrapped, while one Extend fixture
   introduces one soft wrap.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
