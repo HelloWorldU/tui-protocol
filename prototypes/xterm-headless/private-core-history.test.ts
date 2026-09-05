@@ -128,7 +128,7 @@ test("resizing xterm while reading history preserves Block boundaries and the re
   xterm.dispose();
 });
 
-test("a Block range follows xterm's realized carriage-return layout so Update removes every old row", async () => {
+test("a bare CR renders two Block rows and Update removes both old rows", async () => {
   const xterm = new Terminal({
     allowProposedApi: true,
     cols: 10,
@@ -139,6 +139,7 @@ test("a Block range follows xterm's realized carriage-return layout so Update re
 
   await history.apply(append("thinking", "a\rb", "mutable"));
   assert.deepEqual(history.range("thinking"), { start: 0, lineCount: 2 });
+  assert.deepEqual(bufferRows(xterm), ["a", "b", ""]);
 
   await history.apply({ type: "update", id: "thinking", content: "done" });
 

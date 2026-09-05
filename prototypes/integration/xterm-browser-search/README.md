@@ -48,6 +48,13 @@ earlier Block preserves a retained current match, while evicting the Block
 containing the current match clears it. Text in retained Blocks remains
 searchable.
 
+The [browser endpoint's plain-text fixtures](../xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
+separately demonstrate that a visible ESC label is searchable and copies as
+that label, while its raw control sequence is not found. The search addon sees
+the terminal's display projection, not Session's raw text. Those fixtures are
+not part of this standalone ten-scenario run; literal-Tab queries and general
+Unicode search mapping remain untested.
+
 ## Not Proven
 
 - Partial-Block capacity eviction and Append-driven eviction are not tested.

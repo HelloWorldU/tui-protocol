@@ -20,9 +20,9 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Thirty-nine browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Twenty-seven use the protocol-only
-endpoint path. Each of twelve additional scenarios uses an independent raw
+Forty-four browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Thirty-one use the protocol-only
+endpoint path. Each of thirteen additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
 
@@ -112,6 +112,28 @@ they demonstrate that:
 - capacity eviction that removes the managed start of a mixed selection clears
   the complete selection and copy source while retaining its unmanaged row.
 
+Five [plain-text scenarios](scenarios/plain-text.ts) additionally exercise the
+[baseline text projection](../../../docs/protocol/plain-text.md):
+
+- CR, CRLF, and LF copy as LF; a multiline selection retains that copy result
+  through `40`-to-`10`-column reflow. ESC displays and copies as `<U+001B>`,
+  which search finds instead of the original escape bytes;
+- fully selected Tabs copy as HT through a `20`-to-`6`-to-`20`-column reflow
+  round trip, although the display contains expanded spaces;
+- Extend and ReplaceSuffix preserve a selected prefix containing a Tab and ESC
+  using raw scalar positions; full Update clears that selection; and
+- one mixed-output selection copies a managed Tab, an ordinary row, and a
+  later Block with one LF at each boundary; and
+- partial Tabs copy only the selected spaces while complete Tabs copy as HT,
+  including in one reflow case and one complete trailing-Tab case.
+
+The host uses ASCII `<U+XXXX>` labels and `tabStopWidth` logical-line stops
+(default `8`), independent of viewport width. Those are implementation fixtures,
+not protocol requirements. A capture-phase copy handler restores fully selected
+managed Tabs and normalizes copied newlines. `getSelection()` still exposes
+xterm's displayed text; the copy-event payload is the copy oracle. Tab settings
+are held fixed while content is retained.
+
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
 scenario's assertion. This supplies narrow cross-layer evidence for the
@@ -131,7 +153,7 @@ requirements.
   adjacent-managed-Block copy fixtures, one with and one without an existing
   trailing line break, but only the outcomes listed above.
 - Partial-Block trimming, Append-driven eviction outside that one exact
-  complete-leading-Block fixture, other dimensions, and non-ASCII content
+  complete-leading-Block fixture, dimensions beyond those listed, and non-ASCII content
   remain outside this composed experiment.
 - Capacity eviction removes the tested Block's rendered range while Session
   retains its logical snapshot. The experiment does not define forgotten-Block
@@ -146,7 +168,7 @@ requirements.
   real operating-system IME.
 - Private xterm core fields and explicit search-addon reconstruction remain
   experimental fixtures, not a proposed public Terminal API.
-- The mixed-stream selection evidence covers twelve printable-ASCII fixtures
+- The original mixed-stream selection evidence covers twelve printable-ASCII fixtures
   and synthetic browser copy events: seven single-boundary-crossing Operation
   fixtures at `20` columns, one exact-tail Extend fixture, one two-boundary
   Extend fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize
@@ -155,6 +177,11 @@ requirements.
   than the tested trailing LF at an adjacent-managed-Block boundary, other
   resize dimensions, capacity trimming that reaches unmanaged or partial-Block
   rows, mouse selection, and the operating-system clipboard remain untested.
+- The additional plain-text fixtures do not establish general Unicode cell
+  mapping, rectangular selection, or literal-Tab search-query behavior. Only
+  fully selected Tabs are reconstructed; partial-Tab selections use the
+  selected display spaces. Tabs alongside
+  non-ASCII text are conservatively rejected by this host's capacity preflight.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

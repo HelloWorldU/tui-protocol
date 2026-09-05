@@ -48,7 +48,7 @@ The browser run further demonstrates that:
   selected text.
 
 The browser fixture converts each tested selection to a Block ID and ASCII
-content offsets before resize, then reconstructs physical selection coordinates
+display-projection offsets before resize, then reconstructs physical selection coordinates
 after xterm.js reflow. This is a tested implementation fixture, not a proposed
 Terminal integration design.
 
@@ -89,6 +89,17 @@ wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity
 fixtures whose trim exactly matches one complete leading managed Block. These
 scenarios are not part of this standalone browser run.
 
+The endpoint's [plain-text scenarios](../xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
+also exercise normalized multiline copy through reflow, fully selected Tab
+copy through reflow, a Tab/control prefix retained by Extend and ReplaceSuffix,
+and one Tab-containing mixed selection. This wrapper now uses the shared
+[plain-text projection](../../xterm-headless/plain-text.ts) for logical selection
+mapping and a [copy handler](plain-text-copy.ts) for the copy-event payload.
+`getSelection()` remains xterm's displayed text, not the Tab-preserving payload.
+See the [endpoint record](../xterm-browser-protocol-endpoint/README.md) for the
+fixture choices, partial-Tab evidence, and remaining Unicode and rectangular-selection
+boundaries.
+
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
@@ -97,15 +108,14 @@ scenarios are not part of this standalone browser run.
   `20`-to-`10`-to-`20`-column round trip. Mixed capacity evidence is limited to
   trimming exactly one complete leading managed Block and does not exercise a
   trim that reaches unmanaged rows.
-- Unicode, embedded line breaks within either side of the selection, other
-  resize dimensions, and other selection positions remain untested.
+- Unicode, embedded line breaks within either side of a mixed selection, and
+  dimensions and positions beyond the listed fixtures remain untested.
 - Partial-Block capacity eviction remains outside the selection experiment. The
   standalone browser run does not exercise Append-driven eviction; the composed
   endpoint covers only the one exact complete-leading-Block fixture above.
-- Resize selection mapping for line breaks, wide or combining characters, and
-  other non-ASCII text is not implemented or tested.
-- ReplaceSuffix selection mapping for wrapped lines, line breaks, wide or
-  combining characters, and other non-ASCII text is not implemented or tested.
+- Wide, combining, and other non-ASCII selection mapping is not implemented.
+  The composed endpoint supplies only the listed wrapped-prefix and multiline
+  evidence; the standalone page still exercises its original eleven scenarios.
 - The experiment applies Block Operations directly to the history fixture. It
   does not compose the OSC codec or protocol Session.
 

@@ -23,6 +23,52 @@ import {
   write,
 } from "./test-support.ts";
 
+test("capacity checks include the visible expansion of controls before accepting a Block", () => {
+  const terminal = createTerminal({ cols: 4, rows: 3, scrollback: 0 });
+  const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+  try {
+    const context = negotiateAndOpen(endpoint);
+    const result = endpoint.push(encodeInput(
+      append(context, "1", "text", "\x1b\x1b", "mutable"), 3,
+    ));
+    assert.deepEqual(decodeResponses(result), [{
+      version: 1,
+      kind: "protocol.error",
+      context_id: context,
+      operation_id: "1",
+      body: { code: "resource_exhausted" },
+    }]);
+    assert.deepEqual(endpoint.context(context)?.blocks, []);
+    assert.deepEqual(bufferRows(terminal), ["", "", ""]);
+  } finally {
+    endpoint.dispose();
+    terminal.dispose();
+  }
+});
+
+test("a Tab beside non-ASCII text is conservatively rejected before Session or rows change", () => {
+  const terminal = createTerminal({ cols: 20, rows: 3 });
+  const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+  try {
+    const context = negotiateAndOpen(endpoint);
+    const result = endpoint.push(encodeInput(
+      append(context, "1", "text", "界\tx", "mutable"), 3,
+    ));
+    assert.deepEqual(decodeResponses(result), [{
+      version: 1,
+      kind: "protocol.error",
+      context_id: context,
+      operation_id: "1",
+      body: { code: "resource_exhausted" },
+    }]);
+    assert.deepEqual(endpoint.context(context)?.blocks, []);
+    assert.deepEqual(bufferRows(terminal), ["", "", ""]);
+  } finally {
+    endpoint.dispose();
+    terminal.dispose();
+  }
+});
+
 test("when xterm cannot grow history within its capacity, the rejected Update changes nothing and a later fitting Update still renders", async () => {
   const xterm = createTerminal({
     cols: 10,

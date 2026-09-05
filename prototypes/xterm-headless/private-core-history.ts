@@ -1,5 +1,6 @@
 import headless from "@xterm/headless";
 import type { IDisposable, Terminal } from "@xterm/headless";
+import { projectPlainText } from "./plain-text.ts";
 
 import {
   TerminalPrototype,
@@ -234,6 +235,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const replacementLayout = conservativeTextLineCount(
       replacementContent,
       this.#terminal.cols,
+      this.#terminal.options.tabStopWidth,
     );
     if (replacementLayout === undefined) {
       return true;
@@ -264,6 +266,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
             ? replacementContent
             : candidate.content,
           this.#terminal.cols,
+          this.#terminal.options.tabStopWidth,
         );
         if (layout === undefined) {
           return true;
@@ -315,7 +318,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const buffer = this.#bufferService.buffer;
     await write(
       this.#terminal,
-      `${appendBoundary(buffer)}${toTerminalText(block.content)}`,
+      `${appendBoundary(buffer)}${toTerminalText(block.content, this.#terminal.options.tabStopWidth)}`,
     );
     const end = buffer.ybase + buffer.y;
     const start = end - lines.length;
@@ -332,7 +335,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   #appendWouldExceedCapacity(block: Block): boolean {
-    const layout = conservativeTextLineCount(block.content, this.#terminal.cols);
+    const layout = conservativeTextLineCount(
+      block.content, this.#terminal.cols, this.#terminal.options.tabStopWidth,
+    );
     if (layout === undefined) {
       return true;
     }
@@ -351,6 +356,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
         const candidateLayout = conservativeTextLineCount(
           candidate.content,
           this.#terminal.cols,
+          this.#terminal.options.tabStopWidth,
         );
         if (candidateLayout === undefined) {
           return true;
@@ -622,7 +628,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
       scrollback: 10_000,
     });
     try {
-      await write(scratch, toTerminalText(content));
+      await write(scratch, toTerminalText(content, this.#terminal.options.tabStopWidth));
       const scratchBuffer = (
         scratch as unknown as PrivateHeadlessTerminal
       )._core._bufferService.buffer;
@@ -668,10 +674,8 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 }
 
-function toTerminalText(content: string): string {
-  const normalized = content
-    .replaceAll("\r\n", "\n")
-    .replaceAll("\r", "\n");
+function toTerminalText(content: string, tabWidth?: number): string {
+  const normalized = projectPlainText(content, tabWidth).text;
   const projected = normalized.replaceAll("\n", "\r\n");
   return normalized.endsWith("\n") ? projected : `${projected}\r\n`;
 }
@@ -711,8 +715,11 @@ function replaceSuffixText(
 function conservativeTextLineCount(
   content: string,
   width: number,
+  tabWidth?: number,
 ): TextLineCount | undefined {
-  const normalized = content.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  const projection = projectPlainText(content, tabWidth);
+  if (!projection.ascii && projection.tabs.length > 0) return undefined;
+  const normalized = projection.text;
   const logicalLines = normalized.split("\n");
   if (normalized.endsWith("\n")) {
     logicalLines.pop();

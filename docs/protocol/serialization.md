@@ -222,6 +222,7 @@ decoded logical Message.
 
 - Maximum JSON nesting depth, string length, and identifier length within the
   framing layer's complete-Message limit.
-- Detailed newline, control-character, and Unicode validity for baseline
-  `text/plain` content.
 - JSON `data` schemas for future optional content types.
+
+Baseline display processing is defined by [Plain Text Content](plain-text.md),
+not JSON serialization. Decoding preserves the original scalar sequence.

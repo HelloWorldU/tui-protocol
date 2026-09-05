@@ -3,6 +3,13 @@ import type { IMarker, Terminal } from "@xterm/xterm";
 
 import type { Operation } from "../../block-model/model.ts";
 import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
+import {
+  projectPlainText,
+  retainedPlainTextLength,
+  textOffset,
+  textPosition,
+} from "../../xterm-headless/plain-text.ts";
+import { installPlainTextCopy } from "./plain-text-copy.ts";
 
 interface SelectionSnapshot {
   readonly column: number;
@@ -44,17 +51,19 @@ interface LogicalSelectionSnapshot {
 
 /**
  * A browser-only experiment around the private xterm history renderer. It is
- * deliberately limited to the tested printable-ASCII selection behavior.
+ * deliberately limited to the tested ASCII display-projection behavior.
  */
 export class BrowserSelectionHistory {
   readonly #terminal: Terminal;
   readonly #history: PrivateCoreBlockHistory;
+  readonly #disposeCopy: () => void;
 
   constructor(terminal: Terminal) {
     this.#terminal = terminal;
     this.#history = new PrivateCoreBlockHistory(
       terminal as unknown as HeadlessTerminal,
     );
+    this.#disposeCopy = installPlainTextCopy(terminal, this.#history);
   }
 
   async apply(operation: Operation): Promise<void> {
@@ -186,7 +195,8 @@ export class BrowserSelectionHistory {
       if (
         operation.type === "replaceSuffix" &&
         logicalSelection?.blockId === operation.id &&
-        logicalSelection.endOffset <= operation.retain
+        logicalSelection.endOffset <=
+          this.#retainedProjectionLength(operation.id, operation.retain)
       ) {
         await this.#history.renderAccepted(operation);
         this.#restoreLogicalSelection(logicalSelection);
@@ -244,6 +254,7 @@ export class BrowserSelectionHistory {
   }
 
   dispose(): void {
+    this.#disposeCopy();
     this.#history.dispose();
   }
 
@@ -276,22 +287,27 @@ export class BrowserSelectionHistory {
         continue;
       }
       const rangeStart = range.start * this.#terminal.cols;
-      const startOffset = selectionStart - rangeStart;
-      const endOffset = selectionEnd - rangeStart;
+      const startCell = selectionStart - rangeStart;
+      const endCell = selectionEnd - rangeStart;
       if (
-        startOffset < 0 ||
-        endOffset > range.lineCount * this.#terminal.cols
+        startCell < 0 ||
+        endCell > range.lineCount * this.#terminal.cols
       ) {
         continue;
       }
-      if (
-        !/^[\x20-\x7e]*$/.test(block.content) ||
-        endOffset > Array.from(block.content).length
-      ) {
-        throw new Error(
-          "Resize selection mapping is limited to one logical ASCII line.",
-        );
-      }
+      const projection = projectPlainText(
+        block.content, this.#terminal.options.tabStopWidth,
+      );
+      if (!projection.ascii) return undefined;
+      const startOffset = textOffset(
+        projection.text, position.row - range.start, position.column,
+        this.#terminal.cols,
+      );
+      const endOffset = textOffset(
+        projection.text, position.endRow - range.start, position.endColumn,
+        this.#terminal.cols,
+      );
+      if (startOffset === undefined || endOffset === undefined) return undefined;
       return { blockId: block.id, startOffset, endOffset };
     }
 
@@ -356,7 +372,7 @@ export class BrowserSelectionHistory {
       .find((candidate) => candidate.id === blockId);
     if (
       block === undefined ||
-      !/^[\x20-\x7e]*$/.test(block.content) ||
+      !projectPlainText(block.content, this.#terminal.options.tabStopWidth).ascii ||
       retain > Array.from(block.content).length
     ) {
       return false;
@@ -364,7 +380,15 @@ export class BrowserSelectionHistory {
 
     const selectionEnd =
       selection.endRow * this.#terminal.cols + selection.endColumn;
-    const retainedEnd = range.start * this.#terminal.cols + retain;
+    const projection = projectPlainText(
+      block.content, this.#terminal.options.tabStopWidth,
+    );
+    const boundary = textPosition(
+      projection.text, this.#retainedProjectionLength(blockId, retain),
+      this.#terminal.cols,
+    );
+    const retainedEnd =
+      (range.start + boundary.row) * this.#terminal.cols + boundary.column;
     return selectionEnd <= retainedEnd;
   }
 
@@ -443,12 +467,15 @@ export class BrowserSelectionHistory {
     const block = this.#history
       .blocks()
       .find((candidate) => candidate.id === blockId);
-    const offset = (row - range.start) * this.#terminal.cols + column;
-    return block !== undefined &&
-      /^[\x20-\x7e]*$/.test(block.content) &&
-      offset <= Array.from(block.content).length
-      ? { kind: "block", blockId, offset }
-      : undefined;
+    if (block === undefined) return undefined;
+    const projection = projectPlainText(
+      block.content, this.#terminal.options.tabStopWidth,
+    );
+    if (!projection.ascii) return undefined;
+    const offset = textOffset(
+      projection.text, row - range.start, column, this.#terminal.cols,
+    );
+    return offset === undefined ? undefined : { kind: "block", blockId, offset };
   }
 
   #logicalLineSelectionEndpointAnchor(
@@ -546,10 +573,18 @@ export class BrowserSelectionHistory {
     if (range === undefined) {
       return undefined;
     }
-    return {
-      column: endpoint.offset % this.#terminal.cols,
-      row: range.start + Math.floor(endpoint.offset / this.#terminal.cols),
-    };
+    const block = this.#history.blocks().find(
+      block => block.id === endpoint.blockId,
+    );
+    if (block === undefined) return undefined;
+    const projection = projectPlainText(
+      block.content, this.#terminal.options.tabStopWidth,
+    );
+    if (!projection.ascii || endpoint.offset > projection.text.length) return undefined;
+    const position = textPosition(
+      projection.text, endpoint.offset, this.#terminal.cols,
+    );
+    return { column: position.column, row: range.start + position.row };
   }
 
   #resolveLogicalLineSelectionEndpoint(
@@ -640,14 +675,28 @@ export class BrowserSelectionHistory {
       this.#terminal.clearSelection();
       return;
     }
-    const rowOffset = Math.floor(
-      selection.startOffset / this.#terminal.cols,
-    );
-    const column = selection.startOffset % this.#terminal.cols;
+    const start = this.#resolveSelectionEndpoint({
+      kind: "block", blockId: selection.blockId, offset: selection.startOffset,
+    });
+    const end = this.#resolveSelectionEndpoint({
+      kind: "block", blockId: selection.blockId, offset: selection.endOffset,
+    });
+    if (start === undefined || end === undefined) {
+      this.#terminal.clearSelection();
+      return;
+    }
     this.#terminal.select(
-      column,
-      range.start + rowOffset,
-      selection.endOffset - selection.startOffset,
+      start.column,
+      start.row,
+      (end.row - start.row) * this.#terminal.cols + end.column - start.column,
+    );
+  }
+
+  #retainedProjectionLength(id: string, retain: number): number {
+    const block = this.#history.blocks().find(block => block.id === id);
+    if (block === undefined) return 0;
+    return retainedPlainTextLength(
+      block.content, retain, this.#terminal.options.tabStopWidth,
     );
   }
 }

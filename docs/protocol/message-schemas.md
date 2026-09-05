@@ -247,6 +247,6 @@ stale content state.
 Structural and semantic failures both leave protocol state unchanged and use
 the correlated failure behavior defined by the logical wire model.
 
-## Open Design Choices
-
-- Exact validity rules for baseline `text/plain` data.
+Baseline `text/plain` uses the `Text` schema above. Its display and native-text
+processing are defined in [Plain Text Content](plain-text.md); the schema does
+not normalize its data or reject the controls represented by visible labels.

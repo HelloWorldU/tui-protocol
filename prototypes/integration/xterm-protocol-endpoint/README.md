@@ -167,6 +167,17 @@ general trimming implementation.
 
 ## Experimental Boundaries
 
+The [plain-text tests](plain-text.test.ts) additionally exercise normalized
+CR/LF/CRLF, visible control labels, host Tab alignment, raw scalar positions
+across content-changing Operations, and a CRLF pair split between Append and
+Extend. The [capacity tests](capacity.test.ts) include rejection before state
+mutation when control-label expansion would exceed the available rows.
+The shared [projection](../../xterm-headless/plain-text.ts) uses `<U+XXXX>`
+labels and fixed logical-line Tab stops from the host's `tabStopWidth` option.
+Those are terminal fixtures for [Plain Text Content](../../../docs/protocol/plain-text.md),
+not prescribed label spellings or tab widths. Session retains the original
+text; ordinary frame-external control execution is unchanged.
+
 - xterm.js history replacement still uses private core fields and is not a
   proposed public API or production implementation.
 - `XtermTerminalAdapter` is an integration-prototype boundary, not a stable or
@@ -193,10 +204,9 @@ general trimming implementation.
   be mixed on one endpoint, either concurrently or sequentially. Protocol-only
   pushes bypass the mixed ingress's single ordering queue and can enter a
   planned-only capacity check while unmanaged rows are present.
-- The private renderer does not yet define a safe physical projection for
-  C0 or C1 controls inside `text/plain`, apart from its modeled CR/LF line
-  breaks. Such payloads are outside this experiment and must not be mistaken
-  for frame-external native traffic.
+- Control-label projection is tested for the defined C0/DEL/C1 ranges, not all
+  Unicode formatting or bidirectional characters. Tab stops are held fixed
+  while content is retained; runtime Tab-setting changes are not tested.
 - Known Update, Extend, and ReplaceSuffix capacity exhaustion is checked before
   Session commit, but accepted Operations still render asynchronously
   afterward. The prototype does not provide general failure atomicity,
@@ -206,9 +216,9 @@ general trimming implementation.
   no-pending-render case, but it does not implement or prove safe eviction of
   unmanaged rows. Mixed capacity layouts beyond the listed conservative
   rejection remain unproven. Its current non-ASCII upper bound may reject a
-  layout that xterm.js could fit, and capacity preflight conservatively rejects
-  a mutation whose resulting `text/plain` contains unsupported C0 or C1
-  controls other than the modeled CR/LF line breaks.
+  layout that xterm.js could fit. Capacity preflight counts expanded controls
+  and Tabs, but conservatively rejects Tabs alongside non-ASCII text because
+  this fixture lacks the width mapping needed to align them correctly.
 - The adapter combines Context and Block IDs into an internal rendering key.
   The key is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected

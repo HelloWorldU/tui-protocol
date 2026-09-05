@@ -87,7 +87,14 @@ can be designed.
 
 - The spike models one implicit Protocol Context and does not implement its
   control exchanges or Context IDs on Operations.
-- Plain text only; terminal control sequences are not part of the experiment.
+- Plain text only. The shared [projection](plain-text.ts) normalizes newlines,
+  expands Tabs at host-selected logical-line stops, and renders other
+  C0/DEL/C1 controls as visible `<U+XXXX>` labels without executing them.
+  [Projection tests](plain-text.test.ts) enumerate those controls and check
+  selected ASCII offset round trips; the [composed endpoint](../integration/xterm-protocol-endpoint/README.md)
+  records runtime evidence for [Plain Text Content](../../docs/protocol/plain-text.md).
+  Labels and tab-stop implementation are experimental terminal choices. Tabs
+  alongside non-ASCII text are not supported by the capacity preflight.
 - The standalone spike assumes a dedicated terminal. The composed xterm
   endpoint separately tests one narrow unmanaged-output gap and rejects one
   unsafe near-capacity growth against the Buffer's physical row count before

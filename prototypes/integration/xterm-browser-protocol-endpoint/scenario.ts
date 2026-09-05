@@ -63,6 +63,13 @@ import {
   runSelectionAndReadingScenario,
 } from "./scenarios/update.ts";
 import type { ScenarioResult } from "./scenario-harness.ts";
+import {
+  runPlainTextNewlineAndControlScenario,
+  runPlainTextTabReflowScenario,
+  runPlainTextRetainedSelectionScenario,
+  runPlainTextMixedCopyScenario,
+  runPlainTextPartialTabScenario,
+} from "./scenarios/plain-text.ts";
 import "./style.css";
 
 const terminalElement = requiredElement("terminal");
@@ -129,6 +136,11 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runResizePreservesMixedSelectionScenario(),
     await runCapacityEvictsEarlierBlockAndPreservesMixedSelectionScenario(),
     await runCapacityEvictsSelectedBlockAndClearsMixedSelectionScenario(),
+    await runPlainTextNewlineAndControlScenario(),
+    await runPlainTextTabReflowScenario(),
+    await runPlainTextRetainedSelectionScenario(),
+    await runPlainTextMixedCopyScenario(),
+    await runPlainTextPartialTabScenario(),
   ];
 }
 

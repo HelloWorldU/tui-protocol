@@ -80,9 +80,10 @@ the incremental Operation. Resize and reflow do not change it.
 
 Each content type defines the logical semantics that terminal-native
 capabilities operate on, including layout and reflow, selection and copying,
-and a searchable text projection. For `text/plain`, that projection is the
-text itself; richer types may preserve structured rendering while defining
-the corresponding logical text.
+and a searchable text projection. [Plain Text Content](plain-text.md) defines
+the baseline's newline, Tab, and visible-control handling without changing its
+logical content. Richer types may preserve structured rendering while defining
+their corresponding logical text.
 
 The content type specifies these observable semantics. The terminal retains
 ownership of how native capabilities are implemented, presented, and
@@ -91,7 +92,7 @@ executed. Their shared interaction with Block Operations is defined by
 
 ## Open Design Choices
 
-- Newline, control-character, and Unicode handling for `text/plain`.
+- Remaining text-layout boundaries listed in [Plain Text Content](plain-text.md).
 - The initial set of optional content types and their schemas.
 - Content-type naming, registration, and versioning.
 - Detailed native projections for each optional content type.

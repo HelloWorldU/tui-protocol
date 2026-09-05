@@ -206,6 +206,12 @@ limitations:
   single-boundary-crossing Operation fixtures, one exact-old-tail Extend
   fixture, one two-boundary multi-wrap Extend fixture, one mixed-boundary resize
   round trip, and two exact complete-leading-Block capacity fixtures.
+- Five additional [plain-text browser fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
+  exercise normalized multiline copy through reflow, fully selected Tab copy,
+  visible-control search, raw-scalar retained-prefix selection, and one
+  Tab-containing mixed copy case. These test the projection in
+  [Plain Text Content](plain-text.md), including one partial-Tab copy/reflow
+  fixture, not general Unicode behavior.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
@@ -242,7 +248,8 @@ single-boundary-crossing Operation fixtures, one Extend fixture whose endpoint
 is exactly at the old Block tail, one two-boundary Extend fixture with two soft
 wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity
 fixtures whose trim exactly matches one complete leading managed Block.
-Unicode, line breaks within selected content other than the tested trailing LF
-at an adjacent-Block boundary, other resize dimensions, capacity trimming that
+The additional plain-text fixtures above extend copy evidence to normalized
+line breaks and fully selected Tabs. Unicode, embedded line breaks within a
+mixed selection, dimensions beyond the listed fixtures, capacity trimming that
 reaches unmanaged or partial-Block rows, mouse selection, and operating-system
 clipboard behavior remain untested.
