@@ -100,6 +100,11 @@ See the [endpoint record](../xterm-browser-protocol-endpoint/README.md) for the
 fixture choices, partial-Tab evidence, and remaining Unicode and rectangular-selection
 boundaries.
 
+The same endpoint's [capacity fixtures](../xterm-browser-protocol-endpoint/scenarios/capacity.ts)
+also exercise Tab-preserving copy when projected text growth evicts an earlier
+complete Block, and copy-source clearing when it evicts the selected Block.
+These additional cases do not change this standalone page's scenario count.
+
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility

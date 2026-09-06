@@ -19,6 +19,8 @@ import {
   runCapacityEvictsSelectedBlockScenario,
   runCapacityRetainsSearchMatchScenario,
   runCapacityRetainsSelectionAndReadingScenario,
+  runProjectedCapacityRetainsSelectionScenario,
+  runProjectedCapacityEvictsSelectionScenario,
 } from "./scenarios/capacity.ts";
 import {
   runExtendActiveInputAndCompositionScenario,
@@ -122,6 +124,8 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runCapacityRetainsSearchMatchScenario(),
     await runCapacityEvictsSearchMatchScenario(),
     await runCapacityActiveInputScenario(),
+    await runProjectedCapacityRetainsSelectionScenario(),
+    await runProjectedCapacityEvictsSelectionScenario(),
     await runAdjacentManagedBlocksCopyOneSuppliedNewlineScenario(),
     await runTrailingNewlineDoesNotDuplicateAdjacentManagedCopyBoundaryScenario(),
     await runEarlierUpdatePreservesMixedSelectionScenario(),

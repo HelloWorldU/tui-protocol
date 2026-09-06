@@ -69,6 +69,89 @@ test("a Tab beside non-ASCII text is conservatively rejected before Session or r
   }
 });
 
+for (const operation of ["Update", "Extend", "ReplaceSuffix"] as const) {
+  for (const [label, fragment] of [["Tab", "\tX"], ["ESC label", "\x1bX"]]) {
+    test(`${operation} whose ${label} expansion exceeds capacity leaves rows unchanged and a later Extend accepts the original base_operation_id`, async () => {
+      const terminal = createTerminal({ cols: 8, rows: 3, scrollback: 2 });
+      const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+      try {
+        const context = negotiateAndOpen(endpoint);
+        assert.deepEqual(endpoint.push(concatenate([
+          encodeInput(append(context, "1", "target", "x", "mutable"), 3),
+          encodeInput(append(context, "2", "tail", "t1\nt2\nt3", "sealed"), 4),
+        ])), emptyResult());
+        await endpoint.drain();
+        const before = bufferRows(terminal);
+        assert.deepEqual(before, ["x", "t1", "t2", "t3", ""]);
+        const rejectedMessage = operation === "Update"
+          ? update(context, "3", "target", fragment)
+          : operation === "Extend"
+            ? extend(context, "3", "target", "1", fragment)
+            : replaceSuffix(context, "3", "target", "1", 0, fragment);
+
+        const result = endpoint.push(encodeInput(rejectedMessage, 5));
+        assert.deepEqual(result.diagnostics, []);
+        assert.deepEqual(decodeResponses(result), [{
+          version: 1, kind: "protocol.error", context_id: context,
+          operation_id: "3", body: { code: "resource_exhausted" },
+        }]);
+        await endpoint.drain();
+        assert.equal(endpoint.context(context)?.blocks[0]?.content.data, "x");
+        assert.deepEqual(bufferRows(terminal), before);
+        assert.deepEqual(requiredRange(endpoint, context, "target"), { start: 0, lineCount: 1 });
+
+        // Rejection consumes Operation 3 but does not replace content state 1.
+        assert.deepEqual(endpoint.push(encodeInput(
+          extend(context, "4", "target", "1", "!"), 6,
+        )), emptyResult());
+        await endpoint.drain();
+        assert.equal(endpoint.context(context)?.blocks[0]?.content.data, "x!");
+        assert.deepEqual(bufferRows(terminal), ["x!", ...before.slice(1)]);
+      } finally {
+        endpoint.dispose();
+        terminal.dispose();
+      }
+    });
+  }
+}
+
+test("queued Tab growth fits, the next ESC growth is rejected, and ReplaceSuffix can still use the Tab update's ID", async () => {
+  const terminal = createTerminal({ cols: 8, rows: 3, scrollback: 3 });
+  const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+  try {
+    const context = negotiateAndOpen(endpoint);
+    assert.deepEqual(endpoint.push(concatenate([
+      encodeInput(append(context, "1", "target", "x", "mutable"), 3),
+      encodeInput(append(context, "2", "tail", "t1\nt2\nt3", "sealed"), 4),
+    ])), emptyResult());
+    await endpoint.drain();
+
+    const result = endpoint.push(concatenate([
+      encodeInput(extend(context, "3", "target", "1", "\tY"), 5),
+      encodeInput(extend(context, "4", "target", "3", "\x1b"), 6),
+    ]));
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(decodeResponses(result), [{
+      version: 1, kind: "protocol.error", context_id: context,
+      operation_id: "4", body: { code: "resource_exhausted" },
+    }]);
+    await endpoint.drain();
+    assert.equal(endpoint.context(context)?.blocks[0]?.content.data, "x\tY");
+    assert.deepEqual(bufferRows(terminal), ["x       ", "Y", "t1", "t2", "t3", ""]);
+    assert.deepEqual(requiredRange(endpoint, context, "target"), { start: 0, lineCount: 2 });
+
+    assert.deepEqual(endpoint.push(encodeInput(
+      replaceSuffix(context, "5", "target", "3", 1, "!"), 7,
+    )), emptyResult());
+    await endpoint.drain();
+    assert.equal(endpoint.context(context)?.blocks[0]?.content.data, "x!");
+    assert.deepEqual(bufferRows(terminal), ["x!", "t1", "t2", "t3", ""]);
+  } finally {
+    endpoint.dispose();
+    terminal.dispose();
+  }
+});
+
 test("when xterm cannot grow history within its capacity, the rejected Update changes nothing and a later fitting Update still renders", async () => {
   const xterm = createTerminal({
     cols: 10,

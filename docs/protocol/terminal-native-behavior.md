@@ -212,6 +212,10 @@ limitations:
   Tab-containing mixed copy case. These test the projection in
   [Plain Text Content](plain-text.md), including one partial-Tab copy/reflow
   fixture, not general Unicode behavior.
+- The browser endpoint's [capacity fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/capacity.ts)
+  additionally test two projected-text growth cases: complete-Block eviction
+  preserves a retained reading position and Tab copy source, or clears an
+  evicted selection and moves reading to the nearest retained Block.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal

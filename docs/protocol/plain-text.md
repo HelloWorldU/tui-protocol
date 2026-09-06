@@ -66,3 +66,8 @@ exercise selected copy/search outcomes, fully and partially selected Tabs
 through reflow, and one mixed-output copy case. Their [README](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
 records limitations. Label spelling and tab-stop implementation in those
 fixtures are terminal choices, not protocol requirements.
+
+The endpoint [capacity tests](../../prototypes/integration/xterm-protocol-endpoint/capacity.test.ts)
+and [browser capacity record](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
+add bounded evidence for expanded text near capacity, including rejected
+growth and selection behavior when exactly one complete oldest Block is evicted.

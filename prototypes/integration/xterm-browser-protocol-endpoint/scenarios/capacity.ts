@@ -1,6 +1,7 @@
 import {
   append,
   assertBlockContent,
+  assertBufferRows,
   assertEqual,
   assertInputStateUnchanged,
   assertTrue,
@@ -13,6 +14,89 @@ import {
   write,
 } from "../scenario-harness.ts";
 import type { Fixture, ScenarioResult } from "../scenario-harness.ts";
+
+export async function runProjectedCapacityRetainsSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createProjectedCapacityFixture();
+  try {
+    const before = requiredRange(fixture, "reader");
+    fixture.terminal.scrollToLine(before.start);
+    fixture.terminal.select(0, before.start, 9);
+    assertEqual(copySelection(fixture.terminal), "r\ts", "Tab copy before eviction");
+
+    await growProjectedCapacityFixture(fixture);
+
+    const after = requiredRange(fixture, "reader");
+    assertEqual(after.start, before.start + 1, "reader moved by growth minus complete-Block trimming");
+    assertEqual(fixture.terminal.buffer.active.viewportY, after.start, "the same reader row stays at viewport top");
+    assertTrue(fixture.terminal.buffer.active.viewportY < fixture.terminal.buffer.active.baseY,
+      "retained reading position did not switch to tail following");
+    assertEqual(fixture.terminal.getSelectionPosition()?.start.y, after.start, "selection moved with its reader Block");
+    assertEqual(copySelection(fixture.terminal), "r\ts", "retained copy restores the Tab at its new rows");
+    assertBlockContent(fixture, "reader", "r\ts");
+    return {
+      name: "Projected Text Growth Evicts an Earlier Block and Preserves Tab Copy",
+      detail: "the reader moved by one row while its viewport position and Tab-preserving copy stayed unchanged",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+export async function runProjectedCapacityEvictsSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createProjectedCapacityFixture();
+  try {
+    const oldest = requiredRange(fixture, "oldest");
+    fixture.terminal.scrollToLine(oldest.start + 1);
+    fixture.terminal.select(0, oldest.start, 9);
+    assertEqual(copySelection(fixture.terminal), "\tO", "selected Tab and letter before eviction");
+
+    await growProjectedCapacityFixture(fixture);
+
+    assertEqual(fixture.terminal.hasSelection(), false, "the evicted projected Block loses its selection");
+    assertEqual(copySelection(fixture.terminal), undefined, "the evicted Tab is not a stale copy source");
+    assertEqual(fixture.terminal.buffer.active.viewportY, 0, "reading moves to the nearest retained Block");
+    assertEqual(fixture.terminal.buffer.active.getLine(0)?.translateToString(true),
+      "<U+001B>", "the next retained content is the visible ESC label");
+    assertTrue(fixture.terminal.buffer.active.viewportY < fixture.terminal.buffer.active.baseY,
+      "evicting the reading position did not switch to tail following");
+    return {
+      name: "Projected Text Growth Evicts a Selected Tab Block and Clears Copy",
+      detail: "the old Tab lost its copy source and reading moved forward to the retained control label",
+    };
+  } finally {
+    fixture.dispose();
+  }
+}
+
+async function createProjectedCapacityFixture(): Promise<Fixture> {
+  const fixture = createFixture({ cols: 8, rows: 3, scrollback: 6 });
+  pushMessages(fixture.endpoint, [
+    append(fixture.contextId, "1", "oldest", "\tO", "sealed"),
+    append(fixture.contextId, "2", "growing", "B", "mutable"),
+    append(fixture.contextId, "3", "reader", "r\ts", "sealed"),
+    append(fixture.contextId, "4", "tail", "t1\nt2", "sealed"),
+  ]);
+  await fixture.endpoint.drain();
+  assertEqual(requiredRange(fixture, "oldest").lineCount, 2, "two raw scalars occupy two rendered rows");
+  assertEqual(requiredRange(fixture, "reader").start, 3, "reader start before growth");
+  assertBufferRows(fixture.terminal, ["        ", "O", "B", "r       ", "s", "t1", "t2", ""]);
+  return fixture;
+}
+
+async function growProjectedCapacityFixture(fixture: Fixture): Promise<void> {
+  // Five raw scalars expand to 25 cells / four rows at eight columns.
+  // Three added rows exceed capacity by exactly the oldest Block's two rows.
+  pushMessages(fixture.endpoint, [
+    update(fixture.contextId, "5", "growing", "\x1b\tX\tY"),
+  ]);
+  await fixture.endpoint.drain();
+  assertEqual(fixture.endpoint.range(fixture.contextId, "oldest"), undefined, "complete oldest Block was evicted");
+  assertEqual(requiredRange(fixture, "growing").lineCount, 4, "capacity used projected rows rather than raw scalars");
+  assertBufferRows(fixture.terminal, ["<U+001B>", "        ", "X       ", "Y", "r       ", "s", "t1", "t2", ""]);
+  assertBlockContent(fixture, "oldest", "\tO");
+  assertBlockContent(fixture, "growing", "\x1b\tX\tY");
+  assertEqual(fixture.endpoint.context(fixture.contextId)?.state, "open", "Context remains open after complete-Block eviction");
+}
 
 export async function runCapacityRetainsSelectionAndReadingScenario(): Promise<ScenarioResult> {
   const fixture = await createCapacityFixture();

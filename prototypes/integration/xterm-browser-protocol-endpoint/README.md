@@ -20,8 +20,8 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Forty-four browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Thirty-one use the protocol-only
+Forty-six browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Thirty-three use the protocol-only
 endpoint path. Each of thirteen additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
@@ -134,6 +134,20 @@ managed Tabs and normalizes copied newlines. `getSelection()` still exposes
 xterm's displayed text; the copy-event payload is the copy oracle. Tab settings
 are held fixed while content is retained.
 
+Two further [capacity scenarios](scenarios/capacity.ts) combine that projection
+with complete-Block eviction at `8` columns, `3` viewport rows, and `6`
+scrollback rows. An Update's five-scalar snapshot occupies four physical rows
+and evicts exactly the two rows of the oldest Tab-containing Block:
+
+- an unaffected reader moves by one physical row while remaining at viewport
+  top, and its selected text still copies as `r\ts`; and
+- a selection in the evicted Block clears, including its Tab copy source;
+  reading moves to the nearest retained Block without following the tail.
+
+Both scenarios check the complete resulting Buffer rows and retain the evicted
+Block's raw Session snapshot. They do not demonstrate partial-Block eviction,
+Unicode alignment, or operating-system clipboard behavior.
+
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
 scenario's assertion. This supplies narrow cross-layer evidence for the
@@ -147,8 +161,9 @@ requirements.
 - Content metadata is not composed because the protocol has not defined an
   optional styled content representation.
 - The protocol-only scenarios exercise all five current Block Operation kinds,
-  one fixed `20`-to-`10`-column resize, one Update-driven complete-Block
-  capacity boundary, and one Append-driven fixture whose trim exactly matches
+  the listed resize dimensions, the original Update-driven complete-Block
+  capacity boundary and the two projected-text cases above, and one
+  Append-driven fixture whose trim exactly matches
   one complete leading managed Block. They also exercise two
   adjacent-managed-Block copy fixtures, one with and one without an existing
   trailing line break, but only the outcomes listed above.

@@ -171,12 +171,23 @@ The [plain-text tests](plain-text.test.ts) additionally exercise normalized
 CR/LF/CRLF, visible control labels, host Tab alignment, raw scalar positions
 across content-changing Operations, and a CRLF pair split between Append and
 Extend. The [capacity tests](capacity.test.ts) include rejection before state
-mutation when control-label expansion would exceed the available rows.
+mutation when control-label expansion would exceed the available rows. Six
+additional cases combine Update, Extend, and ReplaceSuffix with Tab or ESC
+expansion at a full five-row Buffer: rejection leaves raw content and rows
+unchanged, and a smaller Extend still accepts the original content-state ID.
+A queued case fills the remaining row with a Tab expansion, rejects the next
+ESC expansion, and then successfully applies ReplaceSuffix using the accepted
+Tab Operation's ID. These are bounded preflight checks, not general renderer
+failure-atomicity evidence.
 The shared [projection](../../xterm-headless/plain-text.ts) uses `<U+XXXX>`
 labels and fixed logical-line Tab stops from the host's `tabStopWidth` option.
 Those are terminal fixtures for [Plain Text Content](../../../docs/protocol/plain-text.md),
 not prescribed label spellings or tab widths. Session retains the original
 text; ordinary frame-external control execution is unchanged.
+
+The [browser endpoint](../xterm-browser-protocol-endpoint/README.md) separately
+tests projected-text growth that evicts one complete oldest Block, preserving
+an unaffected reading position and Tab copy source or clearing an evicted one.
 
 - xterm.js history replacement still uses private core fields and is not a
   proposed public API or production implementation.
