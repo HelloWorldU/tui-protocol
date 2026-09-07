@@ -185,6 +185,13 @@ Those are terminal fixtures for [Plain Text Content](../../../docs/protocol/plai
 not prescribed label spellings or tab widths. Session retains the original
 text; ordinary frame-external control execution is unchanged.
 
+The same plain-text tests exercise Chinese beside Tabs at `9` columns through
+Append, Extend, ReplaceSuffix, and Update, checking rendered rows and raw Session
+content. A capacity test rejects Chinese/Tab growth beyond three available rows
+without changing content or its base ID; a smaller Extend then succeeds.
+The [browser Chinese scenarios](../xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
+separately test selection and copy through resize and subsequent Operations.
+
 The [browser endpoint](../xterm-browser-protocol-endpoint/README.md) separately
 tests projected-text growth that evicts one complete oldest Block, preserving
 an unaffected reading position and Tab copy source or clearing an evicted one.
@@ -210,7 +217,8 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   accepted Block render before executing later stream traffic.
 - The explicit private Block ranges exclude the one tested intervening
   unmanaged row. Arbitrary terminal controls, styled or image output, and
-  Unicode layout beyond the listed repeated-CJK case remain untested.
+  Unicode layout beyond the listed repeated-CJK and Chinese/Tab cases remain
+  untested.
 - The mixed-stream ingress and the protocol-only `push()` entry point must not
   be mixed on one endpoint, either concurrently or sequentially. Protocol-only
   pushes bypass the mixed ingress's single ordering queue and can enter a
@@ -228,8 +236,9 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   unmanaged rows. Mixed capacity layouts beyond the listed conservative
   rejection remain unproven. Its current non-ASCII upper bound may reject a
   layout that xterm.js could fit. Capacity preflight counts expanded controls
-  and Tabs, but conservatively rejects Tabs alongside non-ASCII text because
-  this fixture lacks the width mapping needed to align them correctly.
+  and Tabs. It now aligns Tabs beside basic CJK ideographs `U+4E00..U+9FFF`
+  under the pinned default Unicode provider, but rejects Tabs beside other
+  Unicode. CJK row estimates still cannot authorize capacity eviction.
 - The adapter combines Context and Block IDs into an internal rendering key.
   The key is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
@@ -290,8 +299,8 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   Update-driven complete-Block capacity boundary. A separate Append-driven
   capacity fixture covers only reading position, selection and copy, and the
   new Block's single appearance at the tail when one complete leading Block is
-  removed. Selection evidence is limited to the listed ASCII fixtures and
-  tested dimensions.
+  removed. Selection evidence is limited to the listed ASCII and basic-CJK/Tab
+  fixtures and their tested dimensions.
 
 ## Run
 

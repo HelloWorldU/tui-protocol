@@ -51,10 +51,16 @@ characters. Copying an ESC label therefore cannot reconstruct an executable
 escape sequence. Ordinary printable text remains literal; text/plain does not
 interpret Markdown or other markup.
 
+## 5. Wide Han Characters
+
+When a Han character occupies two terminal cells, a selection endpoint inside
+that span expands outward to the character boundary. Selection and copy include
+the complete character, not half of its displayed span.
+
 ## Open Design Choices
 
 - Detailed Unicode width, grapheme, and formatting-character behavior beyond
-  the control ranges above.
+  the control ranges and two-cell Han selection rule above.
 
 ## Experimental Evidence
 
@@ -66,6 +72,12 @@ exercise selected copy/search outcomes, fully and partially selected Tabs
 through reflow, and one mixed-output copy case. Their [README](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
 records limitations. Label spelling and tab-stop implementation in those
 fixtures are terminal choices, not protocol requirements.
+
+The [Chinese browser fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
+exercise Chinese/Tab copy through reflow, endpoints inside two-cell characters,
+and raw-scalar suffix replacement after resize. Their width mapping is restricted
+to ASCII and basic CJK ideographs under the pinned xterm default Unicode provider;
+it is not a protocol-wide width table or evidence for general Unicode layout.
 
 The endpoint [capacity tests](../../prototypes/integration/xterm-protocol-endpoint/capacity.test.ts)
 and [browser capacity record](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)

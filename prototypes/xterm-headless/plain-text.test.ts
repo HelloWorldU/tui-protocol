@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import headless from "@xterm/headless";
 
 import {
-  projectPlainText, retainedPlainTextLength, textOffset, textPosition,
+  fixtureCellWidth, projectPlainText, retainedPlainTextLength, textOffset, textPosition,
 } from "./plain-text.ts";
 
 test("every C0, DEL, and C1 control except Tab, LF, and CR projects to its visible label", () => {
@@ -14,6 +15,56 @@ test("every C0, DEL, and C1 control except Tab, LF, and CR projects to its visib
     assert.equal(projection.text, label, `control ${code}`);
     assert.equal(projection.ascii, true);
     assert.deepEqual(projection.tabs, []);
+  }
+});
+
+test("the basic-CJK fixture widths agree with the pinned xterm default provider", () => {
+  const terminal = new headless.Terminal();
+  try {
+    const provider = (terminal as unknown as {
+      _core: { unicodeService: { activeVersion: string; wcwidth(code: number): number } };
+    })._core.unicodeService;
+    assert.equal(provider.activeVersion, "6");
+    for (let code = 0x4e00; code <= 0x9fff; code++) {
+      assert.equal(fixtureCellWidth(String.fromCodePoint(code)), provider.wcwidth(code), String(code));
+    }
+    assert.equal(projectPlainText("中文\t结果").text, "中文    结果");
+    assert.equal(projectPlainText("中\t文", 4).text, "中  文");
+    assert.equal(projectPlainText("中文\t结果").mappable, true);
+    assert.equal(projectPlainText("😀\t").mappable, false);
+    assert.equal(projectPlainText("e\u0301\t").mappable, false);
+  } finally { terminal.dispose(); }
+});
+
+test("Chinese and Tab offsets match actual xterm cells, including the gap before a wrapped wide glyph", async () => {
+  for (const raw of ["中文\t结果", "abc中\t文", "中\t文\t尾", "abcde中", "中中中"]) {
+    const { text } = projectPlainText(raw);
+    for (const cols of [2, 3, 5, 6, 9, 20]) {
+      const terminal = new headless.Terminal({ cols, rows: 2, scrollback: 100, allowProposedApi: true });
+      try {
+        await new Promise<void>(resolve => terminal.write(text, resolve));
+        const cells: { row: number; column: number; char: string; width: number }[] = [];
+        for (let row = 0; row < terminal.buffer.active.length; row++) {
+          const line = terminal.buffer.active.getLine(row)!;
+          for (let column = 0; column < cols; column++) {
+            const cell = line.getCell(column)!;
+            if (cell.getChars() !== "") cells.push({ row, column, char: cell.getChars(), width: cell.getWidth() });
+          }
+        }
+        assert.equal(cells.map(cell => cell.char).join(""), text);
+        for (const [offset, cell] of cells.entries()) {
+          const label = JSON.stringify({ raw, cols, offset });
+          assert.deepEqual(textPosition(text, offset, cols), { row: cell.row, column: cell.column }, label);
+          assert.deepEqual(textPosition(text, offset + 1, cols, "end"),
+            { row: cell.row, column: cell.column + cell.width }, label);
+          assert.equal(textOffset(text, cell.row, cell.column, cols), offset, label);
+          if (cell.width === 2) {
+            assert.equal(textOffset(text, cell.row, cell.column + 1, cols, "start"), offset, label);
+            assert.equal(textOffset(text, cell.row, cell.column + 1, cols, "end"), offset + 1, label);
+          }
+        }
+      } finally { terminal.dispose(); }
+    }
   }
 });
 

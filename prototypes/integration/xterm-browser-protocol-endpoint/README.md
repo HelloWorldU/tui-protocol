@@ -20,8 +20,8 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Forty-six browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Thirty-three use the protocol-only
+Forty-nine browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Thirty-six use the protocol-only
 endpoint path. Each of thirteen additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
@@ -134,6 +134,24 @@ managed Tabs and normalizes copied newlines. `getSelection()` still exposes
 xterm's displayed text; the copy-event payload is the copy oracle. Tab settings
 are held fixed while content is retained.
 
+Three [Chinese/Tab scenarios](scenarios/plain-text-chinese.ts) add narrow evidence:
+
+- selecting and copying `中文\t结果` survives a `20`-to-`5`-to-`9`-to-`20`-column
+  resize sequence, without copying the unused cell before a wrapped wide glyph;
+- selection endpoints inside `中` and `文` expand outward to include both whole
+  characters, survive reflow to `3` columns, and do not change the partial-Tab
+  rule in an adjacent selection; and
+- after resize to `9` columns, Extend and ReplaceSuffix preserve a selected
+  Chinese/Tab prefix using three raw scalars rather than eight display cells.
+  Replacing a selected new glyph clears copy, and a subsequent full Update
+  renders the new Chinese/Tab snapshot at the resized width.
+
+The shared mapping supports ASCII and basic CJK ideographs `U+4E00..U+9FFF`
+under the pinned xterm `6.0.0` default Unicode provider (`6`). Its two-cell
+ideograph width is an experimental fixture, checked against that provider by
+[Node tests](../../xterm-headless/plain-text.test.ts), not a protocol-mandated
+width table. Unicode-provider changes while retaining content are not supported.
+
 Two further [capacity scenarios](scenarios/capacity.ts) combine that projection
 with complete-Block eviction at `8` columns, `3` viewport rows, and `6`
 scrollback rows. An Update's five-scalar snapshot occupies four physical rows
@@ -168,8 +186,8 @@ requirements.
   adjacent-managed-Block copy fixtures, one with and one without an existing
   trailing line break, but only the outcomes listed above.
 - Partial-Block trimming, Append-driven eviction outside that one exact
-  complete-leading-Block fixture, dimensions beyond those listed, and non-ASCII content
-  remain outside this composed experiment.
+  complete-leading-Block fixture, dimensions beyond those listed, and Unicode
+  content beyond the three Chinese/Tab fixtures remain outside this experiment.
 - Capacity eviction removes the tested Block's rendered range while Session
   retains its logical snapshot. The experiment does not define forgotten-Block
   lifecycle or prove complete memory reclamation.
@@ -195,8 +213,10 @@ requirements.
 - The additional plain-text fixtures do not establish general Unicode cell
   mapping, rectangular selection, or literal-Tab search-query behavior. Only
   fully selected Tabs are reconstructed; partial-Tab selections use the
-  selected display spaces. Tabs alongside
-  non-ASCII text are conservatively rejected by this host's capacity preflight.
+  selected display spaces. Tabs alongside Unicode outside the mapped basic-CJK
+  range are conservatively rejected by this host's capacity preflight. The new
+  Chinese fixtures do not exercise emoji, combining sequences, Unicode-provider
+  changes, Chinese search, mixed-output Chinese selections, or Chinese eviction.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

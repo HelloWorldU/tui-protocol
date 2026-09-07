@@ -73,6 +73,11 @@ import {
   runPlainTextPartialTabScenario,
 } from "./scenarios/plain-text.ts";
 import "./style.css";
+import {
+  runChineseTabReflowScenario,
+  runChinesePartialSelectionScenario,
+  runChineseRetainedSelectionScenario,
+} from "./scenarios/plain-text-chinese.ts";
 
 const terminalElement = requiredElement("terminal");
 const summaryElement = requiredElement("summary");
@@ -145,6 +150,9 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runPlainTextRetainedSelectionScenario(),
     await runPlainTextMixedCopyScenario(),
     await runPlainTextPartialTabScenario(),
+    await runChineseTabReflowScenario(),
+    await runChinesePartialSelectionScenario(),
+    await runChineseRetainedSelectionScenario(),
   ];
 }
 

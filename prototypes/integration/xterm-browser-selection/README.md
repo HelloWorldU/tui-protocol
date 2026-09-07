@@ -105,6 +105,12 @@ also exercise Tab-preserving copy when projected text growth evicts an earlier
 complete Block, and copy-source clearing when it evicts the selected Block.
 These additional cases do not change this standalone page's scenario count.
 
+The endpoint's [Chinese/Tab fixtures](../xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
+also exercise basic-CJK selection/copy through resize and subsequent Operations.
+The shared wrapper maps two-cell ideographs and expands interior selection
+endpoints to whole characters; a partial Tab still copies only its selected
+spaces. See the endpoint record for the pinned width profile and tested sizes.
+
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
@@ -118,9 +124,9 @@ These additional cases do not change this standalone page's scenario count.
 - Partial-Block capacity eviction remains outside the selection experiment. The
   standalone browser run does not exercise Append-driven eviction; the composed
   endpoint covers only the one exact complete-leading-Block fixture above.
-- Wide, combining, and other non-ASCII selection mapping is not implemented.
-  The composed endpoint supplies only the listed wrapped-prefix and multiline
-  evidence; the standalone page still exercises its original eleven scenarios.
+- Beyond the composed endpoint's basic-CJK fixtures, wide, combining, and other
+  non-ASCII selection mapping is not implemented. The standalone page still
+  exercises its original eleven ASCII scenarios.
 - The experiment applies Block Operations directly to the history fixture. It
   does not compose the OSC codec or protocol Session.
 

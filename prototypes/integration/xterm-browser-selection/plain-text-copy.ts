@@ -1,6 +1,7 @@
 import type { Terminal } from "@xterm/xterm";
 import type { Block } from "../../block-model/model.ts";
 import { projectPlainText, textPosition } from "../../xterm-headless/plain-text.ts";
+import { normalizeWideSelection } from "./wide-selection.ts";
 
 interface CopyHistory {
   blocks(): readonly Block[];
@@ -14,6 +15,7 @@ export function installPlainTextCopy(
   const element = terminal.element;
   if (element === undefined) return () => {};
   const onCopy = (event: ClipboardEvent): void => {
+    normalizeWideSelection(terminal, history);
     const selection = terminal.getSelectionPosition();
     if (selection === undefined || !terminal.hasSelection() || !event.clipboardData) {
       return;
@@ -29,10 +31,10 @@ export function installPlainTextCopy(
         const projection = projectPlainText(
           block.content, terminal.options.tabStopWidth,
         );
-        if (!projection.ascii) continue;
+        if (!projection.mappable) continue;
         for (const tab of projection.tabs) {
           const a = textPosition(projection.text, tab.start, cols);
-          const b = textPosition(projection.text, tab.end, cols);
+          const b = textPosition(projection.text, tab.end, cols, "end");
           const tabStart = (range.start + a.row) * cols + a.column;
           const tabEnd = (range.start + b.row) * cols + b.column;
           if (tabStart >= start && tabEnd <= end) {
@@ -50,8 +52,7 @@ export function installPlainTextCopy(
         if (line === undefined) break;
         const from = row === selection.start.y ? selection.start.x : 0;
         const to = row === selection.end.y ? selection.end.x : cols;
-        // Rows containing Tabs are ASCII in this fixture. Other rows retain
-        // xterm's native cell-to-string conversion (including wide glyphs).
+        // Slice physical cells using xterm's conversion, not string indices.
         const rowTabs = tabs.filter(
           tab => tab.start < row * cols + to && tab.end > row * cols + from,
         );

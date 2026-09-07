@@ -87,3 +87,25 @@ test("the host tab width is used consistently by Append and Update", async () =>
     assert.equal(bufferRows(terminal)[0], "xy  z");
   } finally { endpoint.dispose(); terminal.dispose(); }
 });
+
+test("Chinese plus Tab renders through all content Operations and ReplaceSuffix still counts raw scalars", async () => {
+  const terminal = createTerminal({ cols: 9, rows: 4 });
+  const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+  try {
+    const context = negotiateAndOpen(endpoint);
+    const messages = [
+      append(context, "1", "text", "中文\t结果"),
+      extend(context, "2", "text", "1", "好"),
+      replaceSuffix(context, "3", "text", "2", 3, "新"),
+      update(context, "4", "text", "中\t文"),
+    ];
+    const raw = ["中文\t结果", "中文\t结果好", "中文\t新", "中\t文"];
+    const rows = [["中文    ", "结果"], ["中文    ", "结果好"], ["中文    ", "新"], ["中      ", "文"]];
+    for (const [index, message] of messages.entries()) {
+      assert.deepEqual(endpoint.push(encodeInput(message, index + 3)), emptyResult());
+      await endpoint.drain();
+      assert.deepEqual(bufferRows(terminal).slice(0, 2), rows[index]);
+      assert.equal(endpoint.context(context)?.blocks[0]?.content.data, raw[index]);
+    }
+  } finally { endpoint.dispose(); terminal.dispose(); }
+});

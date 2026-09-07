@@ -216,12 +216,16 @@ limitations:
   additionally test two projected-text growth cases: complete-Block eviction
   preserves a retained reading position and Tab copy source, or clears an
   evicted selection and moves reading to the nearest retained Block.
+- Three [Chinese/Tab browser fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
+  exercise copy through reflow, whole-character selection at interior endpoints,
+  and subsequent content Operations using raw scalar positions. They use a
+  pinned basic-CJK width fixture, not general Unicode layout.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
 compatibility, a public terminal API, arbitrary mixed-stream ingress,
 partial-Block eviction, Append-driven eviction beyond that one exact
-complete-leading-Block fixture, non-ASCII position mapping, or production
+complete-leading-Block fixture, general Unicode position mapping, or production
 renderer failure atomicity. Capacity eviction that must remove unmanaged rows
 is also not demonstrated.
 

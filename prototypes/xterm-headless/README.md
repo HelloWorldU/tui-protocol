@@ -91,10 +91,14 @@ can be designed.
   expands Tabs at host-selected logical-line stops, and renders other
   C0/DEL/C1 controls as visible `<U+XXXX>` labels without executing them.
   [Projection tests](plain-text.test.ts) enumerate those controls and check
-  selected ASCII offset round trips; the [composed endpoint](../integration/xterm-protocol-endpoint/README.md)
+  selected ASCII offset round trips and Chinese/Tab coordinates against actual
+  xterm cells; the [composed endpoint](../integration/xterm-protocol-endpoint/README.md)
   records runtime evidence for [Plain Text Content](../../docs/protocol/plain-text.md).
-  Labels and tab-stop implementation are experimental terminal choices. Tabs
-  alongside non-ASCII text are not supported by the capacity preflight.
+  Labels and tab-stop implementation are experimental terminal choices. Mapping
+  supports ASCII and basic CJK ideographs `U+4E00..U+9FFF` using a narrow width
+  fixture checked against the pinned xterm default Unicode provider (`6`).
+  Tabs alongside other Unicode remain unsupported by capacity preflight.
+  General grapheme handling and runtime Unicode-provider changes are not tested.
 - The standalone spike assumes a dedicated terminal. The composed xterm
   endpoint separately tests one narrow unmanaged-output gap and rejects one
   unsafe near-capacity growth against the Buffer's physical row count before

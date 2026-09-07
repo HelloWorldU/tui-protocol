@@ -718,7 +718,7 @@ function conservativeTextLineCount(
   tabWidth?: number,
 ): TextLineCount | undefined {
   const projection = projectPlainText(content, tabWidth);
-  if (!projection.ascii && projection.tabs.length > 0) return undefined;
+  if (!projection.mappable && projection.tabs.length > 0) return undefined;
   const normalized = projection.text;
   const logicalLines = normalized.split("\n");
   if (normalized.endsWith("\n")) {

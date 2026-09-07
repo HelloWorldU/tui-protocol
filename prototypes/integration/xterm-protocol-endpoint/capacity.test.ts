@@ -46,13 +46,13 @@ test("capacity checks include the visible expansion of controls before accepting
   }
 });
 
-test("a Tab beside non-ASCII text is conservatively rejected before Session or rows change", () => {
+test("a Tab beside an unmapped combining sequence is rejected before Session or rows change", () => {
   const terminal = createTerminal({ cols: 20, rows: 3 });
   const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
   try {
     const context = negotiateAndOpen(endpoint);
     const result = endpoint.push(encodeInput(
-      append(context, "1", "text", "界\tx", "mutable"), 3,
+      append(context, "1", "text", "中\u0301\tx", "mutable"), 3,
     ));
     assert.deepEqual(decodeResponses(result), [{
       version: 1,
@@ -67,6 +67,31 @@ test("a Tab beside non-ASCII text is conservatively rejected before Session or r
     endpoint.dispose();
     terminal.dispose();
   }
+});
+
+test("Chinese and Tab growth beyond capacity preserves rows and the base ID for a later fitting Extend", async () => {
+  const terminal = createTerminal({ cols: 9, rows: 3, scrollback: 0 });
+  const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+  try {
+    const context = negotiateAndOpen(endpoint);
+    assert.deepEqual(endpoint.push(encodeInput(append(context, "1", "text", "中\t文"), 3)), emptyResult());
+    await endpoint.drain();
+    const before = bufferRows(terminal);
+    assert.deepEqual(before, ["中      ", "文", ""]);
+    const result = endpoint.push(encodeInput(extend(context, "2", "text", "1", "\t结果"), 4));
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(decodeResponses(result), [{
+      version: 1, kind: "protocol.error", context_id: context,
+      operation_id: "2", body: { code: "resource_exhausted" },
+    }]);
+    await endpoint.drain();
+    assert.deepEqual(bufferRows(terminal), before);
+    assert.equal(endpoint.context(context)?.blocks[0]?.content.data, "中\t文");
+    assert.deepEqual(endpoint.push(encodeInput(extend(context, "3", "text", "1", "好"), 5)), emptyResult());
+    await endpoint.drain();
+    assert.equal(endpoint.context(context)?.blocks[0]?.content.data, "中\t文好");
+    assert.deepEqual(bufferRows(terminal), ["中      ", "文好", ""]);
+  } finally { endpoint.dispose(); terminal.dispose(); }
 });
 
 for (const operation of ["Update", "Extend", "ReplaceSuffix"] as const) {

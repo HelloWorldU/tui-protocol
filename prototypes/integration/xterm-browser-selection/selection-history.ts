@@ -10,6 +10,7 @@ import {
   textPosition,
 } from "../../xterm-headless/plain-text.ts";
 import { installPlainTextCopy } from "./plain-text-copy.ts";
+import { normalizeWideSelection } from "./wide-selection.ts";
 
 interface SelectionSnapshot {
   readonly column: number;
@@ -51,12 +52,13 @@ interface LogicalSelectionSnapshot {
 
 /**
  * A browser-only experiment around the private xterm history renderer. It is
- * deliberately limited to the tested ASCII display-projection behavior.
+ * limited to the tested ASCII and basic-CJK display-projection behavior.
  */
 export class BrowserSelectionHistory {
   readonly #terminal: Terminal;
   readonly #history: PrivateCoreBlockHistory;
   readonly #disposeCopy: () => void;
+  readonly #selectionListener: { dispose(): void };
 
   constructor(terminal: Terminal) {
     this.#terminal = terminal;
@@ -64,6 +66,9 @@ export class BrowserSelectionHistory {
       terminal as unknown as HeadlessTerminal,
     );
     this.#disposeCopy = installPlainTextCopy(terminal, this.#history);
+    this.#selectionListener = terminal.onSelectionChange(() => {
+      normalizeWideSelection(terminal, this.#history);
+    });
   }
 
   async apply(operation: Operation): Promise<void> {
@@ -254,11 +259,13 @@ export class BrowserSelectionHistory {
   }
 
   dispose(): void {
+    this.#selectionListener.dispose();
     this.#disposeCopy();
     this.#history.dispose();
   }
 
   #selectionSnapshot(): SelectionSnapshot | undefined {
+    normalizeWideSelection(this.#terminal, this.#history);
     const position = this.#terminal.getSelectionPosition();
     if (position === undefined) {
       return undefined;
@@ -298,14 +305,14 @@ export class BrowserSelectionHistory {
       const projection = projectPlainText(
         block.content, this.#terminal.options.tabStopWidth,
       );
-      if (!projection.ascii) return undefined;
+      if (!projection.mappable) return undefined;
       const startOffset = textOffset(
         projection.text, position.row - range.start, position.column,
         this.#terminal.cols,
       );
       const endOffset = textOffset(
         projection.text, position.endRow - range.start, position.endColumn,
-        this.#terminal.cols,
+        this.#terminal.cols, "end",
       );
       if (startOffset === undefined || endOffset === undefined) return undefined;
       return { blockId: block.id, startOffset, endOffset };
@@ -372,7 +379,7 @@ export class BrowserSelectionHistory {
       .find((candidate) => candidate.id === blockId);
     if (
       block === undefined ||
-      !projectPlainText(block.content, this.#terminal.options.tabStopWidth).ascii ||
+      !projectPlainText(block.content, this.#terminal.options.tabStopWidth).mappable ||
       retain > Array.from(block.content).length
     ) {
       return false;
@@ -385,7 +392,7 @@ export class BrowserSelectionHistory {
     );
     const boundary = textPosition(
       projection.text, this.#retainedProjectionLength(blockId, retain),
-      this.#terminal.cols,
+      this.#terminal.cols, "end",
     );
     const retainedEnd =
       (range.start + boundary.row) * this.#terminal.cols + boundary.column;
@@ -471,7 +478,7 @@ export class BrowserSelectionHistory {
     const projection = projectPlainText(
       block.content, this.#terminal.options.tabStopWidth,
     );
-    if (!projection.ascii) return undefined;
+    if (!projection.mappable) return undefined;
     const offset = textOffset(
       projection.text, row - range.start, column, this.#terminal.cols,
     );
@@ -547,7 +554,7 @@ export class BrowserSelectionHistory {
 
   #restoreEndpointSelection(selection: EndpointSelectionSnapshot): void {
     const start = this.#resolveSelectionEndpoint(selection.start);
-    const end = this.#resolveSelectionEndpoint(selection.end);
+    const end = this.#resolveSelectionEndpoint(selection.end, "end");
     if (start === undefined || end === undefined) {
       this.#terminal.clearSelection();
       return;
@@ -565,6 +572,7 @@ export class BrowserSelectionHistory {
 
   #resolveSelectionEndpoint(
     endpoint: SelectionEndpointAnchor,
+    edge: "start" | "end" = "start",
   ): { readonly column: number; readonly row: number } | undefined {
     if (endpoint.kind === "logicalLine") {
       return this.#resolveLogicalLineSelectionEndpoint(endpoint);
@@ -580,9 +588,9 @@ export class BrowserSelectionHistory {
     const projection = projectPlainText(
       block.content, this.#terminal.options.tabStopWidth,
     );
-    if (!projection.ascii || endpoint.offset > projection.text.length) return undefined;
+    if (!projection.mappable || endpoint.offset > projection.text.length) return undefined;
     const position = textPosition(
-      projection.text, endpoint.offset, this.#terminal.cols,
+      projection.text, endpoint.offset, this.#terminal.cols, edge,
     );
     return { column: position.column, row: range.start + position.row };
   }
@@ -680,7 +688,7 @@ export class BrowserSelectionHistory {
     });
     const end = this.#resolveSelectionEndpoint({
       kind: "block", blockId: selection.blockId, offset: selection.endOffset,
-    });
+    }, "end");
     if (start === undefined || end === undefined) {
       this.#terminal.clearSelection();
       return;
