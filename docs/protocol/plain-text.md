@@ -87,3 +87,6 @@ The endpoint [capacity tests](../../prototypes/integration/xterm-protocol-endpoi
 and [browser capacity record](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
 add bounded evidence for expanded text near capacity, including rejected
 growth and selection behavior when exactly one complete oldest Block is evicted.
+Two [Chinese capacity search cases](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
+add retained-versus-evicted match evidence at one complete-Block boundary using
+the pinned basic-CJK width fixture, not a general Unicode capacity guarantee.

@@ -210,6 +210,27 @@ test("a conservative narrow-Unicode capacity rejection does not mark a visible l
   xterm.dispose();
 });
 
+test("Chinese and Tab growth evicts exactly the complete oldest Block and keeps later rows", async () => {
+  const xterm = new Terminal({ allowProposedApi: true, cols: 8, rows: 3, scrollback: 6 });
+  const history = new PrivateCoreBlockHistory(xterm);
+  try {
+    await history.apply(append("old", "\t旧", "sealed"));
+    await history.apply(append("target", "B", "mutable"));
+    await history.apply(append("reader", "中\t文", "sealed"));
+    await history.apply(append("tail", "t1\nt2", "sealed"));
+    const operation: Operation = { type: "update", id: "target", content: "\x1b\t新\tY" };
+    assert.equal(history.wouldExceedCapacity(operation), false);
+    await history.apply(operation);
+    assert.equal(history.range("old"), undefined);
+    assert.deepEqual(history.range("target"), { start: 0, lineCount: 4 });
+    assert.deepEqual(history.range("reader"), { start: 4, lineCount: 2 });
+    assert.deepEqual(bufferRows(xterm), ["<U+001B>", "        ", "新      ", "Y", "中      ", "文", "t1", "t2", ""]);
+  } finally {
+    history.dispose();
+    xterm.dispose();
+  }
+});
+
 function append(
   id: string,
   content: string,

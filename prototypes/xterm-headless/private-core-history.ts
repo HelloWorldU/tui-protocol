@@ -1,6 +1,6 @@
 import headless from "@xterm/headless";
 import type { IDisposable, Terminal } from "@xterm/headless";
-import { projectPlainText } from "./plain-text.ts";
+import { fixtureCellWidth, projectPlainText } from "./plain-text.ts";
 
 import {
   TerminalPrototype,
@@ -707,10 +707,9 @@ function replaceSuffixText(
 }
 
 /**
- * Returns a safe upper bound for the current plain-text spike. Printable ASCII
- * uses its known single-cell width. Until text/plain Unicode projection is
- * specified, every other printable scalar is conservatively treated as a
- * two-cell glyph so capacity preflight cannot undercount wide characters.
+ * Uses the pinned fixture's ASCII/basic-CJK widths for exact row estimates.
+ * Other printable scalars retain the experimental two-cell upper estimate;
+ * an inexact estimate cannot authorize capacity eviction.
  */
 function conservativeTextLineCount(
   content: string,
@@ -741,8 +740,9 @@ function conservativeTextLineCount(
       ) {
         return undefined;
       }
-      const cellWidth = codePoint <= 0x7e ? 1 : 2;
-      exact &&= codePoint <= 0x7e;
+      const knownWidth = fixtureCellWidth(character);
+      const cellWidth = knownWidth ?? 2;
+      exact &&= knownWidth !== undefined;
       if (cellWidth > width) {
         return undefined;
       }

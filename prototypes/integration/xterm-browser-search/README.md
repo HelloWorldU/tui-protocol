@@ -72,6 +72,12 @@ These cases use the [basic-CJK width fixture](../xterm-browser-protocol-endpoint
 They do not establish general Unicode search behavior or a protocol navigation
 policy. The standalone page still reports ten scenarios.
 
+Two additional [composed Chinese capacity cases](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
+check an Update evicting one complete two-row Chinese/Tab Block at `8` columns,
+`3` viewport rows, and `6` scrollback rows. The retained match keeps its character,
+copy payload, and mapped endpoints; the evicted match clears and leaves search.
+These are not standalone search scenarios and do not test partial-Block trimming.
+
 ## Private Search-Offset Workaround
 
 Before the workaround, the composed second-occurrence fixture selected the

@@ -225,6 +225,9 @@ limitations:
   current versus removed text after content Operations. The
   [search record](../../prototypes/integration/xterm-browser-search/README.md#private-search-offset-workaround)
   documents the version-bound workaround and remaining limits.
+- Two [Chinese capacity search fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
+  check a retained match and copy source moving with its Block, and an evicted
+  match clearing and leaving search, at one Update-driven complete-Block boundary.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal

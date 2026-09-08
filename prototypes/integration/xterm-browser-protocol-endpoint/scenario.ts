@@ -74,6 +74,10 @@ import {
 } from "./scenarios/plain-text.ts";
 import "./style.css";
 import {
+  runChineseCapacityRetainsSearchScenario,
+  runChineseCapacityEvictsSearchScenario,
+} from "./scenarios/chinese-capacity.ts";
+import {
   runChineseSearchReflowScenario,
   runChineseRepeatedSearchScenario,
   runChineseSearchMutationScenario,
@@ -163,6 +167,8 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runChineseRepeatedSearchScenario(),
     await runChineseSearchMutationScenario(),
     await runAdjacentChineseSearchScenario(),
+    await runChineseCapacityRetainsSearchScenario(),
+    await runChineseCapacityEvictsSearchScenario(),
   ];
 }
 

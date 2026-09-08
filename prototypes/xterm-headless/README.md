@@ -102,8 +102,11 @@ can be designed.
 - The standalone spike assumes a dedicated terminal. The composed xterm
   endpoint separately tests one narrow unmanaged-output gap and rejects one
   unsafe near-capacity growth against the Buffer's physical row count before
-  Block mutation. A conservative non-ASCII width bound covers one repeated-CJK
-  case. Safe eviction across mixed managed and unmanaged history and arbitrary
+  Block mutation. The pinned basic-CJK width fixture covers one repeated-CJK
+  rejection case. A [private-history test](private-core-history.test.ts) also
+  checks Chinese/Tab Update growth evicting exactly a two-row oldest Block while
+  preserving later rows. Unmapped Unicode estimates cannot authorize eviction.
+  Safe eviction across mixed managed and unmanaged history and arbitrary
   mixed output remain outside this spike.
 - Complete Update of the Block containing the viewport anchor remains
   undefined; the xterm integration separately exercises ReplaceSuffix's
@@ -112,7 +115,7 @@ can be designed.
   of complete oldest Blocks. It preserves a surviving reading position and
   moves a removed one to the next retained Block without following the tail.
   Its Append path accepts trimming only with no pending render, a dedicated
-  contiguous managed layout, an exact ASCII row count, and an excess composed
+  contiguous managed layout, an exact fixture row count, and an excess composed
   exactly of complete leading Block ranges. The composed endpoint tests one
   such Block, followed by an Update that trims the next Block after stale range
   bookkeeping has been removed. When trimming would be required, Append layouts

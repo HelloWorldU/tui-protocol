@@ -146,9 +146,9 @@ remains used under the protocol replay rules.
 When no earlier render is pending, the check projects the replacement against
 the xterm.js Buffer's current physical row count, including unmanaged rows.
 If the exact excess cannot be removed as complete leading Blocks, it rejects
-the Operation before Block mutation. Non-ASCII scalars use a conservative
-two-cell upper bound so the check cannot undercount the tested wide-character
-case. If that upper bound alone crosses capacity, the Operation is rejected
+the Operation before Block mutation. ASCII and basic CJK use the pinned width
+fixture for exact row estimates; other printable scalars retain a conservative
+two-cell estimate. If that estimate alone crosses capacity, the Operation is rejected
 rather than using an inexact count to schedule trimming. This closes the
 previously observed split-state cases for the tested ASCII and repeated-CJK
 content and dimensions; it is not evidence that all renderer failures are
@@ -160,7 +160,8 @@ Block remains retained. The private xterm range index removes those Block
 ranges, preserves a surviving history-reading position, or moves a removed
 position to the next retained Block without following the tail. The accepted
 Append fixture additionally requires no earlier render to be pending, a
-dedicated contiguous managed layout, and an exact ASCII row count. It trims one
+dedicated contiguous managed layout, and an exact fixture row count (ASCII in
+the tested Append case). It trims one
 complete leading Block; a following tested Update trims the next one. Later
 queued rendering remains ordered. This is a narrow feasibility result, not a
 general trimming implementation.
@@ -238,11 +239,13 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
 - The capacity preflight accounts for current unmanaged rows in the tested
   no-pending-render case, but it does not implement or prove safe eviction of
   unmanaged rows. Mixed capacity layouts beyond the listed conservative
-  rejection remain unproven. Its current non-ASCII upper bound may reject a
+  rejection remain unproven. Its unmapped-Unicode estimate may reject a
   layout that xterm.js could fit. Capacity preflight counts expanded controls
   and Tabs. It now aligns Tabs beside basic CJK ideographs `U+4E00..U+9FFF`
   under the pinned default Unicode provider, but rejects Tabs beside other
-  Unicode. CJK row estimates still cannot authorize capacity eviction.
+  Unicode. The [Chinese capacity browser cases](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
+  exercise one Update-driven complete-Block eviction with the basic-CJK fixture;
+  Chinese Append-driven eviction remains untested.
 - The adapter combines Context and Block IDs into an internal rendering key.
   The key is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
@@ -270,7 +273,7 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   evidence that this headless experiment satisfies the complete terminal
   baseline.
 - Accepted Append-driven trimming requires no pending render, a dedicated
-  contiguous managed layout, an exact ASCII row count, and an excess composed
+  contiguous managed layout, an exact fixture row count, and an excess composed
   exactly of complete leading Block ranges; the current evidence covers one
   such Block. When trimming would be required, Append layouts that fail those
   preconditions, including layouts containing unmanaged rows, use the

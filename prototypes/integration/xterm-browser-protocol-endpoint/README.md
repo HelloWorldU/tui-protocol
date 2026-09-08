@@ -20,8 +20,8 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Fifty-three browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Forty use the protocol-only
+Fifty-five browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Forty-two use the protocol-only
 endpoint path. Each of thirteen additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
@@ -174,6 +174,17 @@ Both scenarios check the complete resulting Buffer rows and retain the evicted
 Block's raw Session snapshot. They do not demonstrate partial-Block eviction,
 Unicode alignment, or operating-system clipboard behavior.
 
+Two [Chinese capacity search scenarios](scenarios/chinese-capacity.ts) use the
+same dimensions with Chinese/Tab Blocks. An Update grows from one to four rows
+and evicts exactly the two-row oldest Block. A retained Chinese match moves
+with its Block and copies unchanged; an evicted match loses its selection and
+copy source and cannot be found again. Both check full Buffer rows, retained
+match endpoints, and raw Session snapshots, including the evicted Block's.
+Capacity preflight uses the same pinned ASCII/basic-CJK width fixture as text
+mapping; unmapped Unicode estimates still cannot authorize eviction. These
+cases do not test Chinese reading anchors, arbitrary selections, resize during
+eviction, or Chinese Append-driven eviction.
+
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
 scenario's assertion. This supplies narrow cross-layer evidence for the
@@ -225,7 +236,8 @@ requirements.
   selected display spaces. Tabs alongside Unicode outside the mapped basic-CJK
   range are conservatively rejected by this host's capacity preflight. The new
   Chinese fixtures do not exercise emoji, combining sequences, Unicode-provider
-  changes, mixed-output Chinese selections, or Chinese eviction. The Chinese
+  changes, mixed-output Chinese selections, or Chinese eviction beyond the two
+  search cases above. The Chinese
   search cases do not test literal-Tab queries, general navigation, or search
   decorations.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
