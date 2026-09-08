@@ -18,11 +18,33 @@ The endpoint uses one shared private history renderer. Selection mapping and
 search restoration therefore observe the same accepted Operation and rendered
 Block ranges rather than running against independent copies of history.
 
+## Verification Checkpoint
+
+The current regression batch covers the listed ASCII/basic-CJK and Tab fixtures,
+not every combination of terminal state. No new protocol semantics are selected
+by these tests. This is a bounded checkpoint for moving on to host integration,
+not a claim that terminal-native behavior is complete.
+
+| Area | Evidence in this batch |
+| --- | --- |
+| Reading and tail following | [Chinese reflow and earlier content changes](scenarios/chinese-native-state.ts) |
+| Selection and copy | [Retained/evicted Chinese and Tab selections](scenarios/chinese-capacity.ts) |
+| Tail Append near capacity | [Retained/evicted selections and new searchable text](scenarios/chinese-append-capacity.ts) |
+| Active input | [Historical content changes and synthetic composition](scenarios/chinese-native-state.ts), [capacity eviction](scenarios/chinese-capacity.ts) |
+| Mixed output | [Chinese managed content beside ordinary ASCII](scenarios/chinese-mixed-selection.ts) |
+| Queued capacity decisions | [Node tests](../xterm-protocol-endpoint/capacity.test.ts) reject edits of an evicted Block while preserving a retained update chain |
+
+Deferred work includes resize that itself triggers capacity eviction, partial
+or unmanaged-row trimming, broader Unicode and literal-Tab queries, real input
+methods and clipboard interaction, and PTY/multiplexer/cross-terminal hosts.
+Styled metadata needs a content representation first. These are distinct
+extensions, not outcomes established by this checkpoint.
+
 ## Proven
 
-Fifty-five browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Forty-two use the protocol-only
-endpoint path. Each of thirteen additional scenarios uses an independent raw
+Sixty-five browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Fifty-one use the protocol-only
+endpoint path. Each of fourteen additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
 
@@ -181,9 +203,30 @@ with its Block and copies unchanged; an evicted match loses its selection and
 copy source and cannot be found again. Both check full Buffer rows, retained
 match endpoints, and raw Session snapshots, including the evicted Block's.
 Capacity preflight uses the same pinned ASCII/basic-CJK width fixture as text
-mapping; unmapped Unicode estimates still cannot authorize eviction. These
-cases do not test Chinese reading anchors, arbitrary selections, resize during
-eviction, or Chinese Append-driven eviction.
+mapping; unmapped Unicode estimates still cannot authorize eviction.
+Three additional cases in that file check retained/evicted reading positions
+and Chinese/Tab selections, and preservation of an unwrapped ASCII input line.
+
+Four [Chinese Append capacity cases](scenarios/chinese-append-capacity.ts) use
+`8` columns, `3` viewport rows, and `6` scrollback rows: a three-row tail Append
+evicts exactly a two-row oldest Block. A retained selection keeps its Chinese/Tab
+copy; an evicted selection clears and reading moves forward. Separate search
+cases preserve a retained current match or clear an evicted one. All check full
+Buffer rows, retained Session snapshots, and that new text enters search while
+evicted text leaves it.
+
+Two [Chinese native-state cases](scenarios/chinese-native-state.ts) check reading
+at the start of a retained Chinese Block through `20`-to-`5`-to-`9`-to-`20`
+reflow and a later Update, followed by explicit tail following through reflow
+and Extend. Separately, reflow to `9` columns and Extend/ReplaceSuffix/Update
+preserve an unwrapped ASCII input line and synthetic composition.
+
+One [Chinese mixed-selection case](scenarios/chinese-mixed-selection.ts) crosses
+from a Chinese/Tab managed Block into ordinary ASCII output and survives a
+`20`-to-`9`-to-`20` resize round trip. Extend adds text inside that selection;
+ReplaceSuffix clears it when selected text is replaced. A reverse-boundary
+selection clears on Update, while a new selection survives Seal and tail Append.
+The copy assertions retain complete Tabs and one newline at each boundary.
 
 Across these scenarios, the fixture drains the rendered-history queue before
 observing terminal state and checks Session content where it is part of the
@@ -199,13 +242,13 @@ requirements.
   optional styled content representation.
 - The protocol-only scenarios exercise all five current Block Operation kinds,
   the listed resize dimensions, the original Update-driven complete-Block
-  capacity boundary and the two projected-text cases above, and one
-  Append-driven fixture whose trim exactly matches
-  one complete leading managed Block. They also exercise two
+  capacity boundary and the projected-text cases above, plus the ASCII and
+  Chinese Append fixtures whose trim exactly matches one complete leading
+  managed Block. They also exercise two
   adjacent-managed-Block copy fixtures, one with and one without an existing
   trailing line break, but only the outcomes listed above.
-- Partial-Block trimming, Append-driven eviction outside that one exact
-  complete-leading-Block fixture, dimensions beyond those listed, and Unicode
+- Partial-Block trimming, Append-driven eviction outside the listed exact
+  complete-leading-Block fixtures, dimensions beyond those listed, and Unicode
   content beyond the listed Chinese/Tab copy and search fixtures remain outside
   this experiment.
 - Capacity eviction removes the tested Block's rendered range while Session
@@ -226,7 +269,8 @@ requirements.
   fixtures at `20` columns, one exact-tail Extend fixture, one two-boundary
   Extend fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize
   round trip, and two capacity fixtures whose trim exactly matches one complete
-  leading managed Block. Unicode, line breaks within selected content other
+  leading managed Block. Beyond the additional Chinese case above, Unicode,
+  line breaks within selected content other
   than the tested trailing LF at an adjacent-managed-Block boundary, other
   resize dimensions, capacity trimming that reaches unmanaged or partial-Block
   rows, mouse selection, and the operating-system clipboard remain untested.
@@ -236,8 +280,8 @@ requirements.
   selected display spaces. Tabs alongside Unicode outside the mapped basic-CJK
   range are conservatively rejected by this host's capacity preflight. The new
   Chinese fixtures do not exercise emoji, combining sequences, Unicode-provider
-  changes, mixed-output Chinese selections, or Chinese eviction beyond the two
-  search cases above. The Chinese
+  changes, or Chinese mixed-output and eviction behavior beyond the listed
+  cases above. The Chinese
   search cases do not test literal-Tab queries, general navigation, or search
   decorations.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,

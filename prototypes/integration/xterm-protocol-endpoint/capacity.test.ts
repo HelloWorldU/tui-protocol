@@ -94,6 +94,46 @@ test("Chinese and Tab growth beyond capacity preserves rows and the base ID for 
   } finally { endpoint.dispose(); terminal.dispose(); }
 });
 
+for (const kind of ["Update", "Extend", "ReplaceSuffix"] as const) {
+  test(`${kind} queues Chinese complete-Block eviction, rejects a later edit of the evicted Block, and accepts an Extend of retained content`, async () => {
+    const terminal = createTerminal({ cols: 8, rows: 3, scrollback: 6 });
+    const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+    try {
+      const context = negotiateAndOpen(endpoint);
+      assert.deepEqual(endpoint.push(concatenate([
+        encodeInput(append(context, "1", "old", "\t旧", "mutable"), 3),
+        encodeInput(append(context, "2", "growing", "B", "mutable"), 4),
+        encodeInput(append(context, "3", "reader", "中\t文", "sealed"), 5),
+        encodeInput(append(context, "4", "tail", "t1\nt2", "sealed"), 6),
+      ])), emptyResult());
+      await endpoint.drain();
+      const content = kind === "Extend" ? "B\t新\t文\tY" : "\x1b\t新\tY";
+      const growth = kind === "Update" ? update(context, "5", "growing", content)
+        : kind === "Extend" ? extend(context, "5", "growing", "2", "\t新\t文\tY")
+        : replaceSuffix(context, "5", "growing", "2", 0, content);
+      // All three Messages are accepted/rejected before any queued render drains.
+      const result = endpoint.push(concatenate([
+        encodeInput(growth, 7),
+        encodeInput(update(context, "6", "old", "不可回写"), 8),
+        encodeInput(extend(context, "7", "growing", "5", "!"), 9),
+      ]));
+      assert.deepEqual(result.diagnostics, []);
+      assert.deepEqual(decodeResponses(result), [{
+        version: 1, kind: "protocol.error", context_id: context,
+        operation_id: "6", body: { code: "resource_exhausted" },
+      }]);
+      await endpoint.drain();
+      assert.equal(endpoint.range(context, "old"), undefined);
+      assert.deepEqual(requiredRange(endpoint, context, "reader"), { start: 4, lineCount: 2 });
+      assert.equal(endpoint.context(context)?.blocks[0]?.content.data, "\t旧");
+      assert.equal(endpoint.context(context)?.blocks[1]?.content.data, content + "!");
+      assert.deepEqual(bufferRows(terminal), kind === "Extend"
+        ? ["B       ", "新      ", "文      ", "Y!", "中      ", "文", "t1", "t2", ""]
+        : ["<U+001B>", "        ", "新      ", "Y!", "中      ", "文", "t1", "t2", ""]);
+    } finally { endpoint.dispose(); terminal.dispose(); }
+  });
+}
+
 for (const operation of ["Update", "Extend", "ReplaceSuffix"] as const) {
   for (const [label, fragment] of [["Tab", "\tX"], ["ESC label", "\x1bX"]]) {
     test(`${operation} whose ${label} expansion exceeds capacity leaves rows unchanged and a later Extend accepts the original base_operation_id`, async () => {

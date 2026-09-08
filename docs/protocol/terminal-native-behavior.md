@@ -228,12 +228,16 @@ limitations:
 - Two [Chinese capacity search fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
   check a retained match and copy source moving with its Block, and an evicted
   match clearing and leaving search, at one Update-driven complete-Block boundary.
+- The [browser endpoint checkpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md#verification-checkpoint)
+  links additional Chinese/Tab reading, selection, input, Append-capacity, and
+  mixed-ASCII-output cases, plus queued capacity Node regressions. It records
+  the tested combinations and deferred extensions without changing this draft.
 
 Together these experiments provide bounded evidence only for their listed
 fixtures. They do not establish protocol conformance, cross-terminal
 compatibility, a public terminal API, arbitrary mixed-stream ingress,
-partial-Block eviction, Append-driven eviction beyond that one exact
-complete-leading-Block fixture, general Unicode position mapping, or production
+partial-Block eviction, Append-driven eviction beyond the listed exact
+complete-leading-Block fixtures, general Unicode position mapping, or production
 renderer failure atomicity. Capacity eviction that must remove unmanaged rows
 is also not demonstrated.
 
@@ -256,16 +260,17 @@ for one retained ASCII row at the viewport top while an earlier Block grows and
 shrinks. Adjacent-Block copy evidence is limited to two protocol-only ASCII
 fixtures: one whose earlier Block lacks a trailing line break and one whose
 earlier Block already ends with one. Append-driven browser
-reading-and-selection evidence is limited to one protocol-only fixture whose
-trim exactly matches one complete leading managed Block containing the reading
-position and selection. Mixed-boundary selection evidence is limited to twelve
+reading-and-selection evidence covers the listed ASCII and Chinese fixtures
+whose trim exactly matches one complete leading managed Block. The original
+mixed-boundary selection evidence is limited to twelve
 printable-ASCII fixtures: seven
 single-boundary-crossing Operation fixtures, one Extend fixture whose endpoint
 is exactly at the old Block tail, one two-boundary Extend fixture with two soft
 wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity
 fixtures whose trim exactly matches one complete leading managed Block.
 The additional plain-text fixtures above extend copy evidence to normalized
-line breaks and fully selected Tabs. Unicode, embedded line breaks within a
-mixed selection, dimensions beyond the listed fixtures, capacity trimming that
+line breaks and fully selected Tabs; the checkpoint above adds one Chinese/Tab
+managed-to-ordinary-ASCII case. Unicode beyond that case, embedded line breaks
+within a mixed selection, dimensions beyond the listed fixtures, capacity trimming that
 reaches unmanaged or partial-Block rows, mouse selection, and operating-system
 clipboard behavior remain untested.

@@ -99,7 +99,10 @@ fix or a public search API. Addon reconstruction still handles cache invalidatio
 
 ## Not Proven
 
-- Partial-Block capacity eviction and Append-driven eviction are not tested.
+- Partial-Block capacity eviction is not tested. The standalone page has no
+  Append-driven eviction case; the [composed Chinese Append cases](../xterm-browser-protocol-endpoint/scenarios/chinese-append-capacity.ts)
+  check retained/evicted current matches, that evicted text leaves search, and
+  that new tail text becomes searchable at one exact complete-Block boundary.
 - Reflow mapping beyond the listed basic-CJK cases, combining characters,
   emoji, multiline queries, and literal-Tab queries are not tested.
 - Search-result counts, decorations, general navigation behavior, keyboard shortcuts,

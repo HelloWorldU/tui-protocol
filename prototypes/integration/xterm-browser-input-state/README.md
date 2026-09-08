@@ -28,6 +28,13 @@ Five browser scenarios demonstrate that, within the tested fixture:
 This provides narrow experimental evidence for [Active Input
 State](../../../docs/protocol/terminal-native-behavior.md#10-active-input-state).
 
+The separate [browser endpoint native-state cases](../xterm-browser-protocol-endpoint/scenarios/chinese-native-state.ts)
+compose Chinese/Tab history, OSC Messages, and an unwrapped ASCII input line,
+including synthetic composition across reflow and content Operations. Its
+[capacity case](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
+also checks input through Chinese Update-driven eviction. These do not change
+this standalone page's scenario count or demonstrate a real IME.
+
 ## Not Proven
 
 - The composition scenario dispatches browser `CompositionEvent` objects. It

@@ -111,19 +111,27 @@ The shared wrapper maps two-cell ideographs and expands interior selection
 endpoints to whole characters; a partial Tab still copies only its selected
 spaces. See the endpoint record for the pinned width profile and tested sizes.
 
+The endpoint additionally tests [Chinese Update-driven eviction](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts),
+[Chinese Append-driven eviction](../xterm-browser-protocol-endpoint/scenarios/chinese-append-capacity.ts),
+and [Chinese/Tab selection crossing ordinary ASCII output](../xterm-browser-protocol-endpoint/scenarios/chinese-mixed-selection.ts).
+Those cases preserve retained copy sources and clear evicted or replaced ones;
+the mixed case includes a `20`-to-`9`-to-`20` resize round trip. They do not
+change the standalone page's eleven-scenario count.
+
 ## Not Proven
 
 - Mouse-driven selection, the operating-system clipboard, accessibility
   selection, and cross-browser behavior are not exercised.
-- Mixed-boundary resize/reflow is limited to one
-  `20`-to-`10`-to-`20`-column round trip. Mixed capacity evidence is limited to
+- Mixed-boundary resize/reflow is limited to the listed ASCII and Chinese
+  round trips. Mixed capacity evidence is limited to
   trimming exactly one complete leading managed Block and does not exercise a
   trim that reaches unmanaged rows.
-- Unicode, embedded line breaks within either side of a mixed selection, and
+- Unicode beyond the listed Chinese fixture, embedded line breaks within
+  either side of a mixed selection, and
   dimensions and positions beyond the listed fixtures remain untested.
 - Partial-Block capacity eviction remains outside the selection experiment. The
   standalone browser run does not exercise Append-driven eviction; the composed
-  endpoint covers only the one exact complete-leading-Block fixture above.
+  endpoint covers only the listed exact complete-leading-Block fixtures.
 - Beyond the composed endpoint's basic-CJK fixtures, wide, combining, and other
   non-ASCII selection mapping is not implemented. The standalone page still
   exercises its original eleven ASCII scenarios.

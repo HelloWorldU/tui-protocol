@@ -245,7 +245,10 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   under the pinned default Unicode provider, but rejects Tabs beside other
   Unicode. The [Chinese capacity browser cases](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
   exercise one Update-driven complete-Block eviction with the basic-CJK fixture;
-  Chinese Append-driven eviction remains untested.
+  the [Chinese Append browser cases](../xterm-browser-protocol-endpoint/scenarios/chinese-append-capacity.ts)
+  add one exact two-row eviction arrangement. Three [queued Node cases](capacity.test.ts)
+  check Update/Extend/ReplaceSuffix-triggered Chinese eviction, rejection of an
+  edit to the evicted Block, and a retained content chain before rendering drains.
 - The adapter combines Context and Block IDs into an internal rendering key.
   The key is an implementation fixture and has no wire-level meaning.
 - Context closure has no separate visual effect in this renderer; rejected
