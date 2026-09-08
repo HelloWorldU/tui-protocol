@@ -20,8 +20,8 @@ Block ranges rather than running against independent copies of history.
 
 ## Proven
 
-Forty-nine browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Thirty-six use the protocol-only
+Fifty-three browser scenarios negotiate the baseline capability and open a
+Context through encoded OSC Messages. Forty use the protocol-only
 endpoint path. Each of thirteen additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
@@ -152,6 +152,14 @@ ideograph width is an experimental fixture, checked against that provider by
 [Node tests](../../xterm-headless/plain-text.test.ts), not a protocol-mandated
 width table. Unicode-provider changes while retaining content are not supported.
 
+Four [Chinese search scenarios](scenarios/chinese-search.ts) additionally check
+a match spanning wide-character reflow, the second identical match staying in
+its Block after resize and earlier-Block updates, current versus removed matches
+through Extend/ReplaceSuffix/Update, and adjacent identical matches reached by
+find-next. They assert match text, copy payload, and physical endpoints.
+The [search record](../xterm-browser-search/README.md#private-search-offset-workaround)
+documents the reproduced padding-offset failure and local private-addon workaround.
+
 Two further [capacity scenarios](scenarios/capacity.ts) combine that projection
 with complete-Block eviction at `8` columns, `3` viewport rows, and `6`
 scrollback rows. An Update's five-scalar snapshot occupies four physical rows
@@ -187,7 +195,8 @@ requirements.
   trailing line break, but only the outcomes listed above.
 - Partial-Block trimming, Append-driven eviction outside that one exact
   complete-leading-Block fixture, dimensions beyond those listed, and Unicode
-  content beyond the three Chinese/Tab fixtures remain outside this experiment.
+  content beyond the listed Chinese/Tab copy and search fixtures remain outside
+  this experiment.
 - Capacity eviction removes the tested Block's rendered range while Session
   retains its logical snapshot. The experiment does not define forgotten-Block
   lifecycle or prove complete memory reclamation.
@@ -199,8 +208,8 @@ requirements.
   lifecycle, rejection, selection, and search outcomes.
 - The composition event is synthetic and does not prove compatibility with a
   real operating-system IME.
-- Private xterm core fields and explicit search-addon reconstruction remain
-  experimental fixtures, not a proposed public Terminal API.
+- Private xterm core fields, search-addon reconstruction, and the search-offset
+  workaround remain experimental fixtures, not a proposed public Terminal API.
 - The original mixed-stream selection evidence covers twelve printable-ASCII fixtures
   and synthetic browser copy events: seven single-boundary-crossing Operation
   fixtures at `20` columns, one exact-tail Extend fixture, one two-boundary
@@ -216,7 +225,9 @@ requirements.
   selected display spaces. Tabs alongside Unicode outside the mapped basic-CJK
   range are conservatively rejected by this host's capacity preflight. The new
   Chinese fixtures do not exercise emoji, combining sequences, Unicode-provider
-  changes, Chinese search, mixed-output Chinese selections, or Chinese eviction.
+  changes, mixed-output Chinese selections, or Chinese eviction. The Chinese
+  search cases do not test literal-Tab queries, general navigation, or search
+  decorations.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
   tested.

@@ -74,6 +74,12 @@ import {
 } from "./scenarios/plain-text.ts";
 import "./style.css";
 import {
+  runChineseSearchReflowScenario,
+  runChineseRepeatedSearchScenario,
+  runChineseSearchMutationScenario,
+  runAdjacentChineseSearchScenario,
+} from "./scenarios/chinese-search.ts";
+import {
   runChineseTabReflowScenario,
   runChinesePartialSelectionScenario,
   runChineseRetainedSelectionScenario,
@@ -153,6 +159,10 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runChineseTabReflowScenario(),
     await runChinesePartialSelectionScenario(),
     await runChineseRetainedSelectionScenario(),
+    await runChineseSearchReflowScenario(),
+    await runChineseRepeatedSearchScenario(),
+    await runChineseSearchMutationScenario(),
+    await runAdjacentChineseSearchScenario(),
   ];
 }
 

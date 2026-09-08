@@ -78,6 +78,10 @@ exercise Chinese/Tab copy through reflow, endpoints inside two-cell characters,
 and raw-scalar suffix replacement after resize. Their width mapping is restricted
 to ASCII and basic CJK ideographs under the pinned xterm default Unicode provider;
 it is not a protocol-wide width table or evidence for general Unicode layout.
+The [Chinese search cases](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-search.ts)
+add bounded evidence for current-projection search across reflow and content
+changes. The [search record](../../prototypes/integration/xterm-browser-search/README.md#private-search-offset-workaround)
+describes the private-addon workaround needed to preserve repeated matches.
 
 The endpoint [capacity tests](../../prototypes/integration/xterm-protocol-endpoint/capacity.test.ts)
 and [browser capacity record](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)

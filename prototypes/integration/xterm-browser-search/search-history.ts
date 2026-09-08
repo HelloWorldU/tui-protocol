@@ -3,6 +3,7 @@ import type { Terminal } from "@xterm/xterm";
 
 import type { Operation } from "../../block-model/model.ts";
 import { BrowserSelectionHistory } from "../xterm-browser-selection/selection-history.ts";
+import { installSearchCellOffsetFixture } from "./search-cell-offset.ts";
 
 /**
  * A narrow browser fixture for current-projection search scenarios.
@@ -19,6 +20,7 @@ export class BrowserSearchHistory {
     this.#terminal = terminal;
     this.#history = new BrowserSelectionHistory(terminal);
     terminal.loadAddon(this.#search);
+    installSearchCellOffsetFixture(this.#search, terminal);
   }
 
   async apply(operation: Operation): Promise<void> {
@@ -73,6 +75,7 @@ export class BrowserSearchHistory {
     this.#search.dispose();
     this.#search = new SearchAddon();
     this.#terminal.loadAddon(this.#search);
+    installSearchCellOffsetFixture(this.#search, this.#terminal);
   }
 
   #restoreSearch(currentTerm: string | undefined): void {

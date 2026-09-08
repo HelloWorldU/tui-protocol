@@ -53,14 +53,50 @@ separately demonstrate that a visible ESC label is searchable and copies as
 that label, while its raw control sequence is not found. The search addon sees
 the terminal's display projection, not Session's raw text. Those fixtures are
 not part of this standalone ten-scenario run; literal-Tab queries and general
-Unicode search mapping remain untested.
+Unicode search mapping remain untested beyond the composed cases below.
+
+Four [Chinese search scenarios](../xterm-browser-protocol-endpoint/scenarios/chinese-search.ts)
+run through the composed OSC endpoint, not this standalone page. They check:
+
+- a Chinese word crossing a wide-character soft wrap remains the current match
+  through `20`-to-`5`-to-`9`-to-`20` reflow, without searching or copying padding;
+- the second identical occurrence stays in its own Block when resize and an
+  earlier Block's growth or shrinkage move it;
+- Extend makes new Chinese text searchable; ReplaceSuffix preserves a retained
+  match and removes old suffix matches; full Update removes the old snapshot;
+  and
+- find-next reaches an immediately adjacent identical word and wraps back after
+  a `20`-to-`9`-to-`20` resize round trip.
+
+These cases use the [basic-CJK width fixture](../xterm-browser-protocol-endpoint/README.md).
+They do not establish general Unicode search behavior or a protocol navigation
+policy. The standalone page still reports ten scenarios.
+
+## Private Search-Offset Workaround
+
+Before the workaround, the composed second-occurrence fixture selected the
+first Block's matching word after resize instead of preserving the second.
+Our diagnosis is a mismatch between the search addon's
+[logical-line cache](https://raw.githubusercontent.com/xtermjs/xterm.js/master/addons/addon-search/src/SearchLineCache.ts),
+which omits the unused cell before a wrapped wide glyph, and its
+[search-start conversion](https://github.com/xtermjs/xterm.js/blob/master/addons/addon-search/src/SearchEngine.ts),
+which counted that cell as a space in the installed `0.16.0` source.
+
+The local [cell-offset fixture](search-cell-offset.ts) replaces only the private
+`_engine._bufferColsToStringOffset` method on each addon instance. It excludes
+the same padding cell while preserving actual spaces, including expanded Tabs.
+An absent hook fails explicitly; dependency upgrades require revalidation.
+[Node tests](../xterm-protocol-endpoint/search-projection.test.ts) check the
+conversion against headless Buffer cells, and the four browser cases check its
+composed outcomes. This is a version-bound prototype workaround, not an upstream
+fix or a public search API. Addon reconstruction still handles cache invalidation.
 
 ## Not Proven
 
 - Partial-Block capacity eviction and Append-driven eviction are not tested.
-- Reflow mapping for line breaks, wide or combining characters, and other
-  non-ASCII text is not tested.
-- Search-result counts, decorations, navigation policy, keyboard shortcuts,
+- Reflow mapping beyond the listed basic-CJK cases, combining characters,
+  emoji, multiline queries, and literal-Tab queries are not tested.
+- Search-result counts, decorations, general navigation behavior, keyboard shortcuts,
   accessibility, and cross-browser behavior are not tested.
 - The private history mutation bypasses xterm.js write events, and the search
   addon exposes no public line-cache invalidation API. Recreating it is only a

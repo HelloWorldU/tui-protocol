@@ -191,6 +191,10 @@ content. A capacity test rejects Chinese/Tab growth beyond three available rows
 without changing content or its base ID; a smaller Extend then succeeds.
 The [browser Chinese scenarios](../xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
 separately test selection and copy through resize and subsequent Operations.
+The [search-offset tests](search-projection.test.ts) check a browser-search
+helper against real headless Buffer cells; they do not run browser search.
+The composed endpoint's [Chinese search cases](../xterm-browser-protocol-endpoint/scenarios/chinese-search.ts)
+supply that separate browser evidence.
 
 The [browser endpoint](../xterm-browser-protocol-endpoint/README.md) separately
 tests projected-text growth that evicts one complete oldest Block, preserving
