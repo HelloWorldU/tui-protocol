@@ -23,6 +23,8 @@ prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.
     protocol-endpoint/        Terminal-side bytes-to-state and response path.
+    pty-demo/                 Fixed TUI process through ConPTY to browser history.
+    pty-transport/            Real child-process OSC transport diagnostics.
     xterm-browser-input-state/ Browser active-input behavior experiment.
     xterm-browser-metadata/   Browser content-metadata behavior experiment.
     xterm-browser-protocol-endpoint/ Browser bytes-to-native-state experiment.

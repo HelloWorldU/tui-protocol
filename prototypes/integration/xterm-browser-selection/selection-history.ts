@@ -459,7 +459,9 @@ export class BrowserSelectionHistory {
       return blockAnchor;
     }
 
-    return this.#logicalLineSelectionEndpointAnchor(column, row);
+    // An endpoint outside the edited Block can still belong to another Block.
+    // Use its content mapping before considering ordinary ASCII line anchors.
+    return this.#selectionEndpointAnchorForAnyBlock(column, row);
   }
 
   #blockSelectionEndpointAnchor(

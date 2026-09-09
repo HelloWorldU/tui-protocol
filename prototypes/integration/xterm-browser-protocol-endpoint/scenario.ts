@@ -85,7 +85,7 @@ import {
   runChineseAppendRetainsSearchScenario, runChineseAppendEvictsSearchScenario,
 } from "./scenarios/chinese-append-capacity.ts";
 import { runChineseReadingReflowScenario, runChineseHistoryPreservesInputScenario } from "./scenarios/chinese-native-state.ts";
-import { runChineseMixedSelectionScenario } from "./scenarios/chinese-mixed-selection.ts";
+import { runChineseMixedSelectionScenario, runEarlierExtendPreservesChineseBlockSelectionScenario } from "./scenarios/chinese-mixed-selection.ts";
 import {
   runChineseSearchReflowScenario,
   runChineseRepeatedSearchScenario,
@@ -188,6 +188,7 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runChineseReadingReflowScenario(),
     await runChineseHistoryPreservesInputScenario(),
     await runChineseMixedSelectionScenario(),
+    await runEarlierExtendPreservesChineseBlockSelectionScenario(),
   ];
 }
 

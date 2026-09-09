@@ -19,13 +19,19 @@
     "prototype:xterm-browser-protocol-endpoint": "vite prototypes/integration/xterm-browser-protocol-endpoint",
     "prototype:xterm-browser-search": "vite prototypes/integration/xterm-browser-search",
     "prototype:xterm-browser-selection": "vite prototypes/integration/xterm-browser-selection",
+    "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
+    "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
+    "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",
     "test": "node --test prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts prototypes/reference-codec/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "@types/ws": "8.18.1",
+    "node-pty": "1.1.0",
     "typescript": "^7.0.2",
-    "vite": "8.2.1"
+    "vite": "8.2.1",
+    "ws": "8.21.3"
   },
   "dependencies": {
     "@xterm/addon-search": "0.16.0",

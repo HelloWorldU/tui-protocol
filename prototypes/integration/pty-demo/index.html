@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><title>Real PTY Protocol Demo</title></head>
+<body>
+<h1>Real PTY Protocol Demo</h1>
+<p>Fixed Node TUI → bundled Windows ConPTY → browser codec / Session / xterm.</p>
+<p id="status">Connecting…</p>
+<button id="next">Next stage (n)</button>
+<button id="resize">Resize 40 / 10 columns</button>
+<button id="verify">Run guided checks</button>
+<button id="quit">Close Context and exit (q)</button>
+<label>Search <input id="query" value="保留"></label><button id="search">Find next</button>
+<pre id="report"></pre><div id="terminal"></div>
+<p>Programmatic checks use synthetic copy events, not the operating-system clipboard. This is an experimental host, not a general-purpose terminal.</p>
+<script type="module" src="/main.ts"></script>
+</body></html>

@@ -42,9 +42,15 @@ extensions, not outcomes established by this checkpoint.
 
 ## Proven
 
-Sixty-five browser scenarios negotiate the baseline capability and open a
+The [real PTY demonstration](../pty-demo/README.md) supplies separate,
+environment-specific process-to-browser evidence. Its later-Chinese-Block
+selection failure led to the additional
+[earlier Extend regression](scenarios/chinese-mixed-selection.ts) here: two
+extensions preserve the later Chinese/Tab copy and reading anchor.
+
+Sixty-six browser scenarios negotiate the baseline capability and open a
 Context through encoded OSC Messages. Fifty-one use the protocol-only
-endpoint path. Each of fourteen additional scenarios uses an independent raw
+endpoint path. Each of fifteen additional scenarios uses an independent raw
 mixed-ingress path for both the Messages and ordinary terminal bytes. Together
 they demonstrate that:
 
@@ -286,7 +292,8 @@ requirements.
   decorations.
 - Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
   remote transport, other terminals, and cross-browser behavior are not
-  tested.
+  tested by this fixture. See the separate PTY demonstration linked above for
+  its fixed Windows process scenario and narrower compatibility findings.
 
 ## Run
 

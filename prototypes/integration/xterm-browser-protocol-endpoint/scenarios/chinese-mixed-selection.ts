@@ -5,6 +5,31 @@ import {
 } from "../scenario-harness.ts";
 import type { ScenarioResult } from "../scenario-harness.ts";
 
+export async function runEarlierExtendPreservesChineseBlockSelectionScenario(): Promise<ScenarioResult> {
+  const fixture = await createMixedFixture({ cols: 20, rows: 4 });
+  try {
+    await fixture.ingress.push(concatenate([
+      text("ordinary prefix\r\n"),
+      encodeInput(append(fixture.contextId, "1", "thinking", "思考", "mutable"), 3),
+      encodeInput(append(fixture.contextId, "2", "result", "结果\t保留", "sealed"), 4),
+      encodeInput(append(fixture.contextId, "3", "tail", "1\n2\n3\n4\n5\n6", "sealed"), 5),
+    ]));
+    const range = () => requiredRange(fixture, "result");
+    fixture.terminal.scrollToLine(range().start);
+    fixture.terminal.select(0, range().start, 10);
+    assertEqual(copySelection(fixture.terminal), "结果\t保", "initial selected Chinese and Tab text");
+    for (const [id, base] of [["4", "1"], ["5", "4"]]) {
+      await fixture.ingress.push(encodeInput(extend(fixture.contextId, id, "thinking", base, "\n继续"), Number(id) + 2));
+      assertNoMixedErrors(fixture, "earlier Extend beside Chinese selection");
+      assertEqual(copySelection(fixture.terminal), "结果\t保", "later Chinese Block copy survives each earlier Extend");
+      assertEqual(fixture.terminal.getSelectionPosition()?.start.y, range().start, "selection follows later Block row");
+      assertEqual(fixture.terminal.buffer.active.viewportY, range().start, "reader stays on later Block");
+    }
+    return { name: "Earlier Extend Preserves Later Chinese Block Selection",
+      detail: "two earlier extensions moved the later selection and reading anchor without changing its Chinese/Tab copy" };
+  } finally { fixture.dispose(); }
+}
+
 export async function runChineseMixedSelectionScenario(): Promise<ScenarioResult> {
   const fixture = await createMixedFixture({ cols: 20, rows: 4 });
   try {

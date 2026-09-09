@@ -24,6 +24,8 @@ here.
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Integration prototype | Experimental |
+| [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |
+| [Real PTY demonstration](../prototypes/integration/pty-demo/README.md) | Process-to-browser integration prototype | Experimental; fixed Windows bundled-ConPTY scenario |
 | [xterm protocol endpoint](../prototypes/integration/xterm-protocol-endpoint/README.md) | Integration prototype | Experimental |
 | [xterm browser protocol endpoint](../prototypes/integration/xterm-browser-protocol-endpoint/README.md) | Browser integration prototype | Experimental |
 | [xterm browser selection and copy](../prototypes/integration/xterm-browser-selection/README.md) | Browser integration prototype | Experimental |
