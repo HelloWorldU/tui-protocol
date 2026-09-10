@@ -46,7 +46,7 @@ socket.onmessage = event => {
         operation = Number(message.operation_id);
         if ("context_id" in message) context = message.context_id;
       }
-      if (message.kind === "capability.query" && message.request_id === "verified-error") errorReturned = true;
+      if (message.kind === "capability.query" && operation === 10) errorReturned = true;
     }
     if (diagnostics.length) throw new Error(diagnostics.join("; "));
     status.textContent = context ? `Connected — last Operation ${operation}; Context ${endpoint.context(context)?.state}` : "Negotiating through PTY…";

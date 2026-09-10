@@ -23,6 +23,7 @@ here.
 | [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
+| [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; source-only, unpublished |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Integration prototype | Experimental |
 | [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |
 | [Real PTY demonstration](../prototypes/integration/pty-demo/README.md) | Process-to-browser integration prototype | Experimental; fixed Windows bundled-ConPTY scenario |

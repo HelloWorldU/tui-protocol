@@ -19,6 +19,9 @@ docs/                         Project documentation and its main index.
   design/                     Working design notes for experiments.
   protocol/                   Consolidated, non-normative protocol drafts.
   rfcs/                       Numbered proposals and design rationale.
+sdk/                          Application-facing protocol APIs, initially experimental TypeScript.
+  src/                        TUI client implementation and public exports.
+  test/                       SDK behavior and protocol interoperability checks.
 prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.

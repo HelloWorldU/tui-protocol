@@ -4,7 +4,8 @@ Can a real, fixed TUI process negotiate the protocol, change historical Blocks,
 and receive a rejection through a PTY while the browser preserves the tested
 reading, selection/copy, and search states?
 
-This experimental demonstration composes the [reference codec](../../reference-codec/README.md),
+This experimental demonstration uses the [TUI SDK](../../../sdk/README.md)
+in its child process and composes the [reference codec](../../reference-codec/README.md),
 [protocol Session](../../protocol-session/README.md),
 [mixed xterm endpoint](../xterm-protocol-endpoint/README.md), and
 [browser search/selection history](../xterm-browser-search/README.md).
@@ -16,7 +17,7 @@ across a process boundary; it does not define new protocol semantics.
 ## Path
 
 ```text
-Fixed Node TUI: Message → codec → stdout
+Fixed Node TUI: SDK → codec → stdout
   ↕ bundled Windows ConPTY
 Local host: PTY data ↔ WebSocket
   ↕
@@ -48,6 +49,10 @@ Stop the development server when finished.
 is not a standalone application: the development host supplies the PTY bridge.
 
 ## Observed Result
+
+On 2026-09-10 the same guided sequence was rerun after moving the child to the
+SDK. The child no longer constructs protocol envelopes, frame IDs, or control
+request IDs; incremental base IDs remain explicit application state.
 
 On 2026-09-09, Windows `10.0.19044`, Node `v24.20.0`, `node-pty` `1.1.0`,
 bundled ConPTY `1.23.251008001`, and pinned xterm.js `6.0.0`, the guided browser

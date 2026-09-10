@@ -22,7 +22,7 @@
     "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
     "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
     "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",
-    "test": "node --test prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts prototypes/reference-codec/*.test.ts prototypes/xterm-headless/*.test.ts",
+    "test": "node --test sdk/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts prototypes/reference-codec/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
