@@ -5,7 +5,7 @@ import {
   ProtocolStreamDecoder,
   encodeMessageFrames,
   type Message,
-} from "../../reference-codec/index.ts";
+} from "../../../protocol/src/index.ts";
 import type {
   EndpointDiagnostic,
   EndpointResult,

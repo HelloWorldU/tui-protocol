@@ -11,7 +11,7 @@ import {
   serializeMessage,
   type DecoderEvent,
   type Message,
-} from "./index.ts";
+} from "../src/index.ts";
 
 const messages: readonly Message[] = [
   {

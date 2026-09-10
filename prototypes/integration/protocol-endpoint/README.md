@@ -7,7 +7,7 @@ frames.
 
 It composes:
 
-- the [TypeScript reference codec](../../reference-codec/README.md), which
+- the [TypeScript reference codec](../../../protocol/README.md), which
   implements the current Message, JSON, and OSC framing drafts; and
 - the [protocol session](../../protocol-session/README.md), which implements
   the current Capability, Context, Block Operation, and error semantics.

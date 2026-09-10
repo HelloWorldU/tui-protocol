@@ -1,2 +1,2 @@
 export * from "./client.ts";
-export type { DecoderEvent, ProtocolErrorMessage } from "../../prototypes/reference-codec/index.ts";
+export type { DecoderEvent, ProtocolErrorMessage } from "../../protocol/src/index.ts";

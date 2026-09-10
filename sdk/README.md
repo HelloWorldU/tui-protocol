@@ -11,11 +11,12 @@ reusable client, not a stable API or a published package.
 - `test/client.test.ts` checks client behavior and interoperability with the
   [terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md).
 
-For now the SDK imports the existing
-[reference codec](../prototypes/reference-codec/README.md) rather than copying
-it. It is therefore usable from this checkout, not yet a standalone npm
-distribution. The [protocol drafts](../docs/README.md) remain authoritative;
-SDK conveniences do not introduce new wire semantics.
+The SDK imports the [shared protocol implementation](../protocol/README.md).
+Its runtime source no longer depends on `prototypes/`; its tests and the PTY
+demo still exercise prototype integrations. This remains a source-checkout
+API, not yet a standalone npm distribution. The
+[protocol drafts](../docs/README.md) remain authoritative; SDK conveniences do
+not introduce new wire semantics.
 
 ## TUI-side use
 

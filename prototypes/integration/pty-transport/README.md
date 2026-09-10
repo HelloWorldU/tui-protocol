@@ -2,7 +2,7 @@
 
 This integration probe asks whether a real child process can exchange the
 current experimental OSC `9002` capability Messages through Windows ConPTY.
-It composes the [reference codec](../../reference-codec/README.md),
+It composes the [reference codec](../../../protocol/README.md),
 [protocol Session](../../protocol-session/README.md), and `node-pty` `1.1.0`.
 This probe itself does not connect the browser renderer. The separate
 [PTY demonstration](../pty-demo/README.md) builds on its transport result.

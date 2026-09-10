@@ -34,7 +34,7 @@ here.
 | [xterm browser content metadata](../prototypes/integration/xterm-browser-metadata/README.md) | Browser integration prototype | Experimental |
 | [xterm browser active input state](../prototypes/integration/xterm-browser-input-state/README.md) | Browser integration prototype | Experimental |
 | [Protocol session prototype](../prototypes/protocol-session/README.md) | Executable prototype | Experimental |
-| [TypeScript reference codec](../prototypes/reference-codec/README.md) | Executable prototype | Experimental |
+| [Shared TypeScript protocol code](../protocol/README.md) | Shared implementation | Experimental; source-only, unpublished |
 | [xterm-headless OSC spike](../prototypes/xterm-headless/README.md) | Feasibility spike | Experimental |
 | [Prior art and project evidence](prior-art.md) | Research note | Living document |
 | [RFC process](rfcs/README.md) | Project policy | Active |

@@ -9,7 +9,7 @@ import type {
   Message,
   OperationErrorCode,
   PlainTextSnapshot,
-} from "../reference-codec/message.ts";
+} from "../../protocol/src/message.ts";
 
 type ControlRequest = Extract<
   Message,

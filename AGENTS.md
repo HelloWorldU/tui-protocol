@@ -19,6 +19,9 @@ docs/                         Project documentation and its main index.
   design/                     Working design notes for experiments.
   protocol/                   Consolidated, non-normative protocol drafts.
   rfcs/                       Numbered proposals and design rationale.
+protocol/                     Shared message types, validation, serialization, and framing.
+  src/                        Transport-independent protocol implementation.
+  test/                       Codec and wire-format behavior checks.
 sdk/                          Application-facing protocol APIs, initially experimental TypeScript.
   src/                        TUI client implementation and public exports.
   test/                       SDK behavior and protocol interoperability checks.
@@ -35,7 +38,6 @@ prototypes/                   Executable experiments that test assumptions.
     xterm-browser-selection/  Browser selection and copy behavior experiment.
     xterm-protocol-endpoint/  Protocol bytes to mutable xterm history path.
   protocol-session/           In-memory terminal-side protocol state machine.
-  reference-codec/            TypeScript JSON and OSC codec experiment.
   xterm-headless/             Early xterm feasibility spikes using fixtures.
 ```
 

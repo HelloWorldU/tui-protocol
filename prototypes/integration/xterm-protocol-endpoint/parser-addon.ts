@@ -1,6 +1,6 @@
 import type { IDisposable, ITerminalAddon, Terminal } from "@xterm/headless";
 
-import { OSC_NUMBER } from "../../reference-codec/index.ts";
+import { OSC_NUMBER } from "../../../protocol/src/index.ts";
 import type {
   EndpointDiagnostic,
   EndpointResult,

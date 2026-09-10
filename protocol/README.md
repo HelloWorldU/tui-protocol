@@ -1,14 +1,19 @@
-# TypeScript Reference Codec Prototype
+# Shared TypeScript Protocol Code
 
-This prototype asks whether the draft logical Message schemas, strict UTF-8
-JSON serialization, and OSC framing can form one deterministic TypeScript
-round trip independently of where terminal byte-stream writes are split.
+Shared message types, strict UTF-8 JSON serialization, and OSC framing for
+TUI and Terminal consumers. This code was extracted from the reference-codec
+prototype without changing wire behavior. Its API remains experimental and
+unpublished; protocol design drafts remain in `docs/protocol/`.
+
+`src/index.ts` is the shared entry point; `test/codec.test.ts` retains the
+existing codec checks. The implementation has no SDK, prototype, renderer, or
+PTY dependency. Consumers import it; there is no duplicate codec in the SDK.
 
 It implements the current drafts for:
 
-- [concrete Message schemas](../../docs/protocol/message-schemas.md);
-- [JSON serialization](../../docs/protocol/serialization.md); and
-- [OSC carrier and framing](../../docs/protocol/framing.md).
+- [concrete Message schemas](../docs/protocol/message-schemas.md);
+- [JSON serialization](../docs/protocol/serialization.md); and
+- [OSC carrier and framing](../docs/protocol/framing.md).
 
 ## Proven
 
@@ -41,16 +46,16 @@ It implements the current drafts for:
   emitted with exactly the same bytes; one malformed protocol OSC is consumed
   as an error instead of being emitted as ordinary data.
 - The same codec processes the tested OSC Messages in the [browser protocol
-  endpoint](../integration/xterm-browser-protocol-endpoint/README.md) without a
+  endpoint](../prototypes/integration/xterm-browser-protocol-endpoint/README.md) without a
   Node-only Base64 dependency.
-- A narrow [xterm parser bridge](../integration/xterm-protocol-endpoint/README.md)
+- A narrow [xterm parser bridge](../prototypes/integration/xterm-protocol-endpoint/README.md)
   forwards tested completed OSC `9002` payloads through the same decoder; that
   bridge's mixed-stream limitations are recorded in its README.
 
 ## Experimental Boundaries
 
 - OSC number `9002` remains provisional and is not a public allocation.
-- The exported TypeScript API is an experimental fixture, not a stable SDK.
+- The exported TypeScript API is experimental, not a stable package contract.
 - Base64 uses the standard `btoa` and `atob` globals available in the declared
   Node.js runtime and tested browser; broader runtime portability is untested.
 - Only the baseline `text/plain` content schema is implemented because no
@@ -68,8 +73,9 @@ It implements the current drafts for:
 - Context or Block semantic state transitions and correlated error responses.
 - Capability timeouts, retry storage, or unsupported-terminal fallback.
 - Complete mixed-stream terminal-parser coverage, multiplexer integration, or
-  a bidirectional PTY path. The composed xterm integration tests only the
-  concrete mixed-stream cases recorded in its README.
+  a bidirectional PTY path from codec-only tests. The separate
+  [PTY demonstration](../prototypes/integration/pty-demo/README.md) records its
+  environment-specific process-to-browser evidence.
 - Authentication, provenance, reset behavior, or resource exhaustion outside
   the framing limits.
 - A stable public API or compatibility with future protocol versions.

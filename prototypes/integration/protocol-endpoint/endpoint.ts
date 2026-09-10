@@ -4,7 +4,7 @@ import {
   type DecoderEvent,
   type Message,
   type ProtocolDecoderEvent,
-} from "../../reference-codec/index.ts";
+} from "../../../protocol/src/index.ts";
 import {
   ProtocolSessionError,
   TerminalProtocolSession,

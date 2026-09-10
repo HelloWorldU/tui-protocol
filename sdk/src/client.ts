@@ -1,7 +1,7 @@
 import {
   ProtocolStreamDecoder, encodeMessageFrames,
   type DecoderEvent, type Message,
-} from "../../prototypes/reference-codec/index.ts";
+} from "../../protocol/src/index.ts";
 
 type Request = Extract<Message, { kind: "capability.query" | "context.open" | "context.close" }>;
 type Response = Extract<Message, { kind: "capability.response" | "context.open.response" | "context.close.response" }>;

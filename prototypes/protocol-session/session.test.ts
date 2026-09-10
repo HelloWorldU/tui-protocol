@@ -9,7 +9,7 @@ import type {
   BlockUpdate,
   Message,
   OperationErrorCode,
-} from "../reference-codec/message.ts";
+} from "../../protocol/src/message.ts";
 import {
   ProtocolSessionError,
   TerminalProtocolSession,

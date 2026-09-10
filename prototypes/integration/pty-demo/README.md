@@ -5,7 +5,7 @@ and receive a rejection through a PTY while the browser preserves the tested
 reading, selection/copy, and search states?
 
 This experimental demonstration uses the [TUI SDK](../../../sdk/README.md)
-in its child process and composes the [reference codec](../../reference-codec/README.md),
+in its child process and composes the [reference codec](../../../protocol/README.md),
 [protocol Session](../../protocol-session/README.md),
 [mixed xterm endpoint](../xterm-protocol-endpoint/README.md), and
 [browser search/selection history](../xterm-browser-search/README.md).
