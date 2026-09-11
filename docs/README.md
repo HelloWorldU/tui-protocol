@@ -23,7 +23,7 @@ here.
 | [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
-| [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; source-only, unpublished |
+| [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Integration prototype | Experimental |
 | [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |
 | [Real PTY demonstration](../prototypes/integration/pty-demo/README.md) | Process-to-browser integration prototype | Experimental; fixed Windows bundled-ConPTY scenario |
@@ -34,7 +34,7 @@ here.
 | [xterm browser content metadata](../prototypes/integration/xterm-browser-metadata/README.md) | Browser integration prototype | Experimental |
 | [xterm browser active input state](../prototypes/integration/xterm-browser-input-state/README.md) | Browser integration prototype | Experimental |
 | [Protocol session prototype](../prototypes/protocol-session/README.md) | Executable prototype | Experimental |
-| [Shared TypeScript protocol code](../protocol/README.md) | Shared implementation | Experimental; source-only, unpublished |
+| [Shared TypeScript protocol code](../protocol/README.md) | Shared implementation | Experimental; included in SDK build, unpublished |
 | [xterm-headless OSC spike](../prototypes/xterm-headless/README.md) | Feasibility spike | Experimental |
 | [Prior art and project evidence](prior-art.md) | Research note | Living document |
 | [RFC process](rfcs/README.md) | Project policy | Active |

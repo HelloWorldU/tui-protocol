@@ -9,6 +9,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "build:sdk": "node sdk/build.ts",
     "build:xterm-browser-input-state": "vite build prototypes/integration/xterm-browser-input-state --outDir ../../../.tmp/xterm-browser-input-state-dist --emptyOutDir",
     "build:xterm-browser-metadata": "vite build prototypes/integration/xterm-browser-metadata --outDir ../../../.tmp/xterm-browser-metadata-dist --emptyOutDir",
     "build:xterm-browser-protocol-endpoint": "vite build prototypes/integration/xterm-browser-protocol-endpoint --outDir ../../../.tmp/xterm-browser-protocol-endpoint-dist --emptyOutDir",

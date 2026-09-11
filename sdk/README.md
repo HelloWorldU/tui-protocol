@@ -13,10 +13,32 @@ reusable client, not a stable API or a published package.
 
 The SDK imports the [shared protocol implementation](../protocol/README.md).
 Its runtime source no longer depends on `prototypes/`; its tests and the PTY
-demo still exercise prototype integrations. This remains a source-checkout
-API, not yet a standalone npm distribution. The
+demo still exercise prototype integrations. Source and local compiled output
+are available, but this is not yet a published npm distribution. The
 [protocol drafts](../docs/README.md) remain authoritative; SDK conveniences do
 not introduce new wire semantics.
+
+## Local JavaScript build
+
+Run `pnpm build:sdk` from the repository root. It prints a fresh output directory
+under `.tmp/sdk-build-*`, containing ESM JavaScript, TypeScript declarations,
+the MIT license, and private package metadata. Keep the entire directory:
+`sdk/src/index.js` depends on the sibling `protocol/` output. No prototype code,
+PTY library, terminal renderer, or test code is emitted.
+
+The build uses the repository's pinned compiler. It rewrites runtime imports
+to `.js`, so the output does not need Node's TypeScript execution support.
+Each build uses a fresh directory instead of merging with potentially stale
+output; command-line builds are retained for inspection. The metadata remains
+`private: true`; a public package name, registry publication, supported-runtime
+matrix, and stable exports contract have not been selected.
+
+`pnpm test` includes two artifact checks in `test/artifact.test.ts`. They copy
+only build output outside the checkout and exercise package exports: one runs
+a small negotiation/Append/close exchange with a synthetic responder and Node's
+TypeScript support disabled; the other checks an external TypeScript consumer's
+types with the installed compiler. Both remove their own temporary directories.
+These are packaging checks, not new evidence about real terminal compatibility.
 
 ## TUI-side use
 
