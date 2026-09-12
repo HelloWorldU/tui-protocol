@@ -115,7 +115,9 @@ does not close the underlying transport or terminate remote resources.
 
 ## Terminal-side integration
 
-Terminal implementers do not use this TUI client to render Blocks. Start with
+Terminal implementers do not use this TUI client to render Blocks. The
+[terminal host example](../examples/terminal-host/README.md) introduces the
+incoming-byte, response, and renderer connections. For the underlying API, see
 the [terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md)
 for bytes-to-state/response handling and its Operation adapter contract.
 The [xterm endpoint](../prototypes/integration/xterm-protocol-endpoint/README.md)

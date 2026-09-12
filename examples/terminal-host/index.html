@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Terminal host example</title></head>
+<body>
+  <h1>Terminal host example</h1>
+  <p>The streaming SDK application sends bytes; this host owns protocol execution and terminal history.</p>
+  <button id="connect">Connect application</button>
+  <button id="disconnect" disabled>Disconnect</button>
+  <p id="status" role="status">Ready. One application per page; reload to run again.</p>
+  <div id="terminal"></div>
+  <label>Search retained content <input id="query" value="Result:"></label>
+  <button id="search">Find next</button>
+  <span id="search-result"></span>
+  <h2>Local diagnostics and state</h2>
+  <pre id="report">No connection yet.</pre>
+  <p>Experimental xterm adapter, not a production terminal SDK. The development host uses bundled Windows ConPTY.</p>
+  <script type="module" src="/main.ts"></script>
+</body>
+</html>

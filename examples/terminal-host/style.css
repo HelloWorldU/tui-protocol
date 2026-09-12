@@ -1,0 +1,4 @@
+body { font: 16px system-ui; max-width: 900px; margin: 32px auto; padding: 0 20px; color: #e3e9f0; background: #111820; }
+button, input { padding: 8px; margin: 4px; }
+#terminal { width: fit-content; padding: 12px; margin: 20px 0; border: 1px solid #607080; }
+#report { white-space: pre-wrap; overflow-wrap: anywhere; }

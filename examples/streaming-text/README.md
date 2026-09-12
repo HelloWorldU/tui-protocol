@@ -4,6 +4,9 @@ A small application that uses the built [TUI SDK](../../sdk/README.md), without
 importing prototype code. It demonstrates negotiation, incremental thinking
 output, a final answer, and application-owned fallback. It does not call an LLM.
 
+For the other side of the connection, see the
+[terminal host example](../terminal-host/README.md).
+
 ## What you should see
 
 | Terminal response | Application behavior |
