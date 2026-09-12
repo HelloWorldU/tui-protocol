@@ -1,5 +1,10 @@
 # Protocol Session Prototype
 
+This directory retains the original experiment record. Implementation and tests
+now live in [the terminal module](../../terminal/README.md), under
+`terminal/src/session.ts` and `terminal/test/session.test.ts`. The evidence below
+describes these Session checks, not all later integrations of the module.
+
 This prototype asks whether the draft Capability, Context, Block Operation,
 and error semantics can form one deterministic in-memory terminal-side
 session after Messages have already been decoded.

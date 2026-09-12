@@ -11,7 +11,7 @@ import {
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../protocol-endpoint/index.ts";
+} from "../../../terminal/src/index.ts";
 import { XtermProtocolEndpoint } from "./endpoint.ts";
 import { XtermMixedStreamIngress } from "./mixed-ingress.ts";
 

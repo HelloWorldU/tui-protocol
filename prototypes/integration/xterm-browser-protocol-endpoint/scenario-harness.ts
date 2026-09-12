@@ -9,7 +9,7 @@ import {
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../protocol-endpoint/index.ts";
+} from "../../../terminal/src/index.ts";
 import { BrowserSearchHistory } from "../xterm-browser-search/search-history.ts";
 import {
   XtermMixedStreamIngress,

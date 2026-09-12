@@ -4,13 +4,13 @@ import {
   type DecoderEvent,
   type Message,
   type ProtocolDecoderEvent,
-} from "../../../protocol/src/index.ts";
+} from "../../protocol/src/index.ts";
 import {
   ProtocolSessionError,
   TerminalProtocolSession,
   type OperationExecutionErrorCode,
   type SessionContextSnapshot,
-} from "../../protocol-session/index.ts";
+} from "./session.ts";
 
 const MAX_FRAME_ID = 2_147_483_647;
 

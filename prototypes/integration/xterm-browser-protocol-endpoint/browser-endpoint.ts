@@ -1,8 +1,8 @@
 import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import type { Terminal } from "@xterm/xterm";
 
-import type { SessionContextSnapshot } from "../../protocol-session/index.ts";
-import type { EndpointResult } from "../protocol-endpoint/index.ts";
+import type { SessionContextSnapshot } from "../../../terminal/src/index.ts";
+import type { EndpointResult } from "../../../terminal/src/index.ts";
 import { BrowserSearchHistory } from "../xterm-browser-search/search-history.ts";
 import {
   XtermProtocolEndpoint,

@@ -3,7 +3,7 @@ import { release } from "node:os";
 import { fileURLToPath } from "node:url";
 import * as pty from "node-pty";
 import { ProtocolStreamDecoder, encodeMessageFrames } from "../../../protocol/src/index.ts";
-import { TerminalProtocolSession } from "../../protocol-session/index.ts";
+import { TerminalProtocolSession } from "../../../terminal/src/index.ts";
 
 const child = fileURLToPath(new URL("./probe-child.ts", import.meta.url));
 const session = new TerminalProtocolSession({ completeBaselineSupported: true });

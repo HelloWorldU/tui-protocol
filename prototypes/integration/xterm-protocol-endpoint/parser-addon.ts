@@ -4,7 +4,7 @@ import { OSC_NUMBER } from "../../../protocol/src/index.ts";
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../protocol-endpoint/index.ts";
+} from "../../../terminal/src/index.ts";
 import type { XtermProtocolEndpoint } from "./endpoint.ts";
 
 const textEncoder = new TextEncoder();

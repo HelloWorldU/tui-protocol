@@ -6,14 +6,14 @@ import {
   ProtocolStreamDecoder,
   encodeMessageFrames,
   type Message,
-} from "../../../protocol/src/index.ts";
+} from "../../protocol/src/index.ts";
 import {
   ProtocolEndpointError,
   TerminalProtocolEndpoint,
   type AppliedBlockOperation,
   type EndpointResult,
   type TerminalOperationAdapter,
-} from "./endpoint.ts";
+} from "../src/endpoint.ts";
 
 test("capability query bytes split across two writes produce a supported response Message", () => {
   const endpoint = supportedEndpoint();

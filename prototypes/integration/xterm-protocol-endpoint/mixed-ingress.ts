@@ -7,7 +7,7 @@ import {
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../protocol-endpoint/index.ts";
+} from "../../../terminal/src/index.ts";
 import type { XtermProtocolEndpoint } from "./endpoint.ts";
 
 export interface XtermMixedStreamIngressOptions {

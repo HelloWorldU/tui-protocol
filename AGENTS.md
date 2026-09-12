@@ -28,10 +28,13 @@ examples/                     Runnable application and terminal integration exam
 sdk/                          Application-facing protocol APIs, initially experimental TypeScript.
   src/                        TUI client implementation and public exports.
   test/                       SDK behavior and protocol interoperability checks.
+terminal/                     Reusable terminal protocol execution, without a renderer.
+  src/                        Session, Endpoint, and host Operation adapter interface.
+  test/                       Execution, byte handling, and standalone build checks.
 prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.
-    protocol-endpoint/        Terminal-side bytes-to-state and response path.
+    protocol-endpoint/        Retained bytes-to-state experiment record; code is in terminal/.
     pty-demo/                 Fixed TUI process through ConPTY to browser history.
     pty-transport/            Real child-process OSC transport diagnostics.
     xterm-browser-input-state/ Browser active-input behavior experiment.
@@ -40,7 +43,7 @@ prototypes/                   Executable experiments that test assumptions.
     xterm-browser-search/     Browser search behavior experiment.
     xterm-browser-selection/  Browser selection and copy behavior experiment.
     xterm-protocol-endpoint/  Protocol bytes to mutable xterm history path.
-  protocol-session/           In-memory terminal-side protocol state machine.
+  protocol-session/           Retained Session experiment record; code is in terminal/.
   xterm-headless/             Early xterm feasibility spikes using fixtures.
 ```
 

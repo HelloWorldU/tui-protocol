@@ -11,5 +11,5 @@
     "types": ["node"],
     "verbatimModuleSyntax": true
   },
-  "include": ["examples/**/*.ts", "protocol/**/*.ts", "prototypes/**/*.ts", "sdk/**/*.ts"]
+  "include": ["examples/**/*.ts", "protocol/**/*.ts", "prototypes/**/*.ts", "sdk/**/*.ts", "terminal/**/*.ts"]
 }

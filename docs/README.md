@@ -26,7 +26,8 @@ here.
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |
 | [Terminal host example](../examples/terminal-host/README.md) | Terminal integration example | Experimental; depends on prototype xterm adapter |
-| [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Integration prototype | Experimental |
+| [Terminal protocol module](../terminal/README.md) | Terminal-facing execution | Experimental; local JavaScript build, unpublished |
+| [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Experiment record | Implementation and tests moved to terminal/ |
 | [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |
 | [Real PTY demonstration](../prototypes/integration/pty-demo/README.md) | Process-to-browser integration prototype | Experimental; fixed Windows bundled-ConPTY scenario |
 | [xterm protocol endpoint](../prototypes/integration/xterm-protocol-endpoint/README.md) | Integration prototype | Experimental |
@@ -35,7 +36,7 @@ here.
 | [xterm browser search](../prototypes/integration/xterm-browser-search/README.md) | Browser integration prototype | Experimental |
 | [xterm browser content metadata](../prototypes/integration/xterm-browser-metadata/README.md) | Browser integration prototype | Experimental |
 | [xterm browser active input state](../prototypes/integration/xterm-browser-input-state/README.md) | Browser integration prototype | Experimental |
-| [Protocol session prototype](../prototypes/protocol-session/README.md) | Executable prototype | Experimental |
+| [Protocol session prototype](../prototypes/protocol-session/README.md) | Experiment record | Implementation and tests moved to terminal/ |
 | [Shared TypeScript protocol code](../protocol/README.md) | Shared implementation | Experimental; included in SDK build, unpublished |
 | [xterm-headless OSC spike](../prototypes/xterm-headless/README.md) | Feasibility spike | Experimental |
 | [Prior art and project evidence](prior-art.md) | Research note | Living document |
@@ -63,8 +64,9 @@ prototypes/       Executable semantic and implementation experiments
 tests/            Future black-box scenarios and conformance fixtures
 ```
 
-`prototypes/` contains executable semantic, codec, Session, and xterm.js
-integration experiments. The `spec/` and `tests/` directories should be added
+`prototypes/` contains semantic models, xterm.js integration experiments, and
+retained experiment records. Shared codec and terminal execution code now live
+in `protocol/` and `terminal/`. The `spec/` and `tests/` directories should be added
 only when the project has a normative specification or reusable conformance
 fixtures to place in them.
 

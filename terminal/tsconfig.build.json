@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "noEmitOnError": true,
+    "declaration": true,
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "..",
+    "outDir": "../.tmp/terminal-build-default"
+  },
+  "include": ["src/**/*.ts", "../protocol/src/**/*.ts"]
+}

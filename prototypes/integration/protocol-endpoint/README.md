@@ -1,5 +1,10 @@
 # Terminal Protocol Endpoint Integration Prototype
 
+This directory retains the original experiment record. Implementation, adapter
+interface, and tests now live in [the terminal module](../../../terminal/README.md),
+under `terminal/src/endpoint.ts` and `terminal/test/endpoint.test.ts`. The evidence
+below describes these Endpoint checks, not every downstream integration.
+
 This integration prototype asks whether the existing reference codec and
 protocol session can form one deterministic terminal-side path from incoming
 TUI protocol byte chunks to protocol state changes and encoded response

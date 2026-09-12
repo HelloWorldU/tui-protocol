@@ -9,12 +9,12 @@ reusable client, not a stable API or a published package.
 - `src/index.ts` is the public source entry point.
 - `src/client.ts` implements the single-stream client and Context handles.
 - `test/client.test.ts` checks client behavior and interoperability with the
-  [terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md).
+  [terminal protocol module](../terminal/README.md).
 
 The SDK imports the [shared protocol implementation](../protocol/README.md).
-Its runtime source no longer depends on `prototypes/`; its tests and the PTY
-demo still exercise prototype integrations. Source and local compiled output
-are available, but this is not yet a published npm distribution. The
+Its runtime source no longer depends on `prototypes/`; its tests exercise the
+terminal module, while the PTY demo still uses experimental rendering. Source
+and local compiled output are available, but this is not yet a published npm distribution. The
 [protocol drafts](../docs/README.md) remain authoritative; SDK conveniences do
 not introduce new wire semantics.
 
@@ -118,7 +118,7 @@ does not close the underlying transport or terminate remote resources.
 Terminal implementers do not use this TUI client to render Blocks. The
 [terminal host example](../examples/terminal-host/README.md) introduces the
 incoming-byte, response, and renderer connections. For the underlying API, see
-the [terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md)
+the [terminal protocol module](../terminal/README.md)
 for bytes-to-state/response handling and its Operation adapter contract.
 The [xterm endpoint](../prototypes/integration/xterm-protocol-endpoint/README.md)
 and [PTY demonstration](../prototypes/integration/pty-demo/README.md) show the

@@ -9,7 +9,7 @@ import {
   encodeMessageFrames,
   type Message,
 } from "../../../protocol/src/index.ts";
-import type { EndpointDiagnostic } from "../protocol-endpoint/index.ts";
+import type { EndpointDiagnostic } from "../../../terminal/src/index.ts";
 import { XtermProtocolEndpoint } from "./endpoint.ts";
 import { XtermProtocolParserAddon } from "./parser-addon.ts";
 

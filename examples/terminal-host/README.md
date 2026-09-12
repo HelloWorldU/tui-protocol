@@ -5,9 +5,10 @@ render content, and send replies? This runnable example connects the
 [streaming application](../streaming-text/README.md) to the existing browser
 xterm adapter. Read [main.ts](main.ts) for the connection, not the test suite.
 
-Unlike the standalone TUI client, this terminal example still imports
-`prototypes/`. It teaches integration using experimental components; it is
-not a published terminal SDK or an adapter for an arbitrary terminal.
+The [terminal protocol module](../../terminal/README.md) is independent of
+prototypes and has a local JavaScript build. This browser example still imports
+the xterm renderer and mixed-input adapter from `prototypes/`; it is not a
+standalone renderer or an adapter for an arbitrary terminal.
 
 ## Run
 
@@ -60,7 +61,7 @@ failure stops the example; it does not attempt rollback or reconnect recovery.
 | Part | Existing implementation and responsibility |
 | --- | --- |
 | Message validation and encoding | [Shared protocol](../../protocol/README.md); transport-independent and included in the local SDK build. |
-| Capability, Context, and Operation state | [Protocol endpoint](../../prototypes/integration/protocol-endpoint/README.md) and Session; experimental APIs, independent of xterm rendering. |
+| Capability, Context, and Operation state | [Terminal module](../../terminal/README.md): Endpoint and Session; experimental APIs, independent of xterm rendering. |
 | Rendering and native history | [xterm adapter](../../prototypes/integration/xterm-protocol-endpoint/README.md) and [browser history](../../prototypes/integration/xterm-browser-search/README.md); replace these with your terminal's implementation. |
 | Transport and process lifetime | [Development host](../../prototypes/integration/pty-demo/README.md); fixed child, loopback WebSocket, and bundled ConPTY, not protocol requirements. |
 

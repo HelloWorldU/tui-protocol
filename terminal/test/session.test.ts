@@ -13,7 +13,7 @@ import type {
 import {
   ProtocolSessionError,
   TerminalProtocolSession,
-} from "./session.ts";
+} from "../src/session.ts";
 
 test("repeating a capability query returns the same response, while using its request ID to open a Context is rejected", () => {
   const session = supportedSession();
