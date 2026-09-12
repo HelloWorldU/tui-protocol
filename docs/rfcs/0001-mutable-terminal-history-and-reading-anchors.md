@@ -14,10 +14,12 @@ preserve native scrollback and stable reading positions.
 
 ## Background
 
-AI coding assistants and agentic tools have created long-running, dynamic TUI
-sessions in which earlier content continues to finalize, expand, shrink, and
-reflow. Users still expect to review that content through terminal-owned
-scrollback and its native reading capabilities.
+AI agents bring ongoing, dynamic interactions to terminal interfaces: content
+is generated, revised, and finalized throughout a session. Applications manage
+that content as logical units with identity and lifecycle, while traditional
+terminal interaction primarily expresses character output and screen
+operations. The gap is between the application's content model and what it
+can communicate to the terminal, not simply between two redraw strategies.
 
 Traditional cursor-oriented terminal control lets applications edit the active
 presentation, but generally does not give rows already committed to
@@ -30,11 +32,12 @@ generally reach anonymous rows already in scrollback, while destructive clear-
 and-replay can erase history, duplicate content, or move the user's reading
 position.
 
-The missing contract is not a new redraw algorithm. Applications need to
-express the identity and revision of logical content; terminals need to apply
-those updates to their own history and preserve the user's reading position.
-This resembles targeted updates to identified document nodes, without
-requiring the terminal to become a browser or expose a DOM.
+Historical updates and disrupted reading positions are concrete consequences
+of this gap. The proposed contract lets applications express content identity,
+lifecycle, and revision while terminals own presentation and native behavior.
+This RFC focuses that broader motivation on mutable terminal history and
+reading anchors through the goals below; it does not attempt to cover every
+dynamic TUI requirement.
 
 ## Goals
 

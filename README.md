@@ -1,14 +1,16 @@
 # tui-protocol
 
-An experiment in mutable, anchored content for terminal-native TUI
-applications.
+Exploring a terminal protocol for dynamic TUIs in the age of AI agents.
 
-Modern TUIs ask more of terminals: earlier messages should remain easy to
-revisit even when they continue to change. This project explores a contract
-where applications describe logical content and terminals retain control of
-rendering and history. The vision is to work with historical messages as
-identifiable components—somewhat like updating nodes in a document—without
-giving up the native terminal experience.
+As AI agents develop, terminal interfaces need to support more than a stream
+of output: content is generated, revised, and finalized throughout an ongoing
+interaction. Traditional terminal control remains useful, but does not fully
+express the content model these dynamic applications need.
+
+Our vision is for applications to work with terminal content as identifiable,
+updatable components—somewhat like updating nodes in a document—while terminals
+retain responsibility for rendering, history, and native interaction. This
+project explores the protocol contract that could make that possible.
 
 This project is an early research prototype, not a standard or a stable
 protocol.
@@ -32,9 +34,22 @@ protocol.
 
 ## The problem
 
-Dynamic TUI applications often need to revise earlier output as content
-streams, finalizes, or reflows. At the same time, users expect the terminal's
-native history and its surrounding ecosystem to keep working.
+Applications manage meaningful content with an identity and a lifecycle;
+traditional terminal interaction primarily expresses character output and
+screen operations. The terminal does not generally receive the information
+needed to distinguish a revision of existing content from a redraw of rows.
+
+This mismatch becomes more visible as interactions remain active and content
+changes over time. Updating earlier output without duplicating history, or
+preserving a user's reading position while content changes, are manifestations
+of that gap—not separate problems to solve with another redraw algorithm.
+
+We want applications to express what content changes, while terminals decide
+how to present it without giving up their native capabilities. The
+[RFC](docs/rfcs/0001-mutable-terminal-history-and-reading-anchors.md) develops
+this responsibility boundary and its initial scope.
+
+## Goals
 
 The project explores whether a terminal protocol can provide all three of
 these properties together:
@@ -44,12 +59,6 @@ these properties together:
 2. Update or reflow dynamic content after it has left the active screen.
 3. Keep the user's reading position anchored to logical content when output
    continues or content above it changes.
-
-Ordinary terminal protocols expose an editable active screen, while the
-terminal owns scrollback as physical character rows. Once output enters that
-history, an application generally cannot address it by stable content
-identity, mutate it safely, or express which logical content should remain
-visually anchored.
 
 ## License
 
