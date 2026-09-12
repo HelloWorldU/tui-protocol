@@ -49,6 +49,13 @@ Operation model. Detailed agreed semantics are consolidated under
 
 ## Repository layout
 
+The three reusable TypeScript modules are private pnpm workspace packages:
+`@tui-protocol/protocol`, `@tui-protocol/sdk`, and `@tui-protocol/terminal`.
+Run `pnpm install` at the root before using source commands. Cross-module
+imports use those public entries; local imports stay relative. Source entries
+resolve to TypeScript, while the SDK and terminal build commands produce
+self-contained JavaScript distributions. These names do not imply publication.
+
 Only directories with real content are created. The intended layout is:
 
 ```text

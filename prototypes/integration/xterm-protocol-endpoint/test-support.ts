@@ -7,11 +7,11 @@ import {
   ProtocolStreamDecoder,
   encodeMessageFrames,
   type Message,
-} from "../../../protocol/src/index.ts";
+} from "@tui-protocol/protocol";
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../../../terminal/src/index.ts";
+} from "@tui-protocol/terminal";
 import { XtermProtocolEndpoint } from "./endpoint.ts";
 import { XtermMixedStreamIngress } from "./mixed-ingress.ts";
 

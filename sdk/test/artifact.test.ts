@@ -12,19 +12,21 @@ test("built JavaScript negotiates and sends an Operation outside the checkout wi
   t.after(() => rmSync(output, { recursive: true, force: true }));
   const isolated = mkdtempSync(join(tmpdir(), "tui-sdk-artifact-"));
   t.after(() => rmSync(isolated, { recursive: true, force: true }));
-  const artifact = join(isolated, "node_modules", "tui-sdk-fixture");
+  const artifact = join(isolated, "node_modules", "@tui-protocol/sdk");
   cpSync(output, artifact, { recursive: true });
-  const files = readdirSync(artifact, { recursive: true, withFileTypes: true })
-    .filter(entry => entry.isFile()).map(entry => entry.name);
-  assert.equal(files.filter(name => name.endsWith(".js")).length, 6);
-  assert.equal(files.filter(name => name.endsWith(".d.ts")).length, 6);
+  const entries = readdirSync(artifact, { recursive: true, withFileTypes: true });
+  assert(entries.every(entry => !entry.isSymbolicLink()));
+  const files = entries.filter(entry => entry.isFile()).map(entry => entry.name);
+  assert.equal(files.filter(name => name.endsWith(".js")).length, 7);
+  assert.equal(files.filter(name => name.endsWith(".d.ts")).length, 7);
   assert(files.every(name => name.endsWith(".js") || name.endsWith(".d.ts") || name === "package.json" || name === "LICENSE"));
   const manifest = JSON.parse(readFileSync(join(artifact, "package.json"), "utf8"));
   assert.equal(manifest.private, true);
+  assert.equal(manifest.name, "@tui-protocol/sdk");
   const result = execFileSync(process.execPath, ["--input-type=module", "--no-experimental-strip-types", "-e", `
     import assert from 'node:assert/strict';
-    import { TuiClient } from 'tui-sdk-fixture';
-    import { ProtocolStreamDecoder, encodeMessageFrames } from 'tui-sdk-fixture/protocol';
+    import { TuiClient } from '@tui-protocol/sdk';
+    import { ProtocolStreamDecoder, encodeMessageFrames } from '@tui-protocol/sdk/protocol';
     const decoder = new ProtocolStreamDecoder();
     const sent = [];
     const client = new TuiClient({write(bytes) {
@@ -65,10 +67,10 @@ test("an external TypeScript consumer resolves built declarations and rejects in
   t.after(() => rmSync(output, { recursive: true, force: true }));
   const isolated = mkdtempSync(join(tmpdir(), "tui-sdk-types-"));
   t.after(() => rmSync(isolated, { recursive: true, force: true }));
-  cpSync(output, join(isolated, "node_modules", "tui-sdk-fixture"), { recursive: true });
+  cpSync(output, join(isolated, "node_modules", "@tui-protocol/sdk"), { recursive: true });
   writeFileSync(join(isolated, "consumer.mts"), `
-    import { TuiClient, type TuiContext } from 'tui-sdk-fixture';
-    import { type Message } from 'tui-sdk-fixture/protocol';
+    import { TuiClient, type TuiContext } from '@tui-protocol/sdk';
+    import { type Message } from '@tui-protocol/sdk/protocol';
     const client = new TuiClient({write(bytes) { const accepted: Uint8Array = bytes; }});
     const support: Promise<boolean> = client.negotiate();
     function use(context: TuiContext): string {

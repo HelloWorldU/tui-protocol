@@ -18,6 +18,15 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
     devDependencies:
+      '@tui-protocol/protocol':
+        specifier: workspace:*
+        version: link:protocol
+      '@tui-protocol/sdk':
+        specifier: workspace:*
+        version: link:sdk
+      '@tui-protocol/terminal':
+        specifier: workspace:*
+        version: link:terminal
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
@@ -36,6 +45,20 @@ importers:
       ws:
         specifier: 8.21.3
         version: 8.21.3
+
+  protocol: {}
+
+  sdk:
+    dependencies:
+      '@tui-protocol/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  terminal:
+    dependencies:
+      '@tui-protocol/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
 packages:
 

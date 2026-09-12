@@ -15,17 +15,19 @@ test("built terminal and TUI modules exchange all five Operations outside the ch
   t.after(() => rmSync(sdk, { recursive: true, force: true }));
   const isolated = mkdtempSync(join(tmpdir(), "tui-terminal-artifact-"));
   t.after(() => rmSync(isolated, { recursive: true, force: true }));
-  const artifact = join(isolated, "node_modules", "terminal-fixture");
+  const artifact = join(isolated, "node_modules", "@tui-protocol/terminal");
   cpSync(output, artifact, { recursive: true });
-  cpSync(sdk, join(isolated, "node_modules", "tui-fixture"), { recursive: true });
-  const files = readdirSync(artifact, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile());
-  assert.equal(files.filter(entry => entry.name.endsWith(".js")).length, 7);
-  assert.equal(files.filter(entry => entry.name.endsWith(".d.ts")).length, 7);
+  cpSync(sdk, join(isolated, "node_modules", "@tui-protocol/sdk"), { recursive: true });
+  const entries = readdirSync(artifact, { recursive: true, withFileTypes: true });
+  assert(entries.every(entry => !entry.isSymbolicLink()));
+  const files = entries.filter(entry => entry.isFile());
+  assert.equal(files.filter(entry => entry.name.endsWith(".js")).length, 8);
+  assert.equal(files.filter(entry => entry.name.endsWith(".d.ts")).length, 8);
   assert(files.every(entry => /\.(js|d\.ts)$/.test(entry.name) || ["package.json", "LICENSE"].includes(entry.name)));
   const result = execFileSync(process.execPath, ["--no-experimental-strip-types", "--input-type=module", "-e", `
     import assert from 'node:assert/strict';
-    import { TuiClient } from 'tui-fixture';
-    import { TerminalProtocolEndpoint } from 'terminal-fixture';
+    import { TuiClient } from '@tui-protocol/sdk';
+    import { TerminalProtocolEndpoint } from '@tui-protocol/terminal';
     const accepted = [];
     const errors = [];
     // Host assertion for an in-memory test adapter, not real terminal support.
@@ -69,8 +71,8 @@ test("built terminal and TUI modules exchange all five Operations outside the ch
     env: { ...process.env, NODE_OPTIONS: "", NODE_PATH: "" } });
   assert.equal(result.trim(), "isolated terminal and TUI exchange passed");
   writeFileSync(join(isolated, "consumer.mts"), `
-    import { TerminalProtocolEndpoint, type TerminalOperationAdapter } from 'terminal-fixture';
-    import { type Message } from 'terminal-fixture/protocol';
+    import { TerminalProtocolEndpoint, type TerminalOperationAdapter } from '@tui-protocol/terminal';
+    import { type Message } from '@tui-protocol/terminal/protocol';
     const adapter: TerminalOperationAdapter = {prepare() {return undefined;}, accept(operation) {}};
     const endpoint = new TerminalProtocolEndpoint({completeBaselineSupported: false, operationAdapter:adapter});
     const invalid: TerminalOperationAdapter = {

@@ -3,8 +3,8 @@ import type { IDisposable, Terminal } from "@xterm/headless";
 import {
   TerminalProtocolEndpoint,
   type EndpointResult,
-} from "../../../terminal/src/index.ts";
-import type { SessionContextSnapshot } from "../../../terminal/src/index.ts";
+} from "@tui-protocol/terminal";
+import type { SessionContextSnapshot } from "@tui-protocol/terminal";
 import {
   XtermTerminalAdapter,
   type RenderedBlockRange,

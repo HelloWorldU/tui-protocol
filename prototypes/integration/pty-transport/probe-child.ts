@@ -1,4 +1,4 @@
-import { ProtocolStreamDecoder, encodeMessageFrames } from "../../../protocol/src/index.ts";
+import { ProtocolStreamDecoder, encodeMessageFrames } from "@tui-protocol/protocol";
 
 // A bounded transport diagnostic, not a TUI implementation or fallback policy.
 const decoder = new ProtocolStreamDecoder();

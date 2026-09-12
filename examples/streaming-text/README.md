@@ -47,15 +47,18 @@ node --no-experimental-strip-types "<printed path to streaming-text.mjs>"
 ```
 
 The preparation command prints an entry path in a fresh `.tmp/sdk-build-*`
-directory. Keep or copy that entire directory: the application needs its sibling
-compiled SDK and protocol files. The prepared copy runs as JavaScript; it does
+directory. Keep or copy that entire directory, including its package metadata
+and `node_modules/`: the application resolves `@tui-protocol/sdk` through the
+prepared package's own name, and the SDK uses its included protocol dependency.
+The prepared copy runs as JavaScript; it does
 not need the repository's TypeScript sources or a PTY library. Preparation still
 requires the repository and its installed build dependencies.
 
 An existing terminal must implement the protocol to take the supported path.
 Installing this example does not add protocol support to an unmodified terminal.
-The source `main.mjs` is a template for the prepared directory, not a directly
-runnable entry in its source location.
+The source `main.mjs` can also run in the installed workspace, where the same
+package name resolves to TypeScript sources. The documented prepared path
+demonstrates execution without those sources.
 
 ## Files and responsibilities
 

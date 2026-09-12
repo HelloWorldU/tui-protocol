@@ -31,6 +31,7 @@ sdk/                          Application-facing protocol APIs, initially experi
 terminal/                     Reusable terminal protocol execution, without a renderer.
   src/                        Session, Endpoint, and host Operation adapter interface.
   test/                       Execution, byte handling, and standalone build checks.
+scripts/                      Shared repository build tooling.
 prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.
@@ -46,6 +47,13 @@ prototypes/                   Executable experiments that test assumptions.
   protocol-session/           Retained Session experiment record; code is in terminal/.
   xterm-headless/             Early xterm feasibility spikes using fixtures.
 ```
+
+## Module imports
+
+Use `@tui-protocol/protocol`, `@tui-protocol/sdk`, and `@tui-protocol/terminal`
+for cross-module runtime imports. Keep relative imports inside each module;
+do not reach into another module's `src/`. These workspace names are private,
+not a package-publication or API-stability promise.
 
 ## Pull request workflow
 

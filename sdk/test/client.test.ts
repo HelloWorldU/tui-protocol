@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { TuiClient, ControlTimeoutError, ControlResponseError } from "../src/index.ts";
-import { ProtocolStreamDecoder, encodeMessageFrames, type Message, type DecoderEvent } from "../../protocol/src/index.ts";
-import { TerminalProtocolEndpoint } from "../../terminal/src/index.ts";
+import { ProtocolStreamDecoder, encodeMessageFrames, type Message, type DecoderEvent } from "@tui-protocol/protocol";
+import { TerminalProtocolEndpoint } from "@tui-protocol/terminal";
 
 function fixture(timeoutMs = 2000) {
   const sent: Message[] = [];

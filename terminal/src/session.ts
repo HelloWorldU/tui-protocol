@@ -9,7 +9,7 @@ import type {
   Message,
   OperationErrorCode,
   PlainTextSnapshot,
-} from "../../protocol/src/message.ts";
+} from "@tui-protocol/protocol";
 
 type ControlRequest = Extract<
   Message,

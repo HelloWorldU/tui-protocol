@@ -8,8 +8,8 @@ import {
   ProtocolStreamDecoder,
   encodeMessageFrames,
   type Message,
-} from "../../../protocol/src/index.ts";
-import type { EndpointDiagnostic } from "../../../terminal/src/index.ts";
+} from "@tui-protocol/protocol";
+import type { EndpointDiagnostic } from "@tui-protocol/terminal";
 import { XtermProtocolEndpoint } from "./endpoint.ts";
 import { XtermProtocolParserAddon } from "./parser-addon.ts";
 

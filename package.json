@@ -32,6 +32,9 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@tui-protocol/protocol": "workspace:*",
+    "@tui-protocol/sdk": "workspace:*",
+    "@tui-protocol/terminal": "workspace:*",
     "@types/node": "^24.13.3",
     "@types/ws": "8.18.1",
     "node-pty": "1.1.0",

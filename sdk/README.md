@@ -23,15 +23,19 @@ not introduce new wire semantics.
 Run `pnpm build:sdk` from the repository root. It prints a fresh output directory
 under `.tmp/sdk-build-*`, containing ESM JavaScript, TypeScript declarations,
 the MIT license, and private package metadata. Keep the entire directory:
-`sdk/src/index.js` depends on the sibling `protocol/` output. No prototype code,
+`sdk/src/index.js` uses the included `node_modules/@tui-protocol/protocol`
+package through its public name. No prototype code,
 PTY library, terminal renderer, or test code is emitted.
 
-The build uses the repository's pinned compiler. It rewrites runtime imports
+The build uses the repository's pinned compiler. It rewrites relative runtime imports
 to `.js`, so the output does not need Node's TypeScript execution support.
 Each build uses a fresh directory instead of merging with potentially stale
 output; command-line builds are retained for inspection. The metadata remains
-`private: true`; a public package name, registry publication, supported-runtime
-matrix, and stable exports contract have not been selected.
+`private: true`; `@tui-protocol/sdk` is a local workspace/distribution name, not
+a registry publication or stable API promise. The shared build helper under
+`scripts/` includes actual dependency files, not links back into this checkout.
+The existing distribution-only `./protocol` export is retained as a forwarding
+entry. A supported-runtime matrix and stable exports contract remain deferred.
 
 `pnpm test` includes two artifact checks in `test/artifact.test.ts`. They copy
 only build output outside the checkout and exercise package exports: one runs
@@ -47,7 +51,7 @@ starting negotiation. The transport, raw-input mode, ordinary key handling,
 and fallback renderer belong to the application.
 
 ```ts
-import { TuiClient } from "./sdk/src/index.ts";
+import { TuiClient } from "@tui-protocol/sdk";
 
 const client = new TuiClient({
   write(bytes) { process.stdout.write(bytes); },

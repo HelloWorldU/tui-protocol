@@ -5,11 +5,11 @@ import {
   ProtocolStreamDecoder,
   encodeMessageFrames,
   type Message,
-} from "../../../protocol/src/index.ts";
+} from "@tui-protocol/protocol";
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../../../terminal/src/index.ts";
+} from "@tui-protocol/terminal";
 import { BrowserSearchHistory } from "../xterm-browser-search/search-history.ts";
 import {
   XtermMixedStreamIngress,

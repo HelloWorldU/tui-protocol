@@ -1,12 +1,12 @@
 import type { IDisposable, Terminal } from "@xterm/headless";
 
 import type { Operation } from "../../block-model/model.ts";
-import type { OperationExecutionErrorCode } from "../../../terminal/src/index.ts";
+import type { OperationExecutionErrorCode } from "@tui-protocol/terminal";
 import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
 import type {
   AppliedBlockOperation,
   TerminalOperationAdapter,
-} from "../../../terminal/src/index.ts";
+} from "@tui-protocol/terminal";
 
 export interface RenderedBlockRange {
   readonly start: number;

@@ -4,7 +4,7 @@ import {
   type DecoderEvent,
   type Message,
   type ProtocolDecoderEvent,
-} from "../../protocol/src/index.ts";
+} from "@tui-protocol/protocol";
 import {
   ProtocolSessionError,
   TerminalProtocolSession,

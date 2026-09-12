@@ -27,11 +27,14 @@ pnpm build:terminal
 
 The command prints a fresh `.tmp/terminal-build-*` directory with ESM JavaScript,
 declarations, the MIT license, and private package metadata. Keep the whole
-directory: `terminal/src/index.js` imports the sibling `protocol/` output.
+directory: `terminal/src/index.js` imports the included
+`node_modules/@tui-protocol/protocol` package by name, not through workspace links.
 The exports are `.` for terminal execution and `./protocol` for shared types
-and codecs. A public package name and stable API contract are not selected.
+and codecs. `@tui-protocol/terminal` is the private workspace/distribution name;
+registry publication and a stable API contract remain deferred.
 
-Import `TerminalProtocolEndpoint` from the prepared `terminal/src/index.js`.
+Import `TerminalProtocolEndpoint` from `@tui-protocol/terminal` in the workspace
+or when the complete built distribution is installed under that name.
 Supply the host's `completeBaselineSupported` assertion and its
 `operationAdapter`. For a protocol-only stream, call `push(bytes)` and return
 each `responseFrames` entry to the application; handle `diagnostics` locally.

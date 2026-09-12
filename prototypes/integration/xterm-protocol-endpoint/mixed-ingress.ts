@@ -3,11 +3,11 @@ import type { IDisposable, Terminal } from "@xterm/headless";
 import {
   ProtocolStreamDecoder,
   type DecoderEvent,
-} from "../../../protocol/src/index.ts";
+} from "@tui-protocol/protocol";
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../../../terminal/src/index.ts";
+} from "@tui-protocol/terminal";
 import type { XtermProtocolEndpoint } from "./endpoint.ts";
 
 export interface XtermMixedStreamIngressOptions {

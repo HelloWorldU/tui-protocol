@@ -1,7 +1,7 @@
 import { Terminal } from "@xterm/xterm";
 import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import "@xterm/xterm/css/xterm.css";
-import { ProtocolStreamDecoder } from "../../../protocol/src/index.ts";
+import { ProtocolStreamDecoder } from "@tui-protocol/protocol";
 import { BrowserSearchHistory } from "../xterm-browser-search/search-history.ts";
 import { XtermProtocolEndpoint, XtermMixedStreamIngress } from "../xterm-protocol-endpoint/index.ts";
 import { copySelection } from "../xterm-browser-protocol-endpoint/scenario-harness.ts";

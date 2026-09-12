@@ -5,7 +5,8 @@ TUI and Terminal consumers. This code was extracted from the reference-codec
 prototype without changing wire behavior. Its API remains experimental and
 unpublished; protocol design drafts remain in `docs/protocol/`.
 
-`src/index.ts` is the shared entry point; `test/codec.test.ts` retains the
+`@tui-protocol/protocol` is the private workspace entry point, backed by
+`src/index.ts`; `test/codec.test.ts` retains the
 existing codec checks. The implementation has no SDK, prototype, renderer, or
 PTY dependency. Consumers import it; there is no duplicate codec in the SDK.
 

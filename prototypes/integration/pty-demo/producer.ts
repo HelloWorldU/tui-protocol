@@ -1,4 +1,4 @@
-import { TuiClient, type TuiContext } from "../../../sdk/src/index.ts";
+import { TuiClient, type TuiContext } from "@tui-protocol/sdk";
 
 // Fixed demonstration program: no shell, AI service, file access, or user commands.
 const client = new TuiClient({ write: bytes => { process.stdout.write(bytes); } });

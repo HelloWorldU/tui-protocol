@@ -9,7 +9,7 @@ import type {
   BlockUpdate,
   Message,
   OperationErrorCode,
-} from "../../protocol/src/message.ts";
+} from "@tui-protocol/protocol";
 import {
   ProtocolSessionError,
   TerminalProtocolSession,

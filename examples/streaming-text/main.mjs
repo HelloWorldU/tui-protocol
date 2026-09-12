@@ -1,5 +1,5 @@
-// Run the prepared copy: this relative import points only to built JavaScript.
-import { TuiClient } from "./sdk/src/index.js";
+// The prepared package resolves this same name to built JavaScript.
+import { TuiClient } from "@tui-protocol/sdk";
 import { setTimeout as delay } from "node:timers/promises";
 
 const fragments = ["\nReading input", "\nChecking details", "\nPreparing answer"];

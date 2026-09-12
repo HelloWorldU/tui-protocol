@@ -1,10 +1,10 @@
 import type { IDisposable, ITerminalAddon, Terminal } from "@xterm/headless";
 
-import { OSC_NUMBER } from "../../../protocol/src/index.ts";
+import { OSC_NUMBER } from "@tui-protocol/protocol";
 import type {
   EndpointDiagnostic,
   EndpointResult,
-} from "../../../terminal/src/index.ts";
+} from "@tui-protocol/terminal";
 import type { XtermProtocolEndpoint } from "./endpoint.ts";
 
 const textEncoder = new TextEncoder();
