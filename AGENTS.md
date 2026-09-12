@@ -22,6 +22,8 @@ docs/                         Project documentation and its main index.
 protocol/                     Shared message types, validation, serialization, and framing.
   src/                        Transport-independent protocol implementation.
   test/                       Codec and wire-format behavior checks.
+examples/                     Runnable application integration examples.
+  streaming-text/             Built-SDK streaming output and application fallback.
 sdk/                          Application-facing protocol APIs, initially experimental TypeScript.
   src/                        TUI client implementation and public exports.
   test/                       SDK behavior and protocol interoperability checks.

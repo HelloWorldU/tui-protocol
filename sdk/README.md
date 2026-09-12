@@ -78,8 +78,8 @@ if (await client.negotiate()) {
 ```
 
 The example is schematic: handlers and fallback are application functions.
-For a runnable raw-stdin process with error/exit handling, see the
-[real PTY producer](../prototypes/integration/pty-demo/producer.ts).
+For a runnable application using built JavaScript, with raw-stdin handling and
+ordinary-text fallback, see the [streaming text example](../examples/streaming-text/README.md).
 
 ## API behavior
 

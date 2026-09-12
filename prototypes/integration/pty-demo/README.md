@@ -50,6 +50,12 @@ is not a standalone application: the development host supplies the PTY bridge.
 
 ## Observed Result
 
+The same fixed-process host also runs the
+[streaming SDK example](../../../examples/streaming-text/README.md) through a
+separate configuration. That configuration prepares built JavaScript and checks
+supported, unsupported, and silent negotiation paths. Application code lives in
+`examples/`; the browser fixtures and PTY bridge remain here.
+
 On 2026-09-10 the same guided sequence was rerun after moving the child to the
 SDK. The child no longer constructs protocol envelopes, frame IDs, or control
 request IDs; incremental base IDs remain explicit application state.

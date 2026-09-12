@@ -9,6 +9,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "example:streaming": "vite --config prototypes/integration/pty-demo/streaming-example.config.ts",
+    "prepare:streaming-example": "node examples/streaming-text/prepare.ts",
     "build:sdk": "node sdk/build.ts",
     "build:xterm-browser-input-state": "vite build prototypes/integration/xterm-browser-input-state --outDir ../../../.tmp/xterm-browser-input-state-dist --emptyOutDir",
     "build:xterm-browser-metadata": "vite build prototypes/integration/xterm-browser-metadata --outDir ../../../.tmp/xterm-browser-metadata-dist --emptyOutDir",
@@ -23,7 +25,7 @@
     "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
     "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
     "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",
-    "test": "node --test sdk/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
+    "test": "node --test examples/streaming-text/*.test.ts sdk/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/protocol-endpoint/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts prototypes/protocol-session/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
