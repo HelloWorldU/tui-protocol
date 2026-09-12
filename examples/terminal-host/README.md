@@ -84,16 +84,31 @@ Run `pnpm typecheck`, `pnpm test`, and `pnpm build:terminal-example` from the ro
 The build checks browser bundling, not a standalone deployment: running the page
 still requires its development PTY host and injected connection token.
 
-The browser smoke check is separate from Node tests: connect, inspect both
-rendered Blocks and the closed Context, confirm exit zero, and search for the
-answer. Also disconnect a fresh run before completion and confirm it does not
-report a successful child exit. These are fixed integration checks, not full
-protocol conformance or a new native-capability regression suite.
+For repeatable browser checks, open `http://127.0.0.1:4178/checks.html` while the
+development server is running and choose **Run browser checks**. Keep other
+example connections closed. The [runner](checks.ts) operates the actual example
+UI in a same-origin iframe, using two fresh SDK child processes:
+
+- Completion: final sealed content, explicit Context close before EOF, exit
+  zero, a retained answer search match, and no match for replaced thinking text.
+- Early disconnect: stop after observing the initial mutable thinking Block;
+  verify closed/sealed partial state, searchable partial content, no successful
+  child-exit confirmation, and no answer inherited from the previous run.
+
+Expect `2 browser scenarios passed.` The runner reports FAIL on a mismatched
+result or a local fifteen-second wait deadline. It observes content instead of
+sleeping a fixed interval before disconnecting. If a delayed delivery skips the
+initial observable state, that check fails rather than claiming an interruption
+was exercised. Reloading or rerunning uses fresh Sessions, not recovery.
+
+These browser checks are separate from `pnpm test`; they do not establish full
+protocol conformance or replace the native-capability regression suites.
 
 On 2026-09-12, the local browser run showed the expected final content, explicit
 Context close before EOF, exit zero, and a retained `Result:` search match.
 An interrupted run retained its partial content and reported no child exit
 confirmation. Both checks used the fixed SDK child through bundled ConPTY.
+The repeatable runner subsequently passed these two scenarios locally.
 
 The example uses pinned xterm 6.0 private history interfaces and experimental
 OSC `9002`. It has a fixed 40-by-8 viewport and a local twelve-second connection
