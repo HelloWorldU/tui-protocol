@@ -55,6 +55,10 @@ for cross-module runtime imports. Keep relative imports inside each module;
 do not reach into another module's `src/`. These workspace names are private,
 not a package-publication or API-stability promise.
 
+`pnpm test` checks compiler-resolved dependencies in the three modules' `src/`
+directories: protocol stays internal; SDK and terminal may also use the public
+protocol package. This is a development check, not a runtime security boundary.
+
 ## Pull request workflow
 
 1. Read the instructions that apply to the files being changed.
