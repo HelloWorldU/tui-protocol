@@ -72,9 +72,20 @@ history being cleared, duplicated, or lost while realizing an Operation.
 Trimming is not a Block lifecycle transition and does not itself Seal a Block
 or revoke Context authority.
 
-This draft has not yet defined the observable result of a later Operation that
-targets partially or fully trimmed content, or the reading-state fallback when
-no later retained logical position exists.
+Once a Block is fully evicted by capacity trimming, later Update, Extend, and
+ReplaceSuffix Operations targeting it are rejected; they never restore it to
+displayed history. An otherwise valid content modification reports
+`resource_exhausted` under the current error-code set. Freeing capacity later
+does not make that old Block editable again. To display the content again, the
+application uses Append with a new Block ID, subject to normal resource checks.
+
+The terminal preserves enough identity and replay information to prevent the
+old Block ID or consumed Operation IDs from being reused. It need not retain
+the complete content solely for that purpose. This is not a Seal transition;
+the existing lifecycle and Context rules remain applicable.
+
+Partial-Block eviction, detailed state-reclamation policy, and the reading-state
+fallback when no later retained logical position exists remain open.
 
 ## 6. Resize and Reflow
 

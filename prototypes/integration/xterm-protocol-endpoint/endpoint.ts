@@ -25,7 +25,7 @@ export class XtermProtocolEndpoint implements IDisposable {
   readonly #adapter: XtermTerminalAdapter;
 
   constructor(terminal: Terminal, options: XtermProtocolEndpointOptions) {
-    this.#adapter = new XtermTerminalAdapter(terminal, options.history);
+    this.#adapter = new XtermTerminalAdapter(terminal, options.history, error => this.abort(error));
     this.#endpoint = new TerminalProtocolEndpoint({
       completeBaselineSupported: options.completeBaselineSupported,
       operationAdapter: this.#adapter,
@@ -33,7 +33,17 @@ export class XtermProtocolEndpoint implements IDisposable {
   }
 
   push(bytes: Uint8Array): EndpointResult {
-    return this.#endpoint.push(bytes);
+    try {
+      return this.#endpoint.push(bytes);
+    } catch (error: unknown) {
+      this.abort(error);
+      throw error;
+    }
+  }
+
+  abort(reason: unknown): void {
+    this.#adapter.stop(reason);
+    this.#endpoint.abort(reason);
   }
 
   finish(): EndpointResult {
@@ -89,7 +99,12 @@ export class XtermProtocolEndpoint implements IDisposable {
   acceptDecoded(
     event: Parameters<TerminalProtocolEndpoint["acceptDecoded"]>[0],
   ): EndpointResult {
-    return this.#endpoint.acceptDecoded(event);
+    try {
+      return this.#endpoint.acceptDecoded(event);
+    } catch (error: unknown) {
+      this.abort(error);
+      throw error;
+    }
   }
 
   range(contextId: string, blockId: string): RenderedBlockRange | undefined {

@@ -65,6 +65,7 @@ export class TerminalProtocolEndpoint {
   readonly #operationAdapter: TerminalOperationAdapter | undefined;
   #nextResponseFrameId = 1;
   #ended = false;
+  #failure: ProtocolEndpointError | undefined;
 
   constructor(options: TerminalProtocolEndpointOptions) {
     this.#session = new TerminalProtocolSession(options);
@@ -83,6 +84,7 @@ export class TerminalProtocolEndpoint {
   }
 
   finish(): EndpointResult {
+    if (this.#failure !== undefined) throw this.#failure;
     if (this.#ended) {
       return emptyResult();
     }
@@ -99,6 +101,13 @@ export class TerminalProtocolEndpoint {
 
   contexts(): readonly SessionContextSnapshot[] {
     return this.#session.contexts();
+  }
+
+  /** Stop an untrustworthy execution session without claiming rollback or closure. */
+  abort(reason: unknown): void {
+    this.#failure ??= new ProtocolEndpointError(
+      `Protocol execution stopped: ${errorReason(reason)}`,
+    );
   }
 
   invalidateContext(id: string): boolean {
@@ -160,7 +169,12 @@ export class TerminalProtocolEndpoint {
           continue;
         }
         if (appliedOperation !== undefined) {
-          this.#operationAdapter?.accept(appliedOperation);
+          try {
+            this.#operationAdapter?.accept(appliedOperation);
+          } catch (error: unknown) {
+            this.abort(error);
+            throw this.#failure;
+          }
         }
       }
 
@@ -175,6 +189,7 @@ export class TerminalProtocolEndpoint {
   }
 
   #assertCanReceive(): void {
+    if (this.#failure !== undefined) throw this.#failure;
     if (this.#ended) {
       throw new ProtocolEndpointError(
         "Protocol endpoint cannot receive bytes after its connection ends.",

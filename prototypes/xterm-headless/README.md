@@ -123,8 +123,9 @@ can be designed.
   such Block, followed by an Update that trims the next Block after stale range
   bookkeeping has been removed. When trimming would be required, Append layouts
   that fail those preconditions use the conservative `resource_exhausted` path;
-  other exact Append arrangements remain unproven. Partial-Block trimming and
-  later mutation of a fully trimmed Block remain unsupported. The composed
+  other exact Append arrangements remain unproven. Partial-Block trimming is
+  unsupported; later content mutation of a fully trimmed Block is rejected
+  without restoring it by the [composed endpoint](../integration/xterm-protocol-endpoint/README.md#eviction-and-unrecoverable-rendering-failure). The composed
   Session also retains the logical snapshot after this private range index
   drops rendered rows.
 - Browser rendering and selection behavior are not exercised by headless

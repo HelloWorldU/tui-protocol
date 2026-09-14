@@ -128,6 +128,9 @@ assigned to a later Context on the same connection. Normal termination is
 expressed by an explicit closure request. Ending the end-to-end terminal
 connection closes all of its remaining open Contexts.
 
+This normal termination rule does not claim successful closure after an
+[unrecoverable execution failure](#12-unrecoverable-execution-failure).
+
 The initial protocol does not infer closure from inactivity, viewport state,
 or other presentation events. A TUI may legitimately remain silent while
 waiting for input or long-running work.
@@ -154,6 +157,28 @@ rendering has finished. Operations ordered after closure are invalid.
 This boundary follows the shared byte-stream ordering requirement rather than
 thread scheduling or rendering completion. Concurrency across independent
 streams remains undefined.
+
+## 12. Unrecoverable Execution Failure
+
+If execution fails after changes have begun, the receiver may use the ordinary
+error path only when it can establish that the Operation had no effect or has
+fully restored the required prior state. If it cannot establish or restore
+consistency, it stops processing that end-to-end protocol session, including
+later queued Operations. It does not report an ordinary atomic rejection as
+if the partial changes never happened.
+
+The host is notified and ends or retires the affected execution session. This
+is neither successful Context closure nor a Seal, and does not require clearing
+displayed history or terminating other independent connections. Existing
+snapshots may be retained for diagnosis but grant no authority to continue.
+Merely opening another Context on the failed session is not recovery.
+
+Before resuming protocol use, the host must establish trustworthy execution
+and rendering state and the application must negotiate again and obtain fresh
+Contexts. This does not necessarily require a new PTY. Automatic rollback,
+reconnection, a fatal wire notification, and the mechanics of host recovery
+are not defined here. Stopping limits further damage; it does not prove that
+already executed work was atomic or restore partially rendered content.
 
 ## Open Design Choices
 

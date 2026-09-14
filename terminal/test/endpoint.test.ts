@@ -831,6 +831,31 @@ test("ending the byte stream rejects an incomplete Message, closes Contexts, and
   assert.throws(() => endpoint.push(incomplete[1]), ProtocolEndpointError);
 });
 
+test("an adapter accept exception stops the endpoint without closing Contexts or applying later Messages", () => {
+  const endpoint = new TerminalProtocolEndpoint({
+    completeBaselineSupported: true,
+    operationAdapter: {
+      prepare: () => undefined,
+      accept: () => { throw new Error("partial execution"); },
+    },
+  });
+  const context = openContext(endpoint);
+  const message = (id: string): Message => ({
+    version: 1, kind: "block.append", context_id: context, operation_id: id,
+    body: { block_id: id, lifecycle: "mutable", content: { type: "text/plain", data: id } },
+  });
+  assert.throws(() => endpoint.push(concatenate([
+    encodeInput(message("first"), 1), encodeInput(message("second"), 2),
+  ])), /Protocol execution stopped: partial execution/);
+  assert.deepEqual(endpoint.context(context)?.blocks.map(block => block.id), ["first"]);
+  assert.equal(endpoint.context(context)?.blocks[0]?.lifecycle, "mutable");
+  endpoint.abort("another reason");
+  assert.throws(() => endpoint.acceptDecoded({ type: "message", frameId: 3, message: message("third") }), /partial execution/);
+  assert.throws(() => endpoint.finish(), /partial execution/);
+  assert.throws(() => endpoint.invalidateContext(context), /partial execution/);
+  assert.equal(endpoint.context(context)?.state, "open"); // Frozen diagnostic state, not authority.
+});
+
 function supportedEndpoint(): TerminalProtocolEndpoint {
   return new TerminalProtocolEndpoint({ completeBaselineSupported: true });
 }

@@ -27,11 +27,10 @@ a prerequisite for their adoption.
    user-triggered rounds, earlier content changing after later output exists,
    and reading/selection/search during generation. Use simulated output and
    bounded content, not a real-model dependency or an endurance claim.
-3. **Decide post-eviction behavior.** Rendered history can be trimmed while the
-   Session retains logical content. A later Operation against trimmed content
-   is not yet fully defined. Start with one fully evicted Block before partial
-   eviction or general memory reclamation. This needs protocol discussion;
-   silently deleting state could change mutation and replay behavior. See
+3. **Implement post-eviction behavior.** The full-Block decision is now recorded:
+   reject later content changes without restoring display. Partial eviction
+   and general memory reclamation remain open; silently deleting identity
+   state could change mutation and replay behavior. See
    [capacity semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity)
    and the [current implementation limits](../../prototypes/integration/xterm-protocol-endpoint/README.md#experimental-boundaries).
 4. **Exercise failure and accumulation.** Preparation catches some known
@@ -71,7 +70,36 @@ fits. This is a recorded implementation limit, not a new protocol rule.
 Type checking, 168 Node tests, the browser build, and 69 browser endpoint
 scenarios passed locally. These counts include earlier regression cases;
 they do not prove general layout correctness, sustained use, or recovery.
-Step 2 remains the next proposed work; steps 3 through 5 are not completed.
+Step 2 remains proposed work. The subsequent checkpoint below advances parts
+of steps 3 and 4; resource reclamation, backpressure, and step 5 remain open.
+
+## Follow-up: Eviction and Fault Containment
+
+The agreed boundary is that a fully evicted Block must not be restored by content
+Operations, and that execution must stop if a later failure leaves consistency
+unrecoverable or unknown. The decisions are recorded in
+[capacity semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity)
+and [execution failure](../protocol/contexts.md#12-unrecoverable-execution-failure).
+The existing `resource_exhausted` code is used for otherwise valid modifications
+of fully evicted content; no new wire code or Message is introduced.
+
+The [eviction test](../../prototypes/integration/xterm-protocol-endpoint/evicted-block.test.ts)
+checks rejection, no resurrection, ID retention, and fresh Append. The
+[fault tests](../../prototypes/integration/xterm-protocol-endpoint/fatal-render.test.ts)
+inject partial native output followed by an exception and verify stopped
+rendering and blocked session reuse through direct and mixed input. The
+terminal endpoint also stops on a synchronous adapter accept exception.
+
+This is fault containment, not rollback or automatic restart. Already committed
+logical snapshots may differ from partial rendering and remain diagnostic only.
+Hosts must retire the failed session; a new Context or ingress wrapper does
+not repair it. Snapshot-memory reclamation, partial eviction, fault-frequency
+measurement, and queue/backpressure limits are not implemented by this step.
+
+The follow-up passed type checking, 172 Node tests (including isolated build
+consumers), both affected browser builds, 69 browser endpoint regressions, and
+the two existing real-PTY terminal-example checks. Injected-failure evidence is
+from the Node tests, not a real browser crash or transport-recovery experiment.
 
 ## Deferred
 

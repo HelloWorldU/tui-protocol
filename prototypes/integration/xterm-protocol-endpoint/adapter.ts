@@ -30,29 +30,45 @@ export class XtermTerminalAdapter
 {
   readonly #history: XtermBlockHistory;
   #rendering: Promise<void> = Promise.resolve();
+  #failure: Error | undefined;
+  readonly #onFailure: (error: Error) => void;
 
-  constructor(terminal: Terminal, history?: XtermBlockHistory) {
+  constructor(terminal: Terminal, history?: XtermBlockHistory, onFailure: (error: Error) => void = () => {}) {
     this.#history = history ?? new PrivateCoreBlockHistory(terminal);
+    this.#onFailure = onFailure;
   }
 
   prepare(
     operation: AppliedBlockOperation,
   ): OperationExecutionErrorCode | undefined {
+    if (this.#failure !== undefined) throw this.#failure;
     return this.#history.wouldExceedCapacity(toRenderingOperation(operation))
       ? "resource_exhausted"
       : undefined;
   }
 
   accept(operation: AppliedBlockOperation): void {
+    if (this.#failure !== undefined) throw this.#failure;
     const renderingOperation = toRenderingOperation(operation);
     this.#history.accept(renderingOperation);
-    this.#rendering = this.#rendering.then(() =>
-      this.#history.renderAccepted(renderingOperation),
-    );
+    this.#rendering = this.#rendering.then(async () => {
+      if (this.#failure !== undefined) return;
+      try {
+        await this.#history.renderAccepted(renderingOperation);
+      } catch (error: unknown) {
+        this.stop(error);
+        this.#onFailure(this.#failure!);
+      }
+    });
+  }
+
+  stop(reason: unknown): void {
+    this.#failure ??= reason instanceof Error ? reason : new Error(String(reason));
   }
 
   async drain(): Promise<void> {
     await this.#rendering;
+    if (this.#failure !== undefined) throw this.#failure;
   }
 
   range(

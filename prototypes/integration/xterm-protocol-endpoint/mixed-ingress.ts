@@ -80,6 +80,9 @@ export class XtermMixedStreamIngress implements IDisposable {
     const owned = bytes.slice();
     const task = this.#processing.then(async () => {
       await this.#consume(this.#decoder.push(owned));
+    }).catch((error: unknown) => {
+      this.#endpoint.abort(error);
+      throw error;
     });
     this.#processing = task;
     return task;
@@ -94,6 +97,9 @@ export class XtermMixedStreamIngress implements IDisposable {
       await this.#consume(this.#decoder.finish());
       this.#dispatch(this.#endpoint.finish());
       await this.#endpoint.drain();
+    }).catch((error: unknown) => {
+      this.#endpoint.abort(error);
+      throw error;
     });
     this.#processing = task;
     return task;
@@ -111,6 +117,9 @@ export class XtermMixedStreamIngress implements IDisposable {
   }
 
   async #consume(events: readonly DecoderEvent[]): Promise<void> {
+    // An externally aborted endpoint must also stop ordinary-only input,
+    // including input supplied through a newly created ingress wrapper.
+    await this.#endpoint.drain();
     for (const event of events) {
       if (event.type === "ordinary") {
         await write(this.#terminal, event.data);

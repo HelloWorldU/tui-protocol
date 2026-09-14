@@ -234,8 +234,9 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
 - Known Update, Extend, and ReplaceSuffix capacity exhaustion is checked before
   Session commit, but accepted Operations still render asynchronously
   afterward. The prototype does not provide general failure atomicity,
-  recovery, backpressure, or partial-rendering handling for other renderer
-  failures.
+  recovery or backpressure for other renderer failures. A thrown render now
+  stops this endpoint and skips later queued renders as recorded below; this
+  is containment, not rollback of partial rendering.
 - The capacity preflight accounts for current unmanaged rows in the tested
   no-pending-render case, but it does not implement or prove safe eviction of
   unmanaged rows. Mixed capacity layouts beyond the listed conservative
@@ -281,13 +282,14 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   such Block. When trimming would be required, Append layouts that fail those
   preconditions, including layouts containing unmanaged rows, use the
   conservative `resource_exhausted` path; other exact Append arrangements
-  remain unproven. Partial-Block trimming and mutating a fully trimmed Block
-  also remain unsupported. Complete Update of the Block containing the reading
+  remain unproven. Partial-Block trimming is still unsupported. Content
+  modification of a fully trimmed Block is rejected with `resource_exhausted`
+  and does not restore it. Complete Update of the Block containing the reading
   anchor now uses the bounded prototype policy recorded below.
 - The xterm.js Buffer and range index discard a trimmed Block's rendered rows,
   but the in-memory Session retains its logical snapshot. This experiment does
-  not yet establish a protocol lifecycle for forgotten Blocks or demonstrate
-  complete memory reclamation.
+  not yet demonstrate complete memory reclamation. Full eviction rejects later
+  content changes without changing lifecycle; retained identity prevents reuse.
 - `@xterm/headless` 6.0.0 exposes no selection service or selection API, so
   selection and copying are not exercised by the headless tests in this
   integration. A separate [browser-host
@@ -329,6 +331,30 @@ in that arrangement. Existing Extend and ReplaceSuffix mappings are unchanged.
 Three composed [browser cases](../xterm-browser-protocol-endpoint/scenarios/anchored-update.ts)
 add selection/copy/search checks and ordinary output after shrinking below one
 screen. They use ASCII fixtures, not general Unicode or failure-recovery tests.
+
+## Eviction and Unrecoverable Rendering Failure
+
+[Evicted-Block checks](evicted-block.test.ts) exercise a fully trimmed mutable
+Block: Update, Extend, and ReplaceSuffix return `resource_exhausted`, leave
+content unchanged, and never restore its range. Consumed Operation IDs and the
+old Block ID cannot be reused. A fresh Block can display the content when
+capacity permits; freeing capacity does not revive the old identity. The
+prototype still retains logical snapshots and does not reclaim their memory.
+
+[Fault-injection checks](fatal-render.test.ts) deliberately write partial native
+output and throw during rendering. The adapter aborts the endpoint, skips later
+queued rendering, and reports the failure through `drain()` or mixed `push()`.
+Future input and `finish()` reject rather than declaring successful closure.
+Mixed ingress also stops queued ordinary bytes and control requests. No normal
+`internal_error` or fatal wire notification is generated. Hosts must observe
+the rejection and retire the affected connection/renderer; this code neither
+clears the partial output nor restarts the host.
+
+Protocol-only batches may already have committed later logical Operations
+before asynchronous rendering fails. Their diagnostic snapshots are not proof
+of rendering completion and cannot be reused as live state. The tests verify
+stopping and isolation of a separate endpoint, not rollback, recovery, real
+failure frequency, or detection of a renderer that silently corrupts state.
 
 ## Run
 

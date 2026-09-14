@@ -124,6 +124,12 @@ Context allocation or to an otherwise valid Block Operation. Carrier and
 complete-Message size violations are handled before logical error reporting by
 the framing layer.
 
+For an otherwise valid Update, Extend, or ReplaceSuffix targeting a Block fully
+evicted by capacity trimming, the current code is also `resource_exhausted`.
+Such content is not restored by retrying or by a complete Update; see
+[capacity semantics](terminal-native-behavior.md#5-scrollback-capacity). This
+code does not promise that a resource restriction is temporary.
+
 `internal_error` is the final category for an unexpected implementation
 failure after the Message is structurally and semantically valid. It must not
 replace a more specific code or expose implementation exceptions as new
@@ -136,6 +142,12 @@ including non-reuse of a failed Operation's ID. Neither code promises that
 retrying will succeed.
 
 ## 7. Processing and Recovery
+
+These are ordinary atomic rejection responses. If execution has already partly
+changed state and consistency cannot be established or restored, an ordinary
+`internal_error` must not falsely assert that nothing changed. Instead the host
+stops the affected execution session as described in
+[unrecoverable execution failure](contexts.md#12-unrecoverable-execution-failure).
 
 Error codes describe the rejected Message; they do not alter ordering,
 rollback earlier Messages, close a Context, or acknowledge later Messages. A

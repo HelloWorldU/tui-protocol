@@ -54,12 +54,25 @@ changing Block content. A thrown preparation error becomes a local diagnostic
 and an `internal_error` response. `accept(operation)` runs only after commit;
 it is synchronous and must arrange any later rendering and failure handling.
 
-An `accept` exception or later rendering failure is not rolled back by this
-module. The host owns serialization with rendering, resource checks, native
+An `accept` exception aborts endpoint processing and throws to the host. For a
+later asynchronous rendering failure, the host calls `abort(reason)`. Further
+`push`, `acceptDecoded`, invalidation, and `finish` calls then throw; abort does
+not Seal Blocks, produce a close response, roll back state, or clear history.
+Snapshots remain diagnostic observations, not usable Context authority.
+
+The host owns serialization with rendering, resource checks, native
 history behavior, and invalidation of Contexts whose rendered identity is no
 longer trustworthy. `invalidateContext(id)` acts on a host determination; it
 does not inspect rows or terminal controls. See the
 [native-behavior draft](../docs/protocol/terminal-native-behavior.md).
+
+The host must retire the failed execution session and establish trustworthy
+renderer state before renegotiating with a fresh endpoint. Creating only a new
+Context is insufficient. This abort API does not itself close a transport,
+restart a renderer, or detect asynchronous failures. The
+API also cannot cancel a host callback that is already running. The
+[failure draft](../docs/protocol/contexts.md#12-unrecoverable-execution-failure)
+distinguishes this stop from an ordinary atomic rejection.
 
 Capability support is a host assertion, not a result of loading this module.
 Omitting the optional adapter is useful for state tests, not a complete terminal

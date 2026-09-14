@@ -27,6 +27,11 @@ to protocol state take effect together, including any content, lifecycle,
 history structure, and reading-anchor state required by that Operation. On
 failure, none of those changes take effect.
 
+An implementation fault that leaves state untrustworthy is not an ordinary
+atomic rejection. The [execution-failure boundary](contexts.md#12-unrecoverable-execution-failure)
+requires stopping that session rather than continuing with uncertain state;
+it does not relax the Operation's correctness requirements.
+
 Logical atomicity does not yet require intermediate rendering frames to be
 visually atomic. Wire framing and byte-stream ordering are defined separately
 by the [Wire Format Requirements](wire-requirements.md); concurrency across
