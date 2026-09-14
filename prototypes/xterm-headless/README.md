@@ -108,9 +108,12 @@ can be designed.
   preserving later rows. Unmapped Unicode estimates cannot authorize eviction.
   Safe eviction across mixed managed and unmanaged history and arbitrary
   mixed output remain outside this spike.
-- Complete Update of the Block containing the viewport anchor remains
-  undefined; the xterm integration separately exercises ReplaceSuffix's
-  narrower mapping.
+- Complete Update of the Block containing the viewport anchor uses a local
+  replacement-start policy, clamped to the available viewport. The
+  [composed endpoint checks](../integration/xterm-protocol-endpoint/README.md#updating-the-block-being-read)
+  record its tested behavior. This is not an old-to-new content mapping or a
+  protocol-mandated navigation policy. Shrinkage below one screen preserves
+  blank screen rows and adjusts the following native cursor position.
 - The private range index supports one tested trimming boundary: exact removal
   of complete oldest Blocks. It preserves a surviving reading position and
   moves a removed one to the next retained Block without following the tail.

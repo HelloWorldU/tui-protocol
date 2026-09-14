@@ -144,7 +144,8 @@ test("a bare CR renders two Block rows and Update removes both old rows", async 
   await history.apply({ type: "update", id: "thinking", content: "done" });
 
   assert.deepEqual(history.range("thinking"), { start: 0, lineCount: 1 });
-  assert.deepEqual(bufferRows(xterm), ["done", ""]);
+  assert.deepEqual(bufferRows(xterm), ["done", "", ""]);
+  assert.equal(xterm.buffer.active.cursorY, 1);
 
   history.dispose();
   xterm.dispose();
@@ -165,7 +166,8 @@ test("a Block range follows xterm's realized wide-character wrapping so Update r
   await history.apply({ type: "update", id: "thinking", content: "x" });
 
   assert.deepEqual(history.range("thinking"), { start: 0, lineCount: 1 });
-  assert.deepEqual(bufferRows(xterm), ["x", ""]);
+  assert.deepEqual(bufferRows(xterm), ["x", "", ""]);
+  assert.equal(xterm.buffer.active.cursorY, 1);
 
   history.dispose();
   xterm.dispose();

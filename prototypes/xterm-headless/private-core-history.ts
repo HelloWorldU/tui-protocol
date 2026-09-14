@@ -28,7 +28,7 @@ interface BlockEntry {
 }
 
 type TargetAnchorMapping =
-  | "reject"
+  | "replacementStart"
   | "preserve"
   | { readonly retainedBoundaryRow: number };
 
@@ -64,7 +64,7 @@ interface PrivateBuffer {
   ybase: number;
   ydisp: number;
   readonly x: number;
-  readonly y: number;
+  y: number;
   addMarker(line: number): PrivateMarker;
   getBlankLine(): PrivateBufferLine;
 }
@@ -427,7 +427,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   async #update(
     id: BlockId,
     content: string,
-    targetAnchorMapping: TargetAnchorMapping = "reject",
+    targetAnchorMapping: TargetAnchorMapping = "replacementStart",
   ): Promise<void> {
     const replacement = await this.#materialize(content);
     const entryIndex = this.#entryIndexes.get(id);
@@ -479,13 +479,23 @@ export class PrivateCoreBlockHistory implements IDisposable {
 
     buffer.lines.splice(range.start, range.lineCount, ...replacement);
     buffer.ybase = Math.max(0, oldYbase + delta - trimLineCount);
+    // When shrinking consumes all scrollback, the native cursor must move
+    // upward with the following content rather than retain its old screen row.
+    buffer.y = Math.max(0, Math.min(
+      this.#terminal.rows - 1,
+      buffer.y + oldYbase + delta - trimLineCount - buffer.ybase,
+    ));
+    // xterm requires a complete active screen even when retained content is short.
+    while (buffer.lines.length < this.#terminal.rows) {
+      buffer.lines.splice(buffer.lines.length, 0, buffer.getBlankLine());
+    }
 
     if (wasFollowingTail) {
       buffer.ydisp = buffer.ybase;
     } else if (mappedTargetAnchorOffset !== undefined) {
       buffer.ydisp = Math.min(
         buffer.ybase,
-        range.start + mappedTargetAnchorOffset - trimLineCount,
+        Math.max(0, range.start + mappedTargetAnchorOffset - trimLineCount),
       );
     } else if (oldYdisp >= oldEnd) {
       buffer.ydisp = Math.max(0, oldYdisp + delta - trimLineCount);
@@ -762,10 +772,10 @@ function mapTargetAnchor(
   rowOffset: number,
   mapping: TargetAnchorMapping,
 ): number {
-  if (mapping === "reject") {
-    throw new Error(
-      "Updating the Block containing the viewport anchor is undefined.",
-    );
+  if (mapping === "replacementStart") {
+    // Complete Update has no old-to-new position mapping. This is a local
+    // viewport policy, not a protocol requirement to jump to the Block start.
+    return 0;
   }
   if (mapping === "preserve") {
     return rowOffset;

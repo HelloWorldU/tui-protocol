@@ -184,6 +184,11 @@ The executable evidence for this draft is recorded in the linked prototype
 READMEs; those documents are the source of truth for exact scenarios and
 limitations:
 
+- The [anchored-Update record](../../prototypes/integration/xterm-protocol-endpoint/README.md#updating-the-block-being-read)
+  covers replacement of the Block currently being read, including a local
+  replacement-start viewport policy and its clamping limit. It links Node and
+  browser evidence without prescribing that policy for other terminals.
+
 - The [xterm protocol endpoint](../../prototypes/integration/xterm-protocol-endpoint/README.md)
   composes the codec, Session, terminal adapter, and private xterm.js history
   path. It exercises reading anchors, tail following, resize and reflow, a

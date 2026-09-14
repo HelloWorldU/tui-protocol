@@ -295,6 +295,22 @@ requirements.
   tested by this fixture. See the separate PTY demonstration linked above for
   its fixed Windows process scenario and narrower compatibility findings.
 
+## Updating the Block Being Read
+
+Three [anchored-Update scenarios](scenarios/anchored-update.ts) exercise full
+replacement of the Block at the reading position. Two use growth, shrinkage,
+and empty content to check the local replacement-start viewport policy, exact
+retained rows, clearing selection/copy in replaced content, and preserving a
+later Block's selection/copy. A subsequent Extend and resize still work; explicit
+searches find new text and do not find the replaced text. The third uses raw
+mixed ingress: shrinkage below one screen retains its blank rows and positions
+following ordinary output at the corrected native cursor.
+
+This is bounded ASCII evidence for the [existing Update rule](../../../docs/protocol/terminal-native-behavior.md#4-updating-the-anchored-block),
+not a new required viewport policy. The corresponding
+[Node checks](../xterm-protocol-endpoint/anchored-update.test.ts) separately
+exercise one complete-Block capacity eviction and rejection before mutation.
+
 ## Run
 
 Build the browser fixture from the repository root:

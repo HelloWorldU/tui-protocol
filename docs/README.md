@@ -22,6 +22,7 @@ here.
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
 | [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
+| [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |

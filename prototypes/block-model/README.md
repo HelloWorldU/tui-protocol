@@ -35,7 +35,9 @@ pnpm typecheck
 - The model does not parse escape sequences, render images, or drive a real
   terminal emulator.
 - Complete Update of the Block containing the reading anchor remains
-  undefined. ReplaceSuffix separately tests its defined retained-prefix and
-  removed-suffix mappings.
+  undefined in this model. The separate
+  [xterm integration](../integration/xterm-protocol-endpoint/README.md#updating-the-block-being-read)
+  now tests a local replacement-start policy. ReplaceSuffix separately tests
+  its defined retained-prefix and removed-suffix mappings here.
 - This prototype accepts in-memory TypeScript Operations and does not encode or
   decode wire Messages.

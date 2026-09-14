@@ -2,6 +2,10 @@ import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 
 import {
+  runAnchoredUpdateSelectionScenario,
+  runAnchoredUpdateShortScreenScenario,
+} from "./scenarios/anchored-update.ts";
+import {
   runAppendHistoryReadingAndSelectionScenario,
   runAppendSearchScenario,
   runAppendTailFollowingScenario,
@@ -123,6 +127,9 @@ try {
 
 async function runScenarios(): Promise<ScenarioResult[]> {
   return [
+    await runAnchoredUpdateSelectionScenario(true),
+    await runAnchoredUpdateSelectionScenario(false),
+    await runAnchoredUpdateShortScreenScenario(),
     await runSelectionAndReadingScenario(),
     await runSearchScenario(),
     await runActiveInputAndCompositionScenario(),

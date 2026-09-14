@@ -282,9 +282,8 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   preconditions, including layouts containing unmanaged rows, use the
   conservative `resource_exhausted` path; other exact Append arrangements
   remain unproven. Partial-Block trimming and mutating a fully trimmed Block
-  also remain unsupported. Complete Update of
-  the Block containing the reading anchor remains unsupported independently of
-  capacity.
+  also remain unsupported. Complete Update of the Block containing the reading
+  anchor now uses the bounded prototype policy recorded below.
 - The xterm.js Buffer and range index discard a trimmed Block's rendered rows,
   but the in-memory Session retains its logical snapshot. This experiment does
   not yet establish a protocol lifecycle for forgotten Blocks or demonstrate
@@ -311,6 +310,25 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   new Block's single appearance at the tail when one complete leading Block is
   removed. Selection evidence is limited to the listed ASCII and basic-CJK/Tab
   fixtures and their tested dimensions.
+
+## Updating the Block Being Read
+
+The [anchored-Update tests](anchored-update.test.ts) exercise growth, shrinkage,
+same-height and empty replacement while the viewport reads the target Block.
+The host moves reading toward the replacement's first row, clamped to the
+available viewport range. This is a prototype choice under the
+[existing draft](../../../docs/protocol/terminal-native-behavior.md#4-updating-the-anchored-block),
+not a mapping of old text into new content or a prescribed terminal UX.
+
+Seven Node cases check exact retained rows, queued Extend and subsequent resize,
+one exact complete-leading-Block eviction, unchanged content/reading/base after
+capacity rejection, and shrinking below one screen. The last case checks blank
+screen rows and the native cursor; once all content fits, the physical viewport
+also lies at the tail. The prototype does not retain a separate off-tail intent
+in that arrangement. Existing Extend and ReplaceSuffix mappings are unchanged.
+Three composed [browser cases](../xterm-browser-protocol-endpoint/scenarios/anchored-update.ts)
+add selection/copy/search checks and ordinary output after shrinking below one
+screen. They use ASCII fixtures, not general Unicode or failure-recovery tests.
 
 ## Run
 
