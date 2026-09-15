@@ -70,8 +70,8 @@ fits. This is a recorded implementation limit, not a new protocol rule.
 Type checking, 168 Node tests, the browser build, and 69 browser endpoint
 scenarios passed locally. These counts include earlier regression cases;
 they do not prove general layout correctness, sustained use, or recovery.
-Step 2 remains proposed work. The subsequent checkpoint below advances parts
-of steps 3 and 4; resource reclamation, backpressure, and step 5 remain open.
+The subsequent checkpoints below advance step 2 and parts of steps 3 and 4;
+resource reclamation, backpressure, and step 5 remain open.
 
 ## Follow-up: Eviction and Fault Containment
 
@@ -100,6 +100,27 @@ The follow-up passed type checking, 172 Node tests (including isolated build
 consumers), both affected browser builds, 69 browser endpoint regressions, and
 the two existing real-PTY terminal-example checks. Injected-failure evidence is
 from the Node tests, not a real browser crash or transport-recovery experiment.
+
+## Follow-up: Finite Multi-round Interaction
+
+Implemented on 2026-09-15 in the
+[multi-round example](../../examples/multi-round/README.md). A built-SDK child
+accepts commands for at most three simulated rounds and supports quitting during
+generation. Earlier thinking changes after tool and answer Blocks exist. The
+example reuses terminal-host wiring and the existing PTY bridge; no protocol
+semantics or new transport layer are introduced.
+
+Two browser scenarios checked three-round completion with retained-content
+search and orderly mid-round quit through bundled ConPTY. Four application
+checks cover command handling, the Operation sequence, pause cancellation, and
+the prepared plain-text fallback outside the checkout. The README records run
+commands and the limits: finite ASCII content is not an endurance, resource-limit,
+or recovery result. Selection/copy and scrolling remain available for manual
+observation; this new runner does not assert those native behaviors.
+
+The next implementation question is accumulation under a faster producer:
+measure queued work on this path before selecting limits or backpressure.
+General memory reclamation and partial eviction remain separate unresolved work.
 
 ## Deferred
 

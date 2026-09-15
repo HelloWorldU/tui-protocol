@@ -10,6 +10,11 @@ prototypes and has a local JavaScript build. This browser example still imports
 the xterm renderer and mixed-input adapter from `prototypes/`; it is not a
 standalone renderer or an adapter for an arbitrary terminal.
 
+The [multi-round example](../multi-round/README.md) reuses this wiring with
+optional command buttons, a native-row diagnostic view, and a longer page
+deadline. Those are example controls, not terminal protocol APIs; the original
+page keeps its twelve-second deadline and one-shot application.
+
 ## Run
 
 On Windows with Node 24 or newer, from the repository root:

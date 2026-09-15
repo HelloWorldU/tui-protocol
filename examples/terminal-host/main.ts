@@ -9,6 +9,16 @@ const status = document.querySelector<HTMLElement>("#status")!;
 const report = document.querySelector<HTMLElement>("#report")!;
 const connect = document.querySelector<HTMLButtonElement>("#connect")!;
 const disconnect = document.querySelector<HTMLButtonElement>("#disconnect")!;
+// Optional application controls for the multi-round example, not protocol APIs.
+const commands = [
+  [document.querySelector<HTMLButtonElement>("#next"), "n"],
+  [document.querySelector<HTMLButtonElement>("#quit"), "q"],
+] as const;
+for (const [button, command] of commands) {
+  if (button) button.onclick = () => {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(new TextEncoder().encode(command));
+  };
+}
 const terminal = new Terminal({ cols: 40, rows: 8, scrollback: 1000 });
 terminal.open(document.querySelector<HTMLElement>("#terminal")!);
 
@@ -38,6 +48,12 @@ const input = terminal.onData(data => {
 });
 
 function showState(): void {
+  const rendered = document.querySelector<HTMLElement>("#rendered");
+  if (rendered) {
+    const buffer = terminal.buffer.normal;
+    rendered.textContent = Array.from({ length: buffer.length }, (_, row) =>
+      buffer.getLine(row)?.translateToString(true) ?? "").join("\n");
+  }
   report.textContent = endpoint.contexts().map(context =>
     `Context ${context.id}: ${context.state}\n` + context.blocks.map(block =>
       `  ${block.id}: ${block.lifecycle}; ${JSON.stringify(block.content.data)}`).join("\n"),
@@ -51,11 +67,14 @@ connect.onclick = () => {
   const token = document.querySelector<HTMLMetaElement>('meta[name="pty-token"]')!.content;
   socket = new WebSocket(`ws://${location.host}/pty?token=${token}`);
   socket.binaryType = "arraybuffer";
-  socket.onopen = () => { status.textContent = "Connected; receiving application output."; };
+  socket.onopen = () => {
+    status.textContent = "Connected; receiving application output.";
+    for (const [button] of commands) if (button) button.disabled = false;
+  };
   deadline = setTimeout(() => {
     failure = new Error("Example deadline exceeded");
     socket?.close();
-  }, 12_000);
+  }, Number(document.body.dataset.deadlineMs ?? 12_000));
   socket.onmessage = event => {
     // Serialize host controls with rendered input, not just decoded Messages.
     pending = pending.then(async () => {
@@ -76,6 +95,7 @@ connect.onclick = () => {
   socket.onclose = () => {
     clearTimeout(deadline);
     disconnect.disabled = true;
+    for (const [button] of commands) if (button) button.disabled = true;
     pending = pending.then(async () => {
       if (leaving) return;
       if (failure) throw failure;

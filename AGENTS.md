@@ -25,6 +25,7 @@ protocol/                     Shared message types, validation, serialization, a
 examples/                     Runnable application and terminal integration examples.
   streaming-text/             Built-SDK streaming output and application fallback.
   terminal-host/              Terminal-side wiring using the experimental xterm adapter.
+  multi-round/                Finite user-triggered rounds through the built SDK and PTY host.
 sdk/                          Application-facing protocol APIs, initially experimental TypeScript.
   src/                        TUI client implementation and public exports.
   test/                       SDK behavior and protocol interoperability checks.

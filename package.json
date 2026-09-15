@@ -9,6 +9,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "example:multi-round": "vite --config examples/multi-round/vite.config.ts",
+    "build:multi-round-example": "vite build --config examples/multi-round/vite.config.ts --outDir ../../.tmp/multi-round-example-dist --emptyOutDir",
+    "prepare:multi-round-example": "node examples/multi-round/prepare.ts",
     "build:terminal": "node terminal/build.ts",
     "example:terminal": "vite --config examples/terminal-host/vite.config.ts",
     "build:terminal-example": "vite build --config examples/terminal-host/vite.config.ts --outDir ../../.tmp/terminal-example-dist --emptyOutDir",
@@ -28,7 +31,7 @@
     "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
     "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
     "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",
-    "test": "node --test scripts/*.test.ts examples/streaming-text/*.test.ts sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
+    "test": "node --test scripts/*.test.ts examples/multi-round/*.test.mjs examples/streaming-text/*.test.ts sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

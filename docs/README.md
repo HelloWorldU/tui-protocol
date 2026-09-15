@@ -27,6 +27,7 @@ here.
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |
 | [Terminal host example](../examples/terminal-host/README.md) | Terminal integration example | Experimental; depends on prototype xterm adapter |
+| [Multi-round application example](../examples/multi-round/README.md) | Interactive SDK application example | Experimental; three simulated rounds through bundled ConPTY |
 | [Terminal protocol module](../terminal/README.md) | Terminal-facing execution | Experimental; local JavaScript build, unpublished |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Experiment record | Implementation and tests moved to terminal/ |
 | [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Multi-round protocol example</title></head>
+<body data-deadline-ms="125000">
+  <h1>Multi-round protocol example</h1>
+  <p>A simulated Agent, three rounds, no external model. While output changes, scroll back, select/copy, or search.</p>
+  <p>Wait for [ready] in the terminal, then press n or Next round. Input while generating is not queued. q quits, including during a round.</p>
+  <p><a href="/checks.html">Run repeatable browser checks</a></p>
+  <button id="connect">Connect application</button>
+  <button id="next" disabled>Next round (n)</button>
+  <button id="quit" disabled>Quit (q)</button>
+  <button id="disconnect" disabled>Disconnect</button>
+  <p id="status" role="status">Ready. Reload to start a fresh session.</p>
+  <div id="terminal"></div>
+  <label>Search retained content <input id="query" value="Answer 1:"></label>
+  <button id="search">Find next</button><span id="search-result"></span>
+  <details><summary>Local diagnostics and state</summary><pre id="report">No connection yet.</pre><h2>Rendered row snapshot</h2><pre id="rendered"></pre></details>
+  <p>Fixed 40 × 8 viewport; experimental xterm adapter and Windows bundled ConPTY. Two-minute application limit. This does not test endurance or capacity eviction.</p>
+  <script type="module" src="/main.ts"></script>
+</body>
+</html>
