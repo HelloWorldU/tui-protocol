@@ -136,10 +136,25 @@ counters are not process-memory measurements, and the fixture can await local
 render completion in a way an external TUI cannot. Browser event queues,
 WebSocket buffering, and PTY output are outside this experiment.
 
-Next, instrument and exercise that host/transport boundary before introducing
-watermarks or changing the synchronous SDK interface. Prefer local transport
-backpressure if it can propagate consumption toward the producer; this is an
-engineering direction to test, not a selected wire-level flow-control design.
+The follow-up below instruments the host/transport boundary with experimental
+watermarks, without changing the synchronous SDK interface. Local transport
+backpressure remains a direction to test, not a selected wire-level design.
+
+## Follow-up: Browser-to-PTY Consumption Credits
+
+The 2026-09-16 [PTY pressure experiment](../../prototypes/integration/pty-pressure/README.md)
+adds opt-in local bridge byte credits and pauses/resumes PTY reading. A real SDK
+child's 256 Updates rendered correctly through the browser; all credited bytes
+drained and the Context closed normally. Existing examples leave the option off.
+
+The observed peak exceeded the high watermark because callback chunks can cross
+it. The producer reported no stdout drain waits, so this does not yet prove that
+slower browser consumption constrains application production. These findings
+narrow the claim to a functioning browser-to-PTY-reader control path.
+
+Next, isolate producer/ConPTY buffering and demonstrate upstream waiting before
+adopting limits in the normal examples. Hard queue/memory bounds, policy for a
+permanently stalled consumer, and general memory reclamation remain unresolved.
 
 ## Deferred
 

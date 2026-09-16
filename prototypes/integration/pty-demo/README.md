@@ -29,6 +29,12 @@ The browser sends encoded responses back through ConPTY to the child’s stdin.
 The binary WebSocket traffic and its JSON resize/exit controls are local host
 plumbing, not additions to the protocol's wire Message schema.
 
+The host also has an opt-in byte-credit window used only by the
+[PTY pressure experiment](../pty-pressure/README.md). Its `consumed`/`flow`
+JSON controls drive local PTY pause/resume and measurements, not protocol
+acknowledgements. This demonstration and the existing application examples
+leave that option disabled; their transport behavior is unchanged.
+
 ## Run
 
 On Windows, from the repository root with Node 24 or newer:

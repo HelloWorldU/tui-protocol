@@ -3,9 +3,11 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { WebSocket, WebSocketServer } from "ws";
 import * as pty from "node-pty";
+import { FlowWindow } from "./flow-window.ts";
 
 const origin = "http://127.0.0.1:4178";
-export function createPtyHost(producer: string, javascriptOnly = false) {
+export function createPtyHost(producer: string, javascriptOnly = false, flowControl?: { high: number; low: number }) {
+  if (flowControl) new FlowWindow(flowControl.high, flowControl.low);
   const token = randomBytes(32).toString("hex");
   return defineConfig({
     root: fileURLToPath(new URL(".", import.meta.url)),
@@ -36,22 +38,47 @@ export function createPtyHost(producer: string, javascriptOnly = false) {
               cwd: process.cwd(), env: process.env, useConptyDll: true });
           } catch (error) { active = undefined; client.close(1011, "PTY spawn failed"); console.error(error); return; }
           let exited = false;
+          let exitCode: number | undefined;
+          let peakSocketBytes = 0;
+          const window = flowControl ? new FlowWindow(flowControl.high, flowControl.low) : undefined;
+          const reportFlow = () => {
+            if (window && client.readyState === WebSocket.OPEN) client.send(JSON.stringify({
+              type: "flow", sent: window.sent, consumed: window.consumed,
+              outstanding: window.outstanding, peak: window.peak, paused: window.paused,
+              pauses: window.pauses, resumes: window.resumes, peakSocketBytes,
+            }));
+          };
+          const finishExit = () => {
+            if (exitCode === undefined || (window && window.outstanding !== 0) || client.readyState !== WebSocket.OPEN) return;
+            reportFlow();
+            client.send(JSON.stringify({ type: "exit", code: exitCode }));
+            client.close(1000, "Child exited");
+          };
           const timer = setTimeout(() => client.close(1000, "Demo time limit"), 10 * 60_000);
           const dataSubscription = child.onData(data => {
-            if (client.readyState === WebSocket.OPEN) client.send(Buffer.from(data, "utf8"));
+            if (client.readyState !== WebSocket.OPEN) return;
+            try {
+              const bytes = Buffer.from(data, "utf8");
+              if (window?.add(bytes.length)) child.pause();
+              client.send(bytes);
+              peakSocketBytes = Math.max(peakSocketBytes, client.bufferedAmount);
+              reportFlow();
+            } catch { client.close(1011, "PTY forwarding failed"); }
           });
           const exitSubscription = child.onExit(event => {
             exited = true;
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({ type: "exit", code: event.exitCode }));
-              client.close(1000, "Child exited");
-            }
+            exitCode = event.exitCode;
+            finishExit();
           });
           client.on("message", (bytes, binary) => {
-            if (exited) return;
             try {
-              if (binary) { child.write(bytes.toString("utf8")); return; }
+              if (binary) { if (!exited) child.write(bytes.toString("utf8")); return; }
               const message = JSON.parse(bytes.toString());
+              if (window && message.type === "consumed") {
+                if (window.acknowledge(message.total) && !exited) child.resume();
+                reportFlow(); finishExit(); return;
+              }
+              if (exited) return;
               if (message.type !== "resize" || !Number.isInteger(message.cols) || !Number.isInteger(message.rows) ||
                   message.cols < 10 || message.cols > 160 || message.rows < 4 || message.rows > 50) throw new Error("Invalid resize");
               child.resize(message.cols, message.rows);

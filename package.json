@@ -9,6 +9,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prototype:pty-pressure": "vite --config prototypes/integration/pty-pressure/vite.config.ts",
+    "build:pty-pressure": "vite build --config prototypes/integration/pty-pressure/vite.config.ts --outDir ../../../.tmp/pty-pressure-dist --emptyOutDir",
     "prototype:ingress-pressure": "node prototypes/integration/ingress-pressure/probe.ts",
     "example:multi-round": "vite --config examples/multi-round/vite.config.ts",
     "build:multi-round-example": "vite build --config examples/multi-round/vite.config.ts --outDir ../../.tmp/multi-round-example-dist --emptyOutDir",
@@ -32,7 +34,7 @@
     "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
     "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
     "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",
-    "test": "node --test scripts/*.test.ts examples/multi-round/*.test.mjs examples/streaming-text/*.test.ts sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/ingress-pressure/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
+    "test": "node --test scripts/*.test.ts examples/multi-round/*.test.mjs examples/streaming-text/*.test.ts sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/ingress-pressure/*.test.ts prototypes/integration/pty-demo/*.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
