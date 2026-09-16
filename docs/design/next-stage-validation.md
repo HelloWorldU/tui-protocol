@@ -118,9 +118,28 @@ commands and the limits: finite ASCII content is not an endurance, resource-limi
 or recovery result. Selection/copy and scrolling remain available for manual
 observation; this new runner does not assert those native behaviors.
 
-The next implementation question is accumulation under a faster producer:
-measure queued work on this path before selecting limits or backpressure.
-General memory reclamation and partial eviction remain separate unresolved work.
+Accumulation under a faster producer is the next question. The local experiment
+below isolates one queue; host/transport measurements are still needed before
+selecting limits or backpressure. General memory reclamation and partial
+eviction remain separate unresolved work.
+
+## Follow-up: Local Ingress Accumulation
+
+The 2026-09-16 [pressure experiment](../../prototypes/integration/ingress-pressure/README.md)
+holds the first Extend's rendering while the SDK supplies a finite burst. Across
+16, 64, and 256 Extends, outstanding local pushes grow with the burst. Waiting
+for each batch to finish limits outstanding pushes to that batch in these runs;
+all tested policies finish with identical content and closed Contexts.
+
+This confirms that ordered processing alone is not a queue bound. The byte
+counters are not process-memory measurements, and the fixture can await local
+render completion in a way an external TUI cannot. Browser event queues,
+WebSocket buffering, and PTY output are outside this experiment.
+
+Next, instrument and exercise that host/transport boundary before introducing
+watermarks or changing the synchronous SDK interface. Prefer local transport
+backpressure if it can propagate consumption toward the producer; this is an
+engineering direction to test, not a selected wire-level flow-control design.
 
 ## Deferred
 
