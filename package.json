@@ -9,6 +9,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prototype:pty-upstream": "node prototypes/integration/pty-pressure/upstream-probe.ts",
+    "test:pty-upstream": "node --test prototypes/integration/pty-pressure/upstream.test.ts",
     "prototype:pty-pressure": "vite --config prototypes/integration/pty-pressure/vite.config.ts",
     "build:pty-pressure": "vite build --config prototypes/integration/pty-pressure/vite.config.ts --outDir ../../../.tmp/pty-pressure-dist --emptyOutDir",
     "prototype:ingress-pressure": "node prototypes/integration/ingress-pressure/probe.ts",

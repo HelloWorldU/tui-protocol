@@ -63,11 +63,11 @@ demonstrate pressure propagating all the way to the application**. It establishe
 the browser-to-PTY-reader control path and correct finite completion, not a
 bounded end-to-end pipeline or a measured throughput improvement.
 Counting drain events also does not determine whether a synchronous TTY write
-itself was delayed; producer-side timing remains unmeasured.
-
-Next work should isolate producer/ConPTY buffering and demonstrate producer
-waiting under sustained pressure before adopting this policy in normal examples.
-Do not infer a need for new protocol acknowledgements from this result alone.
+itself was delayed; that browser run did not measure producer-side timing.
+The [upstream follow-up](upstream.md) now compares normal and paused ConPTY
+reading with independent producer progress and write-duration measurements.
+It observes synchronous waiting in isolation, not a complete pipeline bound.
+Do not infer a need for new protocol acknowledgements from these results alone.
 
 ## Run and verification
 

@@ -39,7 +39,7 @@ prototypes/                   Executable experiments that test assumptions.
     ingress-pressure/         Controlled SDK-to-renderer backlog measurement.
     protocol-endpoint/        Retained bytes-to-state experiment record; code is in terminal/.
     pty-demo/                 Fixed TUI process through ConPTY to browser history.
-    pty-pressure/             Browser consumption credits and PTY pause/resume experiment.
+    pty-pressure/             Browser byte credits, PTY pause/resume, and producer-waiting experiments.
     pty-transport/            Real child-process OSC transport diagnostics.
     xterm-browser-input-state/ Browser active-input behavior experiment.
     xterm-browser-metadata/   Browser content-metadata behavior experiment.

@@ -30,6 +30,7 @@ here.
 | [Multi-round application example](../examples/multi-round/README.md) | Interactive SDK application example | Experimental; three simulated rounds through bundled ConPTY |
 | [Ingress pressure experiment](../prototypes/integration/ingress-pressure/README.md) | Integration measurement | Experimental; in-process backlog under a controlled render stall |
 | [PTY pressure experiment](../prototypes/integration/pty-pressure/README.md) | Transport integration measurement | Experimental; browser byte credits and bundled-ConPTY pause/resume |
+| [Producer-side ConPTY waiting](../prototypes/integration/pty-pressure/upstream.md) | Transport isolation measurement | Experimental; normal versus paused reads with independent producer timing |
 | [Terminal protocol module](../terminal/README.md) | Terminal-facing execution | Experimental; local JavaScript build, unpublished |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Experiment record | Implementation and tests moved to terminal/ |
 | [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |

@@ -152,9 +152,24 @@ it. The producer reported no stdout drain waits, so this does not yet prove that
 slower browser consumption constrains application production. These findings
 narrow the claim to a functioning browser-to-PTY-reader control path.
 
-Next, isolate producer/ConPTY buffering and demonstrate upstream waiting before
-adopting limits in the normal examples. Hard queue/memory bounds, policy for a
-permanently stalled consumer, and general memory reclamation remain unresolved.
+The producer-side follow-up below isolates this remaining question. Hard
+queue/memory bounds, policy for a permanently stalled consumer, and general
+memory reclamation remain unresolved.
+
+## Follow-up: Synchronous Producer Waiting
+
+On 2026-09-17 the [upstream comparison](../../prototypes/integration/pty-pressure/upstream.md)
+ran the same finite SDK workload through bundled ConPTY with normal reading and
+a two-second pause. An independent local measurement pipe showed the paused
+producer remaining inside its sixth Update; its synchronous write returned
+after about two seconds when reading resumed. Drain counters stayed zero.
+All 128 Updates in each run decoded in order and both Contexts closed normally.
+
+This narrows the earlier interpretation: lack of drain events did not exclude
+producer waiting. The isolated path has no browser or renderer, and these results
+do not measure OS buffer sizes or establish end-to-end bounded memory. Next,
+combine the larger workload with the browser credit window before considering
+normal-example adoption; permanent stalls and hard limits still need treatment.
 
 ## Deferred
 
