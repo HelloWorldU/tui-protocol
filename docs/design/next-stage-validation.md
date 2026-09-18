@@ -167,9 +167,23 @@ All 128 Updates in each run decoded in order and both Contexts closed normally.
 
 This narrows the earlier interpretation: lack of drain events did not exclude
 producer waiting. The isolated path has no browser or renderer, and these results
-do not measure OS buffer sizes or establish end-to-end bounded memory. Next,
-combine the larger workload with the browser credit window before considering
-normal-example adoption; permanent stalls and hard limits still need treatment.
+do not measure OS buffer sizes or establish end-to-end bounded memory. The
+composed follow-up below connects this workload to browser consumption credits.
+
+## Follow-up: Browser Hold and Producer Waiting
+
+On 2026-09-18 the [composed experiment](../../prototypes/integration/pty-pressure/composed.md)
+ran 128 larger Updates through the browser credit window. A roughly two-second
+producer write overlapped the browser's controlled two-second hold. All Updates
+rendered in order, final content matched, credited bytes drained, and the Context
+closed normally. The smaller browser scenario also passed as a regression.
+
+This supplies evidence of upstream waiting in the composed local path, not a
+hard queue or process-memory bound. No production flow-control default changes.
+Next, define and test host-side termination of a permanently stalled consumer,
+including child cleanup and failure reporting, before normal-example adoption.
+This is local bridge policy unless it exposes a new protocol-level behavior;
+hard limits and general memory reclamation remain separate work.
 
 ## Deferred
 

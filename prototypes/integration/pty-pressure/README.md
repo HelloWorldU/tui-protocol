@@ -20,7 +20,10 @@ not enable this optional bridge behavior.
 distinct ASCII labels and 2048 repeated characters, Seals, and explicitly closes
 the Context. Its synchronous SDK writer calls Node stdout; if a write returns
 false, the application waits for `drain` before sending the next Operation.
-It reports how often that path was used. There is no LLM or arbitrary child command.
+It reports how often that path was used and, since the 2026-09-18 follow-up,
+the longest synchronous write duration. There is no LLM or arbitrary child command.
+The [composed follow-up](composed.md) selects a larger fixed workload and a
+two-second browser hold using the same implementation.
 
 The [browser](main.ts) holds the first Update before native rendering until it
 also observes a host pause. It queues incoming binary data in arrival order and
@@ -67,6 +70,9 @@ itself was delayed; that browser run did not measure producer-side timing.
 The [upstream follow-up](upstream.md) now compares normal and paused ConPTY
 reading with independent producer progress and write-duration measurements.
 It observes synchronous waiting in isolation, not a complete pipeline bound.
+The subsequent [composed measurement](composed.md) observes producer waiting
+overlapping a browser hold in the larger workload; it still establishes no
+hard pipeline memory bound.
 Do not infer a need for new protocol acknowledgements from these results alone.
 
 ## Run and verification
@@ -92,7 +98,7 @@ still require the development host and its injected token. The original
 [terminal-host checks](../../../examples/terminal-host/README.md#verification-and-limits)
 exercise the unchanged default, without flow credits.
 
-Local verification passed type checking, 181 Node tests, the pressure and both
+The original 2026-09-16 verification passed type checking, 181 Node tests, the pressure and both
 example builds, this browser pressure check, and all four existing terminal-host
 and multi-round browser scenarios. Those four regressions do not use flow credits.
 

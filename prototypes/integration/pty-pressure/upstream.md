@@ -90,11 +90,12 @@ may retain background handles. No browser or listening TCP port is needed.
 
 The earlier browser experiment established consumption-credit-to-PTY-reader
 control; this follow-up establishes reader-to-producer waiting in isolation.
-Together they motivate testing the complete path with the larger workload,
-but they are **not one end-to-end bound or a guarantee for every TUI**.
+The [composed follow-up](composed.md) now tests the larger workload through the
+browser and observes overlapping producer waiting. These are still **not an
+end-to-end bound or a guarantee for every TUI**.
 
 Do not change SDK semantics or add Operation acknowledgements on this basis.
-Before enabling the policy in normal examples, check the composed path under
-sustained bounded input and define how a permanently stalled consumer is stopped.
+Before enabling the policy in normal examples, go beyond finite completion and
+define how a permanently stalled consumer is stopped.
 Hard queue limits, buffer ownership/size, memory reclamation, fairness, and
 other PTY platforms remain open. No production flow-control default is changed.

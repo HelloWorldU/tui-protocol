@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8"><title>PTY pressure experiment</title></head>
 <body><h1>PTY pressure experiment</h1>
-<p>Fixed 256-Update SDK child through bundled ConPTY. A controlled render stall exercises host byte credits and PTY pause/resume. Close other port 4178 examples first.</p>
+<p>Fixed SDK child through bundled ConPTY. A controlled render stall exercises host byte credits and PTY pause/resume. Close other port 4178 examples first.</p>
+<p id="workload"></p>
 <button id="run">Run pressure check</button><pre id="result">Ready.</pre><div id="terminal"></div>
 <p>Local bridge controls only, not protocol acknowledgements or a process-memory bound.</p>
 <script type="module" src="/main.ts"></script></body></html>
