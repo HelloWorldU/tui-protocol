@@ -33,6 +33,8 @@ here.
 | [Producer-side ConPTY waiting](../prototypes/integration/pty-pressure/upstream.md) | Transport isolation measurement | Experimental; normal versus paused reads with independent producer timing |
 | [Browser hold and producer waiting](../prototypes/integration/pty-pressure/composed.md) | Transport integration measurement | Experimental; larger browser workload with overlapping producer write delay |
 | [Stalled browser consumption](../prototypes/integration/pty-pressure/stalled.md) | Transport failure experiment | Experimental; local consumption timeout and child shutdown |
+| [Trial resource budgets](design/trial-resource-budgets.md) | Implementation policy | Experimental; retained-state and pending-input accounting |
+| [Trial content samples](design/trial-content-samples.md) | Integration evidence | Experimental; fixed text corpus, resize, and safe rejection boundaries |
 | [Terminal protocol module](../terminal/README.md) | Terminal-facing execution | Experimental; local JavaScript build, unpublished |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Experiment record | Implementation and tests moved to terminal/ |
 | [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |

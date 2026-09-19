@@ -4,7 +4,7 @@ import {
   TerminalProtocolEndpoint,
   type EndpointResult,
 } from "@tui-protocol/terminal";
-import type { SessionContextSnapshot } from "@tui-protocol/terminal";
+import type { SessionContextSnapshot, SessionResourceLimits } from "@tui-protocol/terminal";
 import {
   XtermTerminalAdapter,
   type RenderedBlockRange,
@@ -14,6 +14,7 @@ import {
 export interface XtermProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
   readonly history?: XtermBlockHistory;
+  readonly resourceLimits?: SessionResourceLimits;
 }
 
 /**
@@ -28,6 +29,7 @@ export class XtermProtocolEndpoint implements IDisposable {
     this.#adapter = new XtermTerminalAdapter(terminal, options.history, error => this.abort(error));
     this.#endpoint = new TerminalProtocolEndpoint({
       completeBaselineSupported: options.completeBaselineSupported,
+      resourceLimits: options.resourceLimits,
       operationAdapter: this.#adapter,
     });
   }

@@ -21,17 +21,18 @@ test("built terminal and TUI modules exchange all five Operations outside the ch
   const entries = readdirSync(artifact, { recursive: true, withFileTypes: true });
   assert(entries.every(entry => !entry.isSymbolicLink()));
   const files = entries.filter(entry => entry.isFile());
-  assert.equal(files.filter(entry => entry.name.endsWith(".js")).length, 8);
-  assert.equal(files.filter(entry => entry.name.endsWith(".d.ts")).length, 8);
+  assert.equal(files.filter(entry => entry.name.endsWith(".js")).length, 10);
+  assert.equal(files.filter(entry => entry.name.endsWith(".d.ts")).length, 10);
   assert(files.every(entry => /\.(js|d\.ts)$/.test(entry.name) || ["package.json", "LICENSE"].includes(entry.name)));
   const result = execFileSync(process.execPath, ["--no-experimental-strip-types", "--input-type=module", "-e", `
     import assert from 'node:assert/strict';
     import { TuiClient } from '@tui-protocol/sdk';
-    import { TerminalProtocolEndpoint } from '@tui-protocol/terminal';
+    import { TerminalProtocolEndpoint, trialSessionLimits, PendingInputBudget } from '@tui-protocol/terminal';
+    const budget = new PendingInputBudget(16, 2); budget.acquire(16)();
     const accepted = [];
     const errors = [];
     // Host assertion for an in-memory test adapter, not real terminal support.
-    const endpoint = new TerminalProtocolEndpoint({completeBaselineSupported:true, operationAdapter:{
+    const endpoint = new TerminalProtocolEndpoint({completeBaselineSupported:true, resourceLimits:trialSessionLimits, operationAdapter:{
       prepare(operation) { return operation.kind === 'block.update' && operation.body.content.data === 'too large'
         ? 'resource_exhausted' : undefined; },
       accept(operation) { accepted.push(operation.kind); }

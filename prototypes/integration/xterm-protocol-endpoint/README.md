@@ -168,6 +168,12 @@ general trimming implementation.
 
 ## Experimental Boundaries
 
+The [trial content corpus](../../../docs/design/trial-content-samples.md) records
+additional Buffer-text checks and explicit unsupported-Tab rejection cases.
+Optional [resource budgets](../../../docs/design/trial-resource-budgets.md) bound
+retained Session structures and owned pending input; they do not supply memory
+reclamation or general Unicode mapping.
+
 The [plain-text tests](plain-text.test.ts) additionally exercise normalized
 CR/LF/CRLF, visible control labels, host Tab alignment, raw scalar positions
 across content-changing Operations, and a CRLF pair split between Append and

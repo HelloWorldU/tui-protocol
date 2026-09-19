@@ -2,6 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import "@xterm/xterm/css/xterm.css";
 import "./style.css";
+import { trialSessionLimits, PendingInputBudget } from "@tui-protocol/terminal";
 import { BrowserSearchHistory } from "../../prototypes/integration/xterm-browser-search/search-history.ts";
 import { XtermMixedStreamIngress, XtermProtocolEndpoint } from "../../prototypes/integration/xterm-protocol-endpoint/index.ts";
 
@@ -27,15 +28,18 @@ const history = new BrowserSearchHistory(terminal);
 const endpoint = new XtermProtocolEndpoint(terminal as unknown as HeadlessTerminal, {
   completeBaselineSupported: true, // Experimental fixture assertion, not feature detection.
   history,
+  resourceLimits: trialSessionLimits,
 });
 let socket: WebSocket | undefined;
 let pending = Promise.resolve();
+const pendingBudget = new PendingInputBudget(2 * 1024 * 1024, 512);
 let exitCode: number | undefined;
 let failure: unknown;
 let leaving = false;
 let deadline: ReturnType<typeof setTimeout> | undefined;
 const diagnostics: string[] = [];
 const ingress = new XtermMixedStreamIngress(terminal as unknown as HeadlessTerminal, endpoint, {
+  pendingInputLimits: { bytes: 2 * 1024 * 1024, pushes: 512 },
   // Protocol replies return to the application's stdin, never terminal.write().
   onResponseFrame(frame) {
     if (socket?.readyState === WebSocket.OPEN) socket.send(frame as Uint8Array<ArrayBuffer>);
@@ -76,9 +80,13 @@ connect.onclick = () => {
     socket?.close();
   }, Number(document.body.dataset.deadlineMs ?? 12_000));
   socket.onmessage = event => {
+    if (failure || leaving) return;
+    let release: () => void;
+    try { release = pendingBudget.acquire(typeof event.data === "string" ? event.data.length * 2 : event.data.byteLength); }
+    catch (error) { failure = error; endpoint.abort(error); socket?.close(); return; }
     // Serialize host controls with rendered input, not just decoded Messages.
     pending = pending.then(async () => {
-      if (leaving) return;
+      if (leaving || failure) return;
       if (typeof event.data === "string") {
         const control = JSON.parse(event.data);
         if (control.type !== "exit" || !Number.isInteger(control.code)) throw new Error("Invalid host exit control");
@@ -89,7 +97,7 @@ connect.onclick = () => {
         await ingress.push(new Uint8Array(event.data as ArrayBuffer));
       }
       showState();
-    }).catch(error => { failure = error; socket?.close(); });
+    }).catch(error => { failure = error; endpoint.abort(error); socket?.close(); }).finally(release);
   };
   socket.onerror = () => { failure = new Error("Transport failed"); };
   socket.onclose = () => {

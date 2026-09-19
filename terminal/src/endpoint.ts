@@ -7,10 +7,12 @@ import {
 } from "@tui-protocol/protocol";
 import {
   ProtocolSessionError,
+  SessionResourceLimitError,
   TerminalProtocolSession,
   type OperationExecutionErrorCode,
   type SessionContextSnapshot,
 } from "./session.ts";
+import type { SessionResourceLimits } from "./resource-limits.ts";
 
 const MAX_FRAME_ID = 2_147_483_647;
 
@@ -39,6 +41,7 @@ export interface TerminalOperationAdapter {
 
 export interface TerminalProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
+  readonly resourceLimits?: SessionResourceLimits;
   readonly operationAdapter?: TerminalOperationAdapter;
 }
 
@@ -129,7 +132,8 @@ export class TerminalProtocolEndpoint {
         if (event.identity === undefined) {
           continue;
         }
-        responses = this.#session.handleInvalidMessage(event.identity);
+        try { responses = this.#session.handleInvalidMessage(event.identity); }
+        catch (error) { if (error instanceof SessionResourceLimitError) this.abort(error); throw error; }
       } else {
         let appliedOperation: AppliedBlockOperation | undefined;
         try {
@@ -162,6 +166,7 @@ export class TerminalProtocolEndpoint {
             responses = this.#session.handle(event.message);
           }
         } catch (error: unknown) {
+          if (error instanceof SessionResourceLimitError) { this.abort(error); throw error; }
           if (!(error instanceof ProtocolSessionError)) {
             throw error;
           }

@@ -1,4 +1,5 @@
 import { Terminal } from "@xterm/xterm";
+import { runContentSampleScenarios } from "./scenarios/content-samples.ts";
 import "@xterm/xterm/css/xterm.css";
 
 import {
@@ -127,6 +128,7 @@ try {
 
 async function runScenarios(): Promise<ScenarioResult[]> {
   return [
+    ...await runContentSampleScenarios(),
     await runAnchoredUpdateSelectionScenario(true),
     await runAnchoredUpdateSelectionScenario(false),
     await runAnchoredUpdateShortScreenScenario(),

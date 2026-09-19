@@ -7,6 +7,7 @@ export function prepareExample(): string {
   const output = buildSdk();
   const entry = join(output, "streaming-text.mjs");
   copyFileSync(fileURLToPath(new URL("./main.mjs", import.meta.url)), entry);
+  copyFileSync(fileURLToPath(new URL("./application.mjs", import.meta.url)), join(output, "application.mjs"));
   return entry;
 }
 

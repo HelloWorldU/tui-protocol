@@ -72,8 +72,14 @@ protocol requirement or a recommended production timeout. Broader use needs
 application-specific tolerance for slow consumers.
 
 Neither a process-memory bound nor cross-platform child-tree cleanup is proven.
-The browser stall is controlled, not an actual browser crash. Missing-exit and
-unresponsive-close fallback branches require additional integration fault tests;
-the real run exercises successful termination, not every cleanup failure.
+The browser stall is controlled, not an actual browser crash. The shared host
+[connection wiring](../pty-demo/connection.ts) now has six
+[fault-injection tests](../pty-demo/connection.test.ts): failed kill/missing then
+late exit, ignored close handshake, exit during cleanup, abrupt disconnect,
+unconsumed output after child exit, normal final-credit closure, and a thrown
+exit notification. They use
+fake PTY/socket events and simulated timers, not OS fault injection. Ordinary
+disconnect now also retains the single-child slot until exit is observed.
+This verifies the tested host event ordering, not every native cleanup failure.
 Partial renders remain governed by existing fatal-stop semantics. No SDK API,
 wire format, Operation acknowledgement, or protocol error code changes.

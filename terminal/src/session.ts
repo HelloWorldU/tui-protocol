@@ -10,6 +10,7 @@ import type {
   OperationErrorCode,
   PlainTextSnapshot,
 } from "@tui-protocol/protocol";
+import { validateSessionLimits, type SessionResourceLimits } from "./resource-limits.ts";
 
 type ControlRequest = Extract<
   Message,
@@ -74,6 +75,7 @@ export interface SessionContextSnapshot {
 
 export interface TerminalProtocolSessionOptions {
   readonly completeBaselineSupported: boolean;
+  readonly resourceLimits?: SessionResourceLimits;
 }
 
 export class ProtocolSessionError extends Error {
@@ -83,6 +85,8 @@ export class ProtocolSessionError extends Error {
   }
 }
 
+export class SessionResourceLimitError extends ProtocolSessionError {}
+
 export class TerminalProtocolSession {
   readonly #contexts = new Map<string, StoredContext>();
   readonly #controlResults = new Map<string, StoredControlResult>();
@@ -90,9 +94,16 @@ export class TerminalProtocolSession {
   #pendingOperation: object | undefined = undefined;
   #nextContextId = 1;
   #ended = false;
+  readonly #limits: SessionResourceLimits | undefined;
+  #resourceFailure: SessionResourceLimitError | undefined;
+  #contentUnits = 0;
+  #blockCount = 0;
+  #operationCount = 0;
+  #fingerprintUnits = 0;
 
   constructor(options: TerminalProtocolSessionOptions) {
     this.#completeBaselineSupported = options.completeBaselineSupported;
+    this.#limits = options.resourceLimits && validateSessionLimits(options.resourceLimits);
   }
 
   handle(message: Message): readonly Message[] {
@@ -162,6 +173,7 @@ export class TerminalProtocolSession {
   }
 
   endConnection(): void {
+    if (this.#resourceFailure) throw this.#resourceFailure;
     if (this.#ended) {
       return;
     }
@@ -186,6 +198,7 @@ export class TerminalProtocolSession {
       );
     }
 
+    this.#reserveControl(request.request_id, fingerprint);
     const response = this.#executeControl(request);
     this.#controlResults.set(request.request_id, { fingerprint, response });
     return cloneMessage(response);
@@ -203,6 +216,7 @@ export class TerminalProtocolSession {
       );
     }
 
+    this.#reserveControl(identity.request_id, identity.fingerprint);
     const response = invalidControlError(identity, "invalid_message");
     this.#controlResults.set(identity.request_id, {
       fingerprint: identity.fingerprint,
@@ -222,6 +236,7 @@ export class TerminalProtocolSession {
       if (context.operationIds.has(identity.operation_id)) {
         return invalidOperationError(identity, "operation_id_reused");
       }
+      this.#reserveOperation(identity.operation_id);
       context.operationIds.add(identity.operation_id);
     }
     return invalidOperationError(identity, "invalid_message");
@@ -244,6 +259,7 @@ export class TerminalProtocolSession {
               body: { outcome: "unsupported" },
             };
       case "context.open": {
+        if (this.#limits && this.#contexts.size >= this.#limits.maxContexts) this.#exhaust("Context records");
         const id = `context-${this.#nextContextId}`;
         this.#nextContextId += 1;
         this.#contexts.set(id, {
@@ -297,11 +313,21 @@ export class TerminalProtocolSession {
 
     // Operation identity is consumed even when semantic evaluation rejects the
     // operation. A corrected operation must use a fresh identity.
+    this.#reserveOperation(snapshot.operation_id);
+    if (this.#limits && snapshot.body.block_id.length > this.#limits.maxIdentifierCodeUnits) this.#exhaust("Block ID length");
     context.operationIds.add(snapshot.operation_id);
 
     const error = this.#validateOperation(context, snapshot);
     if (error !== undefined) {
       return rejectedPreparation(snapshot, error);
+    }
+
+    const oldUnits = findBlock(context, snapshot.body.block_id)?.content.data.length ?? 0;
+    const nextUnits = projectedUnits(context, snapshot);
+    if (this.#limits && (nextUnits > this.#limits.maxBlockCodeUnits ||
+        this.#contentUnits - oldUnits + nextUnits > this.#limits.maxTotalContentCodeUnits ||
+        (snapshot.kind === "block.append" && this.#blockCount >= this.#limits.maxBlocks))) {
+      return rejectedPreparation(snapshot, "resource_exhausted");
     }
 
     const token = {};
@@ -328,6 +354,8 @@ export class TerminalProtocolSession {
         try {
           const committed = this.#buildCommittedContext(context, snapshot);
           this.#contexts.set(context.id, committed);
+          this.#contentUnits += nextUnits - oldUnits;
+          if (snapshot.kind === "block.append") this.#blockCount++;
           return [];
         } catch {
           return [operationError(snapshot, "internal_error")];
@@ -478,6 +506,7 @@ export class TerminalProtocolSession {
   }
 
   #assertCanProcess(): void {
+    if (this.#resourceFailure) throw this.#resourceFailure;
     if (this.#ended) {
       throw new ProtocolSessionError(
         "Terminal session cannot receive Messages after its connection ends.",
@@ -488,6 +517,43 @@ export class TerminalProtocolSession {
         "Terminal session cannot process another Message while an Operation is prepared.",
       );
     }
+  }
+
+  #exhaust(resource: string): never {
+    this.#resourceFailure ??= new SessionResourceLimitError(`Local session budget exhausted: ${resource}`);
+    this.#pendingOperation = undefined;
+    throw this.#resourceFailure;
+  }
+
+  #reserveOperation(operationId: string) {
+    if (this.#limits && (operationId.length > this.#limits.maxIdentifierCodeUnits ||
+        this.#operationCount >= this.#limits.maxOperationIds)) {
+      this.#exhaust("Operation identity records");
+    }
+    this.#operationCount++;
+  }
+
+  #reserveControl(requestId: string, fingerprint: string) {
+    if (this.#limits && (requestId.length > this.#limits.maxIdentifierCodeUnits ||
+        this.#controlResults.size >= this.#limits.maxControlResults ||
+        this.#fingerprintUnits + fingerprint.length > this.#limits.maxControlFingerprintCodeUnits)) {
+      this.#exhaust("Control replay records");
+    }
+    this.#fingerprintUnits += fingerprint.length;
+  }
+}
+
+function projectedUnits(context: StoredContext, operation: BlockOperation): number {
+  switch (operation.kind) {
+    case "block.append": case "block.update": return operation.body.content.data.length;
+    case "block.extend": return findBlock(context, operation.body.block_id)!.content.data.length + operation.body.fragment.length;
+    case "block.replace_suffix": {
+      const text = findBlock(context, operation.body.block_id)!.content.data;
+      let scalars = 0, units = 0;
+      for (const scalar of text) { if (scalars++ >= operation.body.retain) break; units += scalar.length; }
+      return units + operation.body.replacement.length;
+    }
+    case "block.seal": return findBlock(context, operation.body.block_id)!.content.data.length;
   }
 }
 

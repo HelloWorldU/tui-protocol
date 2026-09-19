@@ -62,7 +62,8 @@ demonstrates execution without those sources.
 
 ## Files and responsibilities
 
-- [main.mjs](main.mjs): application logic, stdin/stdout transport, fallback, and cleanup.
+- [main.mjs](main.mjs): executable entry point.
+- [application.mjs](application.mjs): application logic, stdin/stdout transport, fallback, and cleanup.
 - [prepare.ts](prepare.ts): build the SDK and copy the application beside it.
 - [example.test.ts](example.test.ts): run that output outside the checkout with redirected streams.
 - [Browser host](../../prototypes/integration/pty-demo/streaming-example.ts): terminal-side integration checks; not an application dependency.
@@ -79,6 +80,15 @@ Operation response. Only a successful run explicitly closes its Context;
 disposing the client after failure is local cleanup, not remote recovery.
 
 ## Verification scope
+
+The [application lifecycle tests](lifecycle.test.mjs) drive the real SDK with
+synthetic TTY streams and protocol replies. Negative or silent negotiation starts
+ordinary fallback. After protocol output starts, Operation rejection, input
+EOF/error, Ctrl+C, and synchronous/asynchronous output errors stop later sends
+instead of starting fallback. Tests check restoration of the previous raw-input
+flag and removal of listeners. Successful closure is checked separately. These
+are application-flow tests, not real OS input-mode fault tests. `main.mjs` calls
+the same `application.mjs` entry; preparation copies both alongside the built SDK.
 
 Run `pnpm typecheck` and `pnpm test` from the root for static and automated checks.
 The isolated application test checks exact fallback output with no escape bytes,

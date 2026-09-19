@@ -82,6 +82,13 @@ or automatic rollback/retry is added.
 
 ## Verification and limits
 
+Optional `resourceLimits` configure local retained-state budgets; the exported
+`trialSessionLimits` profile is used by the browser examples. Content growth
+can return `resource_exhausted`; identity/replay exhaustion stops the endpoint
+instead of forgetting IDs. `PendingInputBudget` helps hosts bound owned queued
+bytes and items. See [accounting, values, tests, and exclusions](../docs/design/trial-resource-budgets.md).
+These are opt-in implementation controls, not negotiated limits or heap bounds.
+
 Run `pnpm typecheck` and `pnpm test`. Existing Session and Endpoint scenarios
 now live under `test/`; their bounded evidence is retained in the original
 [Session record](../prototypes/protocol-session/README.md) and

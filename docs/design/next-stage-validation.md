@@ -194,10 +194,50 @@ old endpoint without rendering the held replacement or claiming rollback.
 The cleanup path must resume/discard internal pipe output after termination:
 the initial kill-only attempt did not observe exit with the pipe paused. This
 is a bundled-ConPTY implementation finding, not a protocol requirement.
-Unconfirmed exit and close-handshake fallback branches remain to be fault-tested.
-Next, exercise those cleanup failures and account for retained resources before
-considering normal-example adoption. Hard memory bounds, slow-but-progressing
-consumers, and other PTY platforms remain unresolved.
+The checkpoint below adds fault tests for unconfirmed exit and close-handshake
+fallback and selects local trial resource budgets. Hard process-memory bounds,
+slow-but-progressing consumers, and other PTY platforms remain unresolved.
+
+## Follow-up: Pre-trial Failure and Resource Checks
+
+Completed on 2026-09-19, in this order:
+
+1. **Cleanup failures.** The shared bridge now has
+   [fault-injection tests](../../prototypes/integration/pty-demo/connection.test.ts)
+   for missing/late exit, failed kill, unresponsive socket close, outstanding
+   trailing output, and failed exit notification. It retains the single-child
+   slot until both exit and socket closure are observed. Fake sockets and timers
+   exercise failure branches; the real stalled-consumer browser check was also
+   rerun through bundled ConPTY. This is not OS-level fault injection.
+2. **Retained-state and pending-input budgets.** The
+   [local trial policy](trial-resource-budgets.md) bounds selected content,
+   identity/replay structures, and queued input. Content overflow uses existing
+   atomic rejection; identity/replay exhaustion stops the execution session
+   instead of forgetting protocol meaning. Closed and evicted records still
+   count. This is not general reclamation or a whole-process memory bound.
+3. **Application failure handling.** The streaming example's
+   [lifecycle tests](../../examples/streaming-text/lifecycle.test.mjs) distinguish
+   unsupported/silent startup negotiation from failure after protocol output
+   starts. Runtime failure stops later sends without ordinary-text fallback;
+   exit paths restore input mode and remove handlers. Synthetic TTY streams
+   supply failures. Both single-round and multi-round real-PTY browser checks
+   were rerun with the shared host budgets enabled.
+4. **Fixed content samples.** The [sample report](trial-content-samples.md)
+   records seven Node cases and four browser cases for literal code, Chinese,
+   long lines, selected Unicode sequences, and known unsupported Tab mapping.
+   Checks distinguish retained text from font shaping and broader native UX;
+   rejected edits preserve the previous state and permit a supported next edit.
+
+Type checking, 224 Node tests, and the four affected browser builds passed.
+The browser runs passed 73 endpoint scenarios, two single-round checks, two
+multi-round checks, and the permanent-consumer-stall check. The latter three
+fixtures use local Windows bundled ConPTY, not a cross-platform transport matrix.
+
+These checks complete this bounded pre-trial checklist, not production readiness.
+The next useful step is a read-only Pi integration assessment: identify its
+rendering boundary and map one finite interaction to the current API before
+proposing an upstream change. Partial eviction, general reclamation, broader
+Unicode mapping, and cross-platform transport remain explicit limitations.
 
 ## Deferred
 

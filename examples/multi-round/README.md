@@ -54,6 +54,10 @@ after negotiation. The application, not the protocol, chooses this behavior.
 
 ## Verification and limits
 
+The shared host now selects the [trial resource budgets](../../docs/design/trial-resource-budgets.md)
+for retained Session state and queued input. Exhaustion does not trigger an
+automatic reconnect; these counters do not measure total process memory.
+
 Run `pnpm typecheck`, `pnpm test`, and `pnpm build:multi-round-example`.
 The build is not a standalone deployment: the page needs its local PTY host.
 Open `http://127.0.0.1:4178/checks.html` and choose **Run browser checks** for

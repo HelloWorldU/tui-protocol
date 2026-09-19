@@ -1,5 +1,10 @@
 # xterm Browser Protocol Endpoint Integration Prototype
 
+The [fixed trial content samples](../../../docs/design/trial-content-samples.md)
+add four browser Buffer-text checks through Append, resize, and Update. Their
+Unicode text retention evidence does not assert glyph shaping or complete
+selection/search support.
+
 This browser-host experiment asks whether all five current Block Operation
 Messages can traverse OSC `9002`, the codec, Session, and mutable xterm.js
 history path while preserving the tested terminal-native states. Separate

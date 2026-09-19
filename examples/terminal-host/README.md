@@ -86,6 +86,10 @@ application's decision; this page demonstrates only the supported path.
 
 ## Verification and limits
 
+This example selects [local Session and pending-input budgets](../../docs/design/trial-resource-budgets.md).
+Exhaustion is reported as a stopped connection where continued execution is
+unsafe; a new page is required. This does not establish a process-memory bound.
+
 Run `pnpm typecheck`, `pnpm test`, and `pnpm build:terminal-example` from the root.
 The build checks browser bundling, not a standalone deployment: running the page
 still requires its development PTY host and injected connection token.

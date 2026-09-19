@@ -8,9 +8,11 @@ import type {
   EndpointDiagnostic,
   EndpointResult,
 } from "@tui-protocol/terminal";
+import { PendingInputBudget } from "@tui-protocol/terminal";
 import type { XtermProtocolEndpoint } from "./endpoint.ts";
 
 export interface XtermMixedStreamIngressOptions {
+  readonly pendingInputLimits?: { bytes: number; pushes: number };
   readonly onResponseFrame: (frame: Uint8Array) => void;
   readonly onDiagnostic: (diagnostic: EndpointDiagnostic) => void;
 }
@@ -28,6 +30,7 @@ export class XtermMixedStreamIngress implements IDisposable {
   readonly #registrations: IDisposable[];
   #processing: Promise<void> = Promise.resolve();
   #ended = false;
+  readonly #budget: PendingInputBudget | undefined;
 
   constructor(
     terminal: Terminal,
@@ -35,6 +38,7 @@ export class XtermMixedStreamIngress implements IDisposable {
     options: XtermMixedStreamIngressOptions,
   ) {
     this.#terminal = terminal;
+    this.#budget = options.pendingInputLimits && new PendingInputBudget(options.pendingInputLimits.bytes, options.pendingInputLimits.pushes);
     this.#endpoint = endpoint;
     this.#onResponseFrame = options.onResponseFrame;
     this.#onDiagnostic = options.onDiagnostic;
@@ -77,13 +81,16 @@ export class XtermMixedStreamIngress implements IDisposable {
     if (this.#ended) {
       throw new Error("Mixed-stream ingress cannot receive bytes after finish.");
     }
-    const owned = bytes.slice();
+    let release: (() => void) | undefined;
+    let owned: Uint8Array;
+    try { release = this.#budget?.acquire(bytes.byteLength); owned = bytes.slice(); }
+    catch (error) { release?.(); this.#endpoint.abort(error); this.#ended = true; throw error; }
     const task = this.#processing.then(async () => {
       await this.#consume(this.#decoder.push(owned));
     }).catch((error: unknown) => {
       this.#endpoint.abort(error);
       throw error;
-    });
+    }).finally(() => release?.());
     this.#processing = task;
     return task;
   }
