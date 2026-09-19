@@ -13,7 +13,7 @@ const workload = __WORKLOAD__;
 const run = document.querySelector<HTMLButtonElement>("#run")!;
 const result = document.querySelector<HTMLElement>("#result")!;
 document.querySelector<HTMLElement>("#workload")!.textContent =
-  `${workload.updates} Updates, ${workload.padding} padding characters each; ${workload.holdMs} ms controlled hold after a host pause.`;
+  `${workload.updates} Updates, ${workload.padding} padding characters each; ${workload.holdMs === null ? "permanent" : `${workload.holdMs} ms`} controlled hold after a host pause.`;
 function assert(value: unknown, reason: string): asserts value { if (!value) throw new Error(reason); }
 
 run.onclick = () => {
@@ -40,12 +40,13 @@ run.onclick = () => {
   let received = 0;
   let pending = Promise.resolve();
   let failure: unknown;
+  let hostFailure: { reason: string; childExitObserved: boolean } | undefined;
   let exitCode: number | undefined;
   let flow: { peak: number; outstanding: number; pauses: number; resumes: number; peakSocketBytes: number } | undefined;
   function unblock() {
     if (!released && entered && sawPause) {
       released = true; heldBytes = pendingBytes; holdStartedAt = Date.now();
-      holdTimer = setTimeout(() => { holdEndedAt = Date.now(); release(); }, workload.holdMs);
+      if (workload.holdMs !== null) holdTimer = setTimeout(() => { holdEndedAt = Date.now(); release(); }, workload.holdMs);
     }
   }
   class GatedHistory extends PrivateCoreBlockHistory {
@@ -55,6 +56,7 @@ run.onclick = () => {
       }
       if (operation.type === "update" && renderedUpdates === 0) {
         entered = true; unblock(); await barrier;
+        if (hostFailure || failure) throw new Error("Stopped before rendering held Update");
       }
       await super.renderAccepted(operation);
       if (operation.type === "update") renderedUpdates++;
@@ -82,6 +84,10 @@ run.onclick = () => {
         if (message.type === "flow") {
           flow = message;
           if (message.paused) { sawPause = true; unblock(); }
+        } else if (message.type === "host_error") {
+          assert(message.reason === "consumer_stalled" && typeof message.childExitObserved === "boolean", "Invalid host failure report");
+          hostFailure = message;
+          endpoint.abort(new Error("Consumer stalled")); release();
         } else if (message.type === "exit") exitCode = message.code;
         else throw new Error("Unexpected host control");
       } catch (error) { stop(error); }
@@ -101,9 +107,28 @@ run.onclick = () => {
     }).catch(stop);
   };
   socket.onerror = () => stop(new Error("WebSocket failed"));
-  socket.onclose = () => {
+  socket.onclose = event => {
+    if (!hostFailure && (event.code !== 1000 || exitCode !== 0)) {
+      failure ??= new Error("Transport closed before successful child completion");
+      endpoint.abort(failure);
+    }
     clearTimeout(deadline); clearTimeout(holdTimer); release();
     void pending.then(async () => {
+      if (workload.holdMs === null) {
+        assert(hostFailure?.reason === "consumer_stalled" && hostFailure.childExitObserved, "Host did not confirm stalled child exit");
+        assert(event.code === 1011 && exitCode === undefined, "Stall was not reported as abnormal closure");
+        assert(entered && sawPause && renderedUpdates === 0, "Held Update rendered or no host pause occurred");
+        const rows = Array.from({ length: terminal.buffer.normal.length }, (_, row) => terminal.buffer.normal.getLine(row)?.translateToString(true) ?? "").join("");
+        assert(rows.includes("initial") && !rows.includes("value-0001"), "Held replacement appeared in the native display");
+        let rejectsFurtherInput = false;
+        try { endpoint.push(new Uint8Array()); } catch { rejectsFurtherInput = true; }
+        assert(rejectsFurtherInput, "Aborted endpoint accepted more input");
+        // Acceptance precedes rendering here. The retained Session snapshot is
+        // diagnostic only after abort; do not claim rollback or normal closure.
+        result.textContent = "PASS: host stopped the stalled child, observed its exit, and closed with 1011; held Update stayed unrendered and the endpoint rejected further input.\n" +
+          JSON.stringify({ hostFailure, heldBytes, renderedUpdates, closeCode: event.code }, null, 2);
+        return;
+      }
       if (failure) throw failure;
       assert(endpoint.contexts()[0]?.state === "closed", "Context was not closed before EOF cleanup");
       await ingress.finish();

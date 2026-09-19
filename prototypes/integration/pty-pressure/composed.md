@@ -54,6 +54,8 @@ and private xterm APIs. It does not test permanent stalls, long-running resource
 use, fairness, eviction, other terminals, Unix, SSH, or tmux. Existing examples
 still leave byte-credit flow control disabled. A permanent-consumer-stall policy
 and explicit accounting boundaries are needed before considering wider use.
+The [stalled-consumer follow-up](stalled.md) now tests a local timeout policy;
+it does not establish those resource bounds.
 
 ## Run and verification
 

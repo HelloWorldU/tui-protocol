@@ -24,6 +24,10 @@ It reports how often that path was used and, since the 2026-09-18 follow-up,
 the longest synchronous write duration. There is no LLM or arbitrary child command.
 The [composed follow-up](composed.md) selects a larger fixed workload and a
 two-second browser hold using the same implementation.
+The [stalled-consumer check](stalled.md) holds it indefinitely and verifies
+host-side termination instead of successful completion. Since 2026-09-19, these
+pressure fixtures enable a five-second consumption-progress watchdog; normal
+examples still leave the optional flow-control path disabled.
 
 The [browser](main.ts) holds the first Update before native rendering until it
 also observes a host pause. It queues incoming binary data in arrival order and

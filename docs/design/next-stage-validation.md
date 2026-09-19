@@ -180,10 +180,24 @@ closed normally. The smaller browser scenario also passed as a regression.
 
 This supplies evidence of upstream waiting in the composed local path, not a
 hard queue or process-memory bound. No production flow-control default changes.
-Next, define and test host-side termination of a permanently stalled consumer,
-including child cleanup and failure reporting, before normal-example adoption.
-This is local bridge policy unless it exposes a new protocol-level behavior;
-hard limits and general memory reclamation remain separate work.
+The follow-up below tests host-side termination of a permanently stalled
+consumer. Hard limits and general memory reclamation remain separate work.
+
+## Follow-up: Stalled Consumer Shutdown
+
+The 2026-09-19 [stall experiment](../../prototypes/integration/pty-pressure/stalled.md)
+adds an opt-in consumption-progress timeout to the local bridge. With the first
+Update held indefinitely, the host stops forwarding, terminates the child,
+observes its exit, and closes the transport as a failure. The browser stops its
+old endpoint without rendering the held replacement or claiming rollback.
+
+The cleanup path must resume/discard internal pipe output after termination:
+the initial kill-only attempt did not observe exit with the pipe paused. This
+is a bundled-ConPTY implementation finding, not a protocol requirement.
+Unconfirmed exit and close-handshake fallback branches remain to be fault-tested.
+Next, exercise those cleanup failures and account for retained resources before
+considering normal-example adoption. Hard memory bounds, slow-but-progressing
+consumers, and other PTY platforms remain unresolved.
 
 ## Deferred
 

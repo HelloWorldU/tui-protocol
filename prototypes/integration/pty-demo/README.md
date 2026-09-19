@@ -93,6 +93,11 @@ checks two earlier extensions with a later Chinese/Tab selection.
 
 ## Host Scope and Limits
 
+The separate [pressure fixtures](../pty-pressure/README.md) opt into byte credits
+and a [consumption timeout](../pty-pressure/stalled.md). This demo and the normal
+examples do not enable them. PTY shutdown drains/discards remaining internal
+output after requesting termination so a paused pipe can finish cleanup.
+
 - The [transport probe](../pty-transport/README.md) recorded a return-path failure
   on this machine's older system ConPTY. This host explicitly uses the approved
   bundled DLL through `useConptyDll: true`; it does not upgrade Windows or claim

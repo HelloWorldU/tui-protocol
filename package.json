@@ -9,6 +9,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prototype:pty-stalled": "vite --config prototypes/integration/pty-pressure/vite.config.ts --mode stalled",
+    "build:pty-stalled": "vite build --config prototypes/integration/pty-pressure/vite.config.ts --mode stalled --outDir ../../../.tmp/pty-stalled-dist --emptyOutDir",
     "prototype:pty-composed": "vite --config prototypes/integration/pty-pressure/vite.config.ts --mode composed",
     "build:pty-composed": "vite build --config prototypes/integration/pty-pressure/vite.config.ts --mode composed --outDir ../../../.tmp/pty-composed-dist --emptyOutDir",
     "prototype:pty-upstream": "node prototypes/integration/pty-pressure/upstream-probe.ts",

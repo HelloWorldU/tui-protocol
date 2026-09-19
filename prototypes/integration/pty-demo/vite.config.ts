@@ -4,10 +4,13 @@ import { defineConfig } from "vite";
 import { WebSocket, WebSocketServer } from "ws";
 import * as pty from "node-pty";
 import { FlowWindow } from "./flow-window.ts";
+import { ConsumptionWatchdog } from "./consumption-watchdog.ts";
+import { stopPty } from "./stop-pty.ts";
 
 const origin = "http://127.0.0.1:4178";
-export function createPtyHost(producer: string, javascriptOnly = false, flowControl?: { high: number; low: number }) {
+export function createPtyHost(producer: string, javascriptOnly = false, flowControl?: { high: number; low: number; stallMs?: number }) {
   if (flowControl) new FlowWindow(flowControl.high, flowControl.low);
+  if (flowControl?.stallMs !== undefined) new ConsumptionWatchdog(flowControl.stallMs, () => {}).dispose();
   const token = randomBytes(32).toString("hex");
   return defineConfig({
     root: fileURLToPath(new URL(".", import.meta.url)),
@@ -40,7 +43,36 @@ export function createPtyHost(producer: string, javascriptOnly = false, flowCont
           let exited = false;
           let exitCode: number | undefined;
           let peakSocketBytes = 0;
+          let stalled = false;
+          let failureReported = false;
+          let killRequested = false;
+          let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+          let terminateTimer: ReturnType<typeof setTimeout> | undefined;
           const window = flowControl ? new FlowWindow(flowControl.high, flowControl.low) : undefined;
+          const reportStall = () => {
+            if (failureReported) return;
+            failureReported = true;
+            clearTimeout(cleanupTimer);
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({ type: "host_error", reason: "consumer_stalled", childExitObserved: exited }));
+              client.close(1011, "Consumer stalled");
+              // Do not wait indefinitely for a dead browser's close handshake.
+              terminateTimer = setTimeout(() => client.terminate(), 1000);
+            }
+          };
+          const kill = () => {
+            if (exited || killRequested) return;
+            killRequested = true;
+            stopPty(child, error => console.error("PTY cleanup failed", error));
+          };
+          const watchdog = flowControl?.stallMs === undefined ? undefined : new ConsumptionWatchdog(flowControl.stallMs, () => {
+            stalled = true;
+            // Stop forwarding/input before killing; do not send stale queued
+            // output or report normal completion after a consumer timeout.
+            cleanupTimer = setTimeout(reportStall, 2000);
+            kill();
+            if (exited) reportStall();
+          });
           const reportFlow = () => {
             if (window && client.readyState === WebSocket.OPEN) client.send(JSON.stringify({
               type: "flow", sent: window.sent, consumed: window.consumed,
@@ -49,17 +81,18 @@ export function createPtyHost(producer: string, javascriptOnly = false, flowCont
             }));
           };
           const finishExit = () => {
-            if (exitCode === undefined || (window && window.outstanding !== 0) || client.readyState !== WebSocket.OPEN) return;
+            if (stalled || exitCode === undefined || (window && window.outstanding !== 0) || client.readyState !== WebSocket.OPEN) return;
             reportFlow();
             client.send(JSON.stringify({ type: "exit", code: exitCode }));
             client.close(1000, "Child exited");
           };
           const timer = setTimeout(() => client.close(1000, "Demo time limit"), 10 * 60_000);
           const dataSubscription = child.onData(data => {
-            if (client.readyState !== WebSocket.OPEN) return;
+            if (stalled || client.readyState !== WebSocket.OPEN) return;
             try {
               const bytes = Buffer.from(data, "utf8");
               if (window?.add(bytes.length)) child.pause();
+              if (window) watchdog?.update(window.outstanding, window.consumed);
               client.send(bytes);
               peakSocketBytes = Math.max(peakSocketBytes, client.bufferedAmount);
               reportFlow();
@@ -68,14 +101,22 @@ export function createPtyHost(producer: string, javascriptOnly = false, flowCont
           const exitSubscription = child.onExit(event => {
             exited = true;
             exitCode = event.exitCode;
-            finishExit();
+            if (stalled) {
+              reportStall();
+              if (client.readyState === WebSocket.CLOSED) {
+                exitSubscription.dispose();
+                if (active === client) active = undefined;
+              }
+            } else finishExit();
           });
           client.on("message", (bytes, binary) => {
+            if (stalled) return;
             try {
               if (binary) { if (!exited) child.write(bytes.toString("utf8")); return; }
               const message = JSON.parse(bytes.toString());
               if (window && message.type === "consumed") {
                 if (window.acknowledge(message.total) && !exited) child.resume();
+                watchdog?.update(window.outstanding, window.consumed);
                 reportFlow(); finishExit(); return;
               }
               if (exited) return;
@@ -87,9 +128,15 @@ export function createPtyHost(producer: string, javascriptOnly = false, flowCont
           client.on("error", () => client.close());
           client.on("close", () => {
             clearTimeout(timer);
-            dataSubscription.dispose(); exitSubscription.dispose();
-            if (!exited) child.kill();
-            if (active === client) active = undefined;
+            clearTimeout(cleanupTimer); clearTimeout(terminateTimer); watchdog?.dispose();
+            dataSubscription.dispose();
+            kill();
+            // A timed-out child without an observed exit keeps the host slot
+            // occupied. A new connection must not hide failed child cleanup.
+            if (!stalled || exited) {
+              exitSubscription.dispose();
+              if (active === client) active = undefined;
+            }
           });
         });
         server.httpServer!.on("close", () => { for (const client of sockets.clients) client.terminate(); sockets.close(); });
