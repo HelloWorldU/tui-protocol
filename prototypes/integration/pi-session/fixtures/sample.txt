@@ -1,0 +1,1 @@
+Trial sample: mutable history keeps old output readable.

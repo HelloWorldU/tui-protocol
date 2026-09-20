@@ -1,0 +1,13 @@
+{
+  "name": "@tui-protocol/pi-session-trial",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@earendil-works/pi-ai": "0.86.1",
+    "@earendil-works/pi-coding-agent": "0.86.1",
+    "@tui-protocol/protocol": "workspace:*",
+    "@tui-protocol/sdk": "workspace:*",
+    "@tui-protocol/terminal": "workspace:*",
+    "typebox": "1.3.27"
+  }
+}

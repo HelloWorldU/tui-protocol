@@ -169,14 +169,17 @@ visible. After that trial, assess whether a stock-UI integration is worth
 the additional transcript/editor and rich-content work above.
 
 No Pi code was changed, dependencies installed, model requests made, or Pi
-tests run for this source investigation. No Pi runtime behavior or upstream
-acceptance has been established. The research checkout is local under
+tests run for this source investigation. That investigation established neither
+Pi runtime behavior nor upstream acceptance. The research checkout is local under
 `.tmp/pi-research`; the separate existing Pi checkout was left untouched.
 
-Follow-up: the [synthetic event-mapping experiment](../../prototypes/integration/pi-session/README.md)
-implements a restricted plain-text mapping through our SDK, codec, and Session.
-It uses hand-authored consumed-field fixtures, not a live Pi dependency, and
-does not yet test the stock UI, real terminal rendering, or producer pressure.
+Follow-up: the [Pi session experiment](../../prototypes/integration/pi-session/README.md)
+retains the synthetic replay and now runs the pinned Pi SDK with a local model
+fixture and one real read-only tool through ConPTY and the experimental xterm
+host. Two browser scenarios check completion/search and mid-stream cancellation.
+Live model acceptance awaits configuration; stock UI compatibility and Pi
+producer backpressure remain unproven. This later experiment is separate from
+the read-only source investigation above.
 
 [main]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/main.ts#L736
 [runtime]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/agent-session-runtime.ts

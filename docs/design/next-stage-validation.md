@@ -15,10 +15,13 @@ conformance, or general terminal compatibility.
 The [read-only Pi assessment](pi-rendering-architecture.md) traces its rendering
 boundary and candidate interfaces. It recommends mapping one finite interaction
 through a separate Pi SDK frontend before considering a stock-UI integration
-or upstream change. The first [synthetic event replay](../../prototypes/integration/pi-session/README.md)
-now checks that mapping through SDK bytes and terminal Session. It does not yet
-connect a live Pi session or renderer. Other terminals still need their own
-rendering/history integration; extracting a production xterm adapter is not a
+or upstream change. The [Pi session experiment](../../prototypes/integration/pi-session/README.md)
+now connects the pinned Pi SDK, a deterministic local model provider, and one
+read-only tool through SDK bytes, Windows ConPTY, and the experimental xterm
+host. Completion and mid-stream cancellation have browser evidence; live model
+acceptance awaits maintainer configuration. This is not the stock Pi UI.
+Other terminals still need their own rendering/history integration; extracting
+a production xterm adapter is not a
 prerequisite for assessing an application.
 
 ## Completed Work and Evidence

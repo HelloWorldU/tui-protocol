@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pi Session Trial</title></head>
+<body data-deadline-ms="65000">
+  <h1>Pi Session Trial</h1>
+  <p>Real Pi SDK 0.86.1, local deterministic provider, one read-only sample tool. No model network requests or user credentials.</p>
+  <p>Connect, wait for [ready], then start. Cancel retains partial content. This is not the stock Pi UI.</p>
+  <p><a href="/checks.html">Run local browser checks</a></p>
+  <button id="connect">Connect application</button>
+  <button id="next" disabled>Start one turn (n)</button>
+  <button id="quit" disabled>Cancel (q)</button>
+  <button id="disconnect" disabled>Disconnect</button>
+  <p id="status" role="status">Ready. Reload to start a fresh session.</p>
+  <div id="terminal"></div>
+  <label>Search retained content <input id="query" value="Result:"></label>
+  <button id="search">Find next</button><span id="search-result"></span>
+  <details><summary>Local state and native rows</summary><pre id="report">No connection yet.</pre><pre id="rendered"></pre></details>
+  <p>Fixed 40 × 8 viewport, experimental xterm adapter, OSC 9002, Windows bundled ConPTY. One-minute application deadline.</p>
+  <script type="module" src="/browser.ts"></script>
+</body>
+</html>
