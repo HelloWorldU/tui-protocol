@@ -1,10 +1,5 @@
 # xterm Browser Protocol Endpoint Integration Prototype
 
-The [fixed trial content samples](../../../docs/design/trial-content-samples.md)
-add four browser Buffer-text checks through Append, resize, and Update. Their
-Unicode text retention evidence does not assert glyph shaping or complete
-selection/search support.
-
 This browser-host experiment asks whether all five current Block Operation
 Messages can traverse OSC `9002`, the codec, Session, and mutable xterm.js
 history path while preserving the tested terminal-native states. Separate
@@ -53,11 +48,12 @@ selection failure led to the additional
 [earlier Extend regression](scenarios/chinese-mixed-selection.ts) here: two
 extensions preserve the later Chinese/Tab copy and reading anchor.
 
-Sixty-six browser scenarios negotiate the baseline capability and open a
-Context through encoded OSC Messages. Fifty-one use the protocol-only
-endpoint path. Each of fifteen additional scenarios uses an independent raw
-mixed-ingress path for both the Messages and ordinary terminal bytes. Together
-they demonstrate that:
+The [scenario runner](scenario.ts) composes protocol-only and raw mixed-ingress
+fixtures, each negotiating Capability and opening its own Context through
+encoded OSC Messages. The 2026-09-19 run passed 73 scenarios, including the
+anchored-Update cases below and four [fixed content samples](../../../docs/design/trial-content-samples.md).
+Those samples check Buffer text through Append, resize, and Update, not glyph
+shaping or Unicode selection/search. The native-state fixtures demonstrate that:
 
 - an OSC Update grows an earlier Block while a later reading position and
   selection move with their unchanged Block and retain the same copied text;
@@ -260,8 +256,8 @@ requirements.
   trailing line break, but only the outcomes listed above.
 - Partial-Block trimming, Append-driven eviction outside the listed exact
   complete-leading-Block fixtures, dimensions beyond those listed, and Unicode
-  content beyond the listed Chinese/Tab copy and search fixtures remain outside
-  this experiment.
+  interaction beyond the listed Chinese/Tab copy and search fixtures remain
+  outside this experiment. The fixed corpus adds text-retention checks only.
 - Capacity eviction removes the tested Block's rendered range while Session
   retains its logical snapshot. The experiment does not define forgotten-Block
   lifecycle or prove complete memory reclamation.

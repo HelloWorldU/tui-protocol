@@ -5,9 +5,10 @@
 | Status | Working note |
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
 
-This document records the current design of the first protocol prototype. It
-is intentionally non-normative: the prototype exists to test these ideas and
-may change them.
+This working note records the first prototype's scenario and later incremental
+extensions. It is non-normative, not the current project plan. The
+[Operation draft](../protocol/operations.md) owns semantics; the
+[validation plan](next-stage-validation.md) tracks implementation progress.
 
 ## Validation Scenario
 
@@ -25,8 +26,9 @@ Entering scrollback is a presentation event, not a block lifecycle event.
 
 The first prototype tests reading-anchor stability when Operations change a
 different Block, including a mutable Block above the user's reading position.
-Mapping an anchor through a complete Update of its own Block is explicitly
-undefined at this stage.
+The semantic model does not map an anchor through a complete Update of its own
+Block. The later [xterm experiment](../../prototypes/integration/xterm-protocol-endpoint/README.md#updating-the-block-being-read)
+tests a local replacement-start policy under the agreed native-behavior rule.
 
 ## Working Model
 
@@ -75,8 +77,8 @@ a mutable `text/plain` Block and names the exact prior content state on which
 it depends. This preserves causal ordering between streamed fragments without
 turning Update into a character-level patch.
 
-The executable prototypes now implement Extend through the reference codec,
-protocol Session, protocol endpoint, and xterm integration path. The
+The executable path now implements Extend through the shared codec,
+terminal Session/Endpoint, and xterm integration. The
 [xterm protocol endpoint experiment](../../prototypes/integration/xterm-protocol-endpoint/README.md)
 records the currently tested rendering and reading-anchor behavior. Update
 remains the resynchronization path. Arbitrary character-range patches remain
@@ -112,8 +114,9 @@ internally to preserve a reading anchor.
 
 ## Open Questions
 
-- Resource limits and allocation policy for Context and Block IDs. Their JSON
-  representation is defined in [JSON Serialization](../protocol/serialization.md);
+- Protocol-wide resource limits and allocation policy for Context and Block IDs;
+  the reference implementation has a local [trial policy](trial-resource-budgets.md).
+  Their JSON representation is defined in [JSON Serialization](../protocol/serialization.md);
   scope and reuse semantics are defined in [Protocol Context
   Semantics](../protocol/contexts.md).
 - Concrete optional content types and their terminal-native projections; the
@@ -121,7 +124,9 @@ internally to preserve a reading anchor.
   [Content Representation](../protocol/content-representation.md).
 - Repeated-query and backoff guidance; negotiation windows and timeout policies
   are caller-owned, while unsupported-terminal fallback is application-owned.
-- How to map a reading anchor when its own Block receives a complete Update.
+- Whether a future version needs an old-to-new anchor mapping for complete
+  Update. The current draft does not require one; this is not a missing
+  replacement operation.
 - How far to extend the current incremental-Operation evidence beyond the
   tested plain-text xterm.js scenarios without weakening complete
   Update as the recovery path.

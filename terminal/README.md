@@ -11,6 +11,8 @@ and unpublished; [protocol drafts](../docs/README.md) define the design.
   correlated errors, and prepared Operations over validated Messages.
 - `src/endpoint.ts`: decode protocol bytes, execute the Session, consult a host
   adapter, and encode response frames. Also exports `TerminalOperationAdapter`.
+- `src/resource-limits.ts` and `src/input-budget.ts`: optional local retained-state
+  and pending-input budgets, not negotiated protocol limits.
 - `src/index.ts`: the module entry point. `test/` holds the migrated checks
   and an isolated build-consumer test.
 
@@ -83,8 +85,8 @@ or automatic rollback/retry is added.
 ## Verification and limits
 
 Optional `resourceLimits` configure local retained-state budgets; the exported
-`trialSessionLimits` profile is used by the browser examples. Content growth
-can return `resource_exhausted`; identity/replay exhaustion stops the endpoint
+`trialSessionLimits` profile is used by the terminal-host and multi-round
+examples. Content growth can return `resource_exhausted`; identity/replay exhaustion stops the endpoint
 instead of forgetting IDs. `PendingInputBudget` helps hosts bound owned queued
 bytes and items. See [accounting, values, tests, and exclusions](../docs/design/trial-resource-budgets.md).
 These are opt-in implementation controls, not negotiated limits or heap bounds.
@@ -107,5 +109,6 @@ against their prior versions: changes were limited to import paths.
 
 The xterm adapters and real-PTY fixtures remain in `prototypes/`. Their existing
 capacity, Unicode, asynchronous rendering, and platform limits still apply.
-This extraction adds no authentication, cache bounds, general transport
-backpressure, production recovery, or new terminal compatibility guarantees.
+The later opt-in budgets described above bound selected retained records and
+pending input. Authentication, general transport backpressure, production
+recovery, and broader terminal compatibility remain outside this module's evidence.

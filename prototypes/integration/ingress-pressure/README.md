@@ -66,17 +66,13 @@ await the terminal's local completion Promise; an external TUI cannot. The
 Operation ID means sent, not rendered. Making that callback `async` would not
 cause the current SDK to wait.
 
-Source inspection shows additional places outside this measurement: the
-[browser host](../../../examples/terminal-host/main.ts) chains incoming events
-on its own Promise before calling ingress, and the
-[PTY bridge](../pty-demo/vite.config.ts) forwards child output into WebSocket.
-Neither currently implements an explicit queue-byte budget or coordinated
-pause/resume. These are code observations, not measured queue sizes.
-
-Next, measure that host/transport boundary and test whether slowing consumption
-can propagate toward the producer. Do not add protocol-level acknowledgements,
-discard dependent incremental Operations, or declare memory bounded on the
-strength of this local comparison. No runtime queue policy is changed here.
+This probe deliberately omits the later opt-in limits so it can measure the
+unbudgeted queue. The [trial resource policy](../../../docs/design/trial-resource-budgets.md)
+now bounds owned pending input in the terminal-host example and its mixed
+ingress. The separate [PTY pressure experiments](../pty-pressure/README.md)
+test optional bridge credits and pause/resume, including a producer-waiting
+follow-up. Neither addition turns this local comparison into evidence of a
+whole-process memory bound or changes the SDK's synchronous writer contract.
 
 ## Run and limits
 

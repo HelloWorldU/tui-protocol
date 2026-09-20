@@ -4,6 +4,8 @@ This directory retains the original experiment record. Implementation and tests
 now live in [the terminal module](../../terminal/README.md), under
 `terminal/src/session.ts` and `terminal/test/session.test.ts`. The evidence below
 describes these Session checks, not all later integrations of the module.
+Later [resource-budget checks](../../docs/design/trial-resource-budgets.md)
+cover opt-in retained-state limits separately from this original experiment.
 
 This prototype asks whether the draft Capability, Context, Block Operation,
 and error semantics can form one deterministic in-memory terminal-side

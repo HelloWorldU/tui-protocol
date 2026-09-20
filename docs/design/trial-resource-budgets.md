@@ -15,13 +15,15 @@ the terminal-host and multi-round examples select `trialSessionLimits`.
 | Operation IDs, across Contexts | 16,384 | Stop rather than forget consumed IDs |
 | Cached control results | 1,024 | Stop rather than evict replay results |
 | Cached control fingerprints | 262,144 UTF-16 code units | Stop rather than change replay behavior |
-| Stored caller identity length | 256 UTF-16 code units | Stop before retaining it |
+| Individually checked Request, Operation, and Block ID length | 256 UTF-16 code units | Stop before retaining that identity |
 
 String budgets use JavaScript code units to check projected retained size; they
 are not rendered cells, Unicode-scalar edit positions, UTF-8 wire lengths, or
 measured heap bytes. ReplaceSuffix still counts Unicode scalars. Limits are
 copied and validated at construction. They are experimental sizing choices,
-not production recommendations. Omitting `resourceLimits` preserves the earlier
+not production recommendations. Context IDs are terminal-assigned; incoming
+Context references in cached controls count toward the fingerprint budget,
+not the individual-ID limit. Omitting `resourceLimits` preserves the earlier
 unbudgeted Session behavior, so other hosts must explicitly choose a policy.
 
 Content rejection preserves the old content and content-state ID but consumes

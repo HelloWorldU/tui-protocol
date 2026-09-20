@@ -44,7 +44,8 @@ Message schema reports `invalid_message` when correlation is reliable. A well-
 formed but unknown or unnegotiated type reports `unsupported_content_type`.
 Structurally valid data for a supported type that violates that type's
 additional content-validity rules reports `invalid_content`. Each failure
-leaves protocol state unchanged.
+leaves the Block's content and lifecycle unchanged; correlation and ID non-reuse
+follow the [logical wire model](wire-format.md#6-error-reporting-and-recovery).
 
 The initial JSON mapping represents the type as a non-empty string and defines
 `text/plain` as the baseline identifier. Naming, registration, and schemas for

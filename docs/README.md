@@ -22,7 +22,7 @@ here.
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
 | [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
-| [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan |
+| [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan; completed checkpoints and remaining trial work |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |
@@ -65,7 +65,7 @@ imports use those public entries; local imports stay relative. Source entries
 resolve to TypeScript, while the SDK and terminal build commands produce
 self-contained JavaScript distributions. These names do not imply publication.
 
-Only directories with real content are created. The intended layout is:
+The current top-level layout is:
 
 ```text
 docs/
@@ -75,16 +75,20 @@ docs/
   protocol/       Draft consolidated protocol semantics
   rfcs/           Numbered design proposals and decisions
 
-spec/             Future normative protocol specification
+protocol/         Shared Message validation, serialization, and framing
+sdk/              Application-facing client and local build
+terminal/         Terminal Session, Endpoint, and host adapter contract
+examples/         Runnable application and terminal-host examples
 prototypes/       Executable semantic and implementation experiments
-tests/            Future black-box scenarios and conformance fixtures
+scripts/          Shared build tooling and repository checks
 ```
 
 `prototypes/` contains semantic models, xterm.js integration experiments, and
 retained experiment records. Shared codec and terminal execution code now live
-in `protocol/` and `terminal/`. The `spec/` and `tests/` directories should be added
-only when the project has a normative specification or reusable conformance
-fixtures to place in them.
+in `protocol/` and `terminal/`. Module tests live with their modules; composed
+experiments live under `prototypes/integration/`. A future `spec/` or top-level
+`tests/` directory needs actual normative documents or reusable conformance
+fixtures; neither exists today.
 
 ## Document authority
 

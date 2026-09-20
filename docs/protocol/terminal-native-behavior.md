@@ -117,7 +117,7 @@ fragment; it does not follow the new logical end. A selection ending there
 therefore does not expand to include the fragment. If the appended fragment
 lies strictly between the preserved endpoints, it becomes part of the current
 selection and copy result. Scrollback-capacity trimming that removes any
-selected content has the same effect.
+selected content clears the complete selection and its copy target.
 
 Clearing a selection removes its highlight and copy target; it does not remove
 Block content. Copying returns only the content of a current valid selection,
@@ -191,102 +191,37 @@ Context Semantics](contexts.md#8-frame-external-invalidation).
 
 ## Experimental Evidence
 
-The executable evidence for this draft is recorded in the linked prototype
-READMEs; those documents are the source of truth for exact scenarios and
-limitations:
+Experiment records own the exact scenarios and implementation limitations:
 
-- The [anchored-Update record](../../prototypes/integration/xterm-protocol-endpoint/README.md#updating-the-block-being-read)
-  covers replacement of the Block currently being read, including a local
-  replacement-start viewport policy and its clamping limit. It links Node and
-  browser evidence without prescribing that policy for other terminals.
-
-- The [xterm protocol endpoint](../../prototypes/integration/xterm-protocol-endpoint/README.md)
-  composes the codec, Session, terminal adapter, and private xterm.js history
-  path. It exercises reading anchors, tail following, resize and reflow, a
-  narrow complete-Block capacity boundary, a narrow parser bridge, ordered
-  mixed output, one retained ASCII unmanaged-output reading position, one
-  conservative mixed-capacity rejection, and bounded line-erase,
-  display-erase, scrollback-clear, and full-reset invalidation cases.
-- The browser-hosted [selection and copy](../../prototypes/integration/xterm-browser-selection/README.md),
+- [Headless protocol endpoint](../../prototypes/integration/xterm-protocol-endpoint/README.md):
+  Operation ordering, reading anchors, capacity checks, mixed output,
+  destructive-control invalidation, and failure containment.
+- [Browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md):
+  composed Operation, resize, capacity, selection/copy, search, and input cases.
+  Its checkpoint distinguishes protocol-only and mixed-output evidence.
+- Standalone [selection](../../prototypes/integration/xterm-browser-selection/README.md),
   [search](../../prototypes/integration/xterm-browser-search/README.md),
-  [content metadata](../../prototypes/integration/xterm-browser-metadata/README.md),
-  and [active input state](../../prototypes/integration/xterm-browser-input-state/README.md)
-  fixtures provide bounded evidence for their corresponding sections above.
-- The [browser protocol endpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
-  composes all five current Block Operations with the tested browser states,
-  resize and reflow, the same narrow Update-driven complete-Block capacity
-  boundary, and one protocol-only Append-driven fixture whose trim exactly
-  matches one complete leading managed Block. It also exercises two
-  protocol-only ASCII adjacent-Block copy fixtures and twelve printable-ASCII
-  mixed-selection fixtures through the raw mixed-ingress path: seven
-  single-boundary-crossing Operation fixtures, one exact-old-tail Extend
-  fixture, one two-boundary multi-wrap Extend fixture, one mixed-boundary resize
-  round trip, and two exact complete-leading-Block capacity fixtures.
-- Five additional [plain-text browser fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
-  exercise normalized multiline copy through reflow, fully selected Tab copy,
-  visible-control search, raw-scalar retained-prefix selection, and one
-  Tab-containing mixed copy case. These test the projection in
-  [Plain Text Content](plain-text.md), including one partial-Tab copy/reflow
-  fixture, not general Unicode behavior.
-- The browser endpoint's [capacity fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/capacity.ts)
-  additionally test two projected-text growth cases: complete-Block eviction
-  preserves a retained reading position and Tab copy source, or clears an
-  evicted selection and moves reading to the nearest retained Block.
-- Three [Chinese/Tab browser fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
-  exercise copy through reflow, whole-character selection at interior endpoints,
-  and subsequent content Operations using raw scalar positions. They use a
-  pinned basic-CJK width fixture, not general Unicode layout.
-- Four [Chinese search fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-search.ts)
-  check wrapped matches, repeated occurrences retaining their identity, and
-  current versus removed text after content Operations. The
-  [search record](../../prototypes/integration/xterm-browser-search/README.md#private-search-offset-workaround)
-  documents the version-bound workaround and remaining limits.
-- Two [Chinese capacity search fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
-  check a retained match and copy source moving with its Block, and an evicted
-  match clearing and leaving search, at one Update-driven complete-Block boundary.
-- The [browser endpoint checkpoint](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md#verification-checkpoint)
-  links additional Chinese/Tab reading, selection, input, Append-capacity, and
-  mixed-ASCII-output cases, plus queued capacity Node regressions. It records
-  the tested combinations and deferred extensions without changing this draft.
+  [metadata](../../prototypes/integration/xterm-browser-metadata/README.md), and
+  [input](../../prototypes/integration/xterm-browser-input-state/README.md)
+  experiments isolate those native capabilities.
+- [Plain text](plain-text.md#experimental-evidence) links projection tests;
+  [trial content samples](../design/trial-content-samples.md) add Buffer-text
+  evidence without claiming general Unicode selection, search, or shaping.
 
-Together these experiments provide bounded evidence only for their listed
-fixtures. They do not establish protocol conformance, cross-terminal
-compatibility, a public terminal API, arbitrary mixed-stream ingress,
-partial-Block eviction, Append-driven eviction beyond the listed exact
-complete-leading-Block fixtures, general Unicode position mapping, or production
-renderer failure atomicity. Capacity eviction that must remove unmanaged rows
-is also not demonstrated.
+These fixtures are not complete conformance or cross-terminal evidence. The
+xterm path uses private APIs and narrow ASCII/basic-CJK mappings. Partial-Block
+or unmanaged-row eviction, arbitrary native controls, real IME and OS clipboard
+behavior, and general renderer failure atomicity remain unproven.
 
 ## Current Scope
 
-This draft defines initial correctness boundaries for reading, reflow,
-selection, search, content metadata, and active input. It does not standardize
-terminal shortcuts, search navigation policy, visual presentation, or internal
-data structures. Detailed behavior for optional content representations
-remains part of each representation's definition.
+This draft defines correctness boundaries for reading, reflow, selection,
+search, content metadata, and active input. It does not standardize shortcuts,
+search navigation policy, visual presentation, or internal data structures.
+Optional content representations define their own detailed native behavior.
 
-The initial mixed-output boundary covers ordinary traffic that appends at the
-logical tail. It does not attempt to redefine the terminal's native control
-language. The effect of frame-external traffic on Context authority is
-governed by the Context invalidation rule, while the exact reset effect on an
-incomplete protocol frame assembly remains a framing question.
-
-The current prototypes test the unmanaged-output reading-anchor guarantee only
-for one retained ASCII row at the viewport top while an earlier Block grows and
-shrinks. Adjacent-Block copy evidence is limited to two protocol-only ASCII
-fixtures: one whose earlier Block lacks a trailing line break and one whose
-earlier Block already ends with one. Append-driven browser
-reading-and-selection evidence covers the listed ASCII and Chinese fixtures
-whose trim exactly matches one complete leading managed Block. The original
-mixed-boundary selection evidence is limited to twelve
-printable-ASCII fixtures: seven
-single-boundary-crossing Operation fixtures, one Extend fixture whose endpoint
-is exactly at the old Block tail, one two-boundary Extend fixture with two soft
-wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity
-fixtures whose trim exactly matches one complete leading managed Block.
-The additional plain-text fixtures above extend copy evidence to normalized
-line breaks and fully selected Tabs; the checkpoint above adds one Chinese/Tab
-managed-to-ordinary-ASCII case. Unicode beyond that case, embedded line breaks
-within a mixed selection, dimensions beyond the listed fixtures, capacity trimming that
-reaches unmanaged or partial-Block rows, mouse selection, and operating-system
-clipboard behavior remain untested.
+Mixed output covers ordinary traffic that appends at the logical tail; it does
+not redefine the terminal's native control language. Context invalidation
+follows the [Context rule](contexts.md#8-frame-external-invalidation). The effect
+of terminal reset on an incomplete protocol assembly remains a
+[framing question](framing.md#open-design-choices).

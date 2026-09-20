@@ -244,8 +244,10 @@ Schema validity does not imply semantic validity. For example, a structurally
 valid `block.update` can still fail because its Block is unknown or sealed,
 and a structurally valid `block.extend` or `block.replace_suffix` can name a
 stale content state.
-Structural and semantic failures both leave protocol state unchanged and use
-the correlated failure behavior defined by the logical wire model.
+Structural and semantic failures apply no requested Context or Block change.
+Correlation bookkeeping and error reporting follow the
+[logical wire model](wire-format.md#6-error-reporting-and-recovery), including
+non-reuse of a reliably identified failed Operation's ID.
 
 Baseline `text/plain` uses the `Text` schema above. Its display and native-text
 processing are defined in [Plain Text Content](plain-text.md); the schema does

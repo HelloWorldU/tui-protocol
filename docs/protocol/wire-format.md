@@ -139,8 +139,10 @@ is also rejected atomically. It produces a correlated failure only when enough
 of its request or Operation identity has been validated to associate that
 failure reliably.
 
-Rejecting an Operation does not close its Context or change any other protocol
-state. Later messages continue to be processed in byte-stream order against
+Rejecting an Operation does not close its Context or apply its requested Block
+change. Its reliably identified Operation ID remains consumed under the
+non-reuse rule; rejection is not a rollback of identity bookkeeping. Later
+messages continue to be processed in byte-stream order against
 the state left by earlier successful Operations. An error notification is not
 an execution barrier and does not roll back later Operations already sent or
 applied. Recovery and fallback remain TUI-owned decisions.
@@ -188,3 +190,6 @@ initial mapping of those fields and scalar values to UTF-8 JSON.
 
 - Resource bounds for retaining completed Context-open outcomes.
 - Resource-exhaustion behavior outside the initial framing limits.
+
+The reference implementation has an opt-in [trial resource policy](../design/trial-resource-budgets.md).
+Its local limits and failure handling do not settle these protocol-wide choices.

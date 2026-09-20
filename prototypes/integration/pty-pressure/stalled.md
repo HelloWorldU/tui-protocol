@@ -77,8 +77,8 @@ The browser stall is controlled, not an actual browser crash. The shared host
 [fault-injection tests](../pty-demo/connection.test.ts): failed kill/missing then
 late exit, ignored close handshake, exit during cleanup, abrupt disconnect,
 unconsumed output after child exit, normal final-credit closure, and a thrown
-exit notification. They use
-fake PTY/socket events and simulated timers, not OS fault injection. Ordinary
+exit notification. They use fake PTY/socket events and simulated timers, not
+OS fault injection. Ordinary
 disconnect now also retains the single-child slot until exit is observed.
 This verifies the tested host event ordering, not every native cleanup failure.
 Partial renders remain governed by existing fatal-stop semantics. No SDK API,

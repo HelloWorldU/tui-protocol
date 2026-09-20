@@ -52,10 +52,10 @@ WebSocket buffering does not mean every transport buffer is empty.
 This is a finite ASCII workload with one mutable Block, experimental OSC 9002,
 and private xterm APIs. It does not test permanent stalls, long-running resource
 use, fairness, eviction, other terminals, Unix, SSH, or tmux. Existing examples
-still leave byte-credit flow control disabled. A permanent-consumer-stall policy
-and explicit accounting boundaries are needed before considering wider use.
-The [stalled-consumer follow-up](stalled.md) now tests a local timeout policy;
-it does not establish those resource bounds.
+still leave byte-credit flow control disabled. The [stalled-consumer follow-up](stalled.md)
+tests a local timeout policy; the separate [trial budgets](../../../docs/design/trial-resource-budgets.md)
+define retained-state and pending-input accounting for normal examples.
+Neither establishes a hard end-to-end memory bound for this pressure fixture.
 
 ## Run and verification
 

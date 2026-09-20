@@ -4,6 +4,9 @@ This directory retains the original experiment record. Implementation, adapter
 interface, and tests now live in [the terminal module](../../../terminal/README.md),
 under `terminal/src/endpoint.ts` and `terminal/test/endpoint.test.ts`. The evidence
 below describes these Endpoint checks, not every downstream integration.
+Later [resource-budget checks](../../../docs/design/trial-resource-budgets.md)
+and [fatal-stop behavior](../../../terminal/README.md#host-adapter-boundary)
+are recorded separately; the exclusions below describe this original experiment.
 
 This integration prototype asks whether the existing reference codec and
 protocol session can form one deterministic terminal-side path from incoming

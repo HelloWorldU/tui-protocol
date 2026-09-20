@@ -95,7 +95,8 @@ browser and observes overlapping producer waiting. These are still **not an
 end-to-end bound or a guarantee for every TUI**.
 
 Do not change SDK semantics or add Operation acknowledgements on this basis.
-Before enabling the policy in normal examples, go beyond finite completion and
-define how a permanently stalled consumer is stopped.
-Hard queue limits, buffer ownership/size, memory reclamation, fairness, and
-other PTY platforms remain open. No production flow-control default is changed.
+The [stalled-consumer experiment](stalled.md) subsequently tested host-side
+termination; the [trial budgets](../../../docs/design/trial-resource-budgets.md)
+bound selected example queues and retained state. Total buffer ownership/size,
+memory reclamation, fairness, and other PTY platforms remain open. Normal
+examples still do not enable the optional consumption-credit policy.

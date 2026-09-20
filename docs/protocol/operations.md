@@ -46,6 +46,10 @@ a correlation ID, reports rejected Operations without acknowledging successful
 ones, and leaves later messages eligible for ordered processing. Block
 Operation retransmission is not supported in the initial model.
 
+Failure isolation below concerns the requested content, lifecycle, history,
+and reading-state changes. It does not undo correlation bookkeeping: a reliably
+identified failed Operation's ID remains consumed under the wire model.
+
 ## Content-State Identity
 
 Each Block's current logical content state is identified by the Operation ID
@@ -122,6 +126,10 @@ wire error mechanism; application-side recovery remains TUI-owned.
 and remains mutable. Whether its rendered rows are in the active viewport or
 scrollback does not affect its eligibility for update.
 
+A fully capacity-evicted Block is no longer retained scrollback. Later content
+changes follow the [eviction rule](terminal-native-behavior.md#5-scrollback-capacity)
+and do not restore it.
+
 ### 2. Replacement Semantics
 
 An Update carries a complete replacement snapshot of the Block's content. The
@@ -151,10 +159,10 @@ If the user's reading anchor belongs to a different Block, it remains bound to
 the same logical position and keeps its viewport-relative position. A user
 following the tail continues to follow the tail.
 
-Mapping a reading anchor through replacement of its own Block remains
-undefined. The detailed anchor ownership, history-reading behavior, and
-scrollback-capacity boundary are defined by [Terminal-Native
-Behavior](terminal-native-behavior.md).
+For replacement of the anchored Block itself, preservation of its old internal
+position is not required; normal replacement and history integrity still apply.
+See [the anchored-Block rule](terminal-native-behavior.md#4-updating-the-anchored-block)
+and the separately defined scrollback-capacity boundary.
 
 ### 5. Failure Isolation
 

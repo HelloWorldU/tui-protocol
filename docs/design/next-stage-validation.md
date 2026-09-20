@@ -1,246 +1,89 @@
 # From Controlled Experiments to Trial Use
 
-Working plan, 2026-09-14. This records engineering judgments and proposed
-priorities, not new protocol requirements or a release commitment. The
-[protocol drafts](../README.md) remain authoritative for agreed semantics.
+Working plan, updated 2026-09-20. Engineering judgments and priorities, not
+new protocol requirements or a release commitment. The [protocol drafts](../README.md)
+remain authoritative for agreed semantics.
 
-## Assessment
+## Current Assessment
 
-The codec, TUI SDK, terminal Session, and xterm experiments form an executable
-path. The [terminal example](../../examples/terminal-host/README.md) also runs
-a fixed application through Windows bundled ConPTY. These are bounded results,
-not complete conformance or general terminal compatibility.
+The codec, SDK, terminal Session, and experimental xterm renderer form an
+executable path. Fixed single-round and multi-round applications run through
+Windows bundled ConPTY. The pre-trial checklist below is implemented and has
+bounded test evidence; it does not establish production readiness, complete
+conformance, or general terminal compatibility.
 
-The next objective is to make a limited application useful to try, rather than
-reorganize implementation directories. Other terminals implement their own
-rendering and history integration; extracting our private xterm adapter is not
-a prerequisite for their adoption.
+The next step is a read-only Pi integration assessment: identify its rendering
+boundary and map one finite interaction to the current API before proposing
+an upstream change. Other terminals still need their own rendering/history
+integration; extracting a production xterm adapter is not a prerequisite for
+assessing an application.
 
-## Gaps and Priority
+## Completed Work and Evidence
 
-1. **Implement an already-defined Update case.** The draft permits replacement
-   of the Block containing the reading anchor without preserving its old
-   internal position. The private renderer initially threw in that case.
-   Complete this path before building a richer interactive example. See
-   [the existing rule](../protocol/terminal-native-behavior.md#4-updating-the-anchored-block).
-2. **Observe finite multi-round use.** Extend the application experience with
-   user-triggered rounds, earlier content changing after later output exists,
-   and reading/selection/search during generation. Use simulated output and
-   bounded content, not a real-model dependency or an endurance claim.
-3. **Implement post-eviction behavior.** The full-Block decision is now recorded:
-   reject later content changes without restoring display. Partial eviction
-   and general memory reclamation remain open; silently deleting identity
-   state could change mutation and replay behavior. See
-   [capacity semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity)
-   and the [current implementation limits](../../prototypes/integration/xterm-protocol-endpoint/README.md#experimental-boundaries).
-4. **Exercise failure and accumulation.** Preparation catches some known
-   capacity failures, but later rendering failures are not generally rolled
-   back. First test safe stopping after an injected failure. Measure queued
-   work under a faster producer before choosing resource limits or transport
-   backpressure. Do not add automatic retry or new wire messages by default.
-   See the [host boundary](../../terminal/README.md#host-adapter-boundary) and
-   [SDK limits](../../sdk/README.md#verification-and-remaining-limits).
-5. **Prepare a bounded external trial.** Document what an application and a
-   terminal must implement, and distinguish agreed requirements from reference
-   implementation choices. Broader Unicode, Unix, SSH/tmux, and other terminals
-   need targeted evidence; absence of tests alone does not prove impossibility.
+The linked records own scenario details, measured values, commands, and limits.
+Dates describe recorded checkpoints, not tests rerun on every document edit.
 
-## Current Work: Updating the Block Being Read
+| Work | Recorded result | Evidence |
+| --- | --- | --- |
+| Update of the Block being read, 2026-09-14 | Replacement-start viewport policy; seven Node and three browser cases | [Anchored Update](../../prototypes/integration/xterm-protocol-endpoint/README.md#updating-the-block-being-read) |
+| Full-Block eviction and render failure | Reject mutation of evicted content; stop after injected partial rendering failure | [Eviction and containment](../../prototypes/integration/xterm-protocol-endpoint/README.md#eviction-and-unrecoverable-rendering-failure) |
+| Finite multi-round use, 2026-09-15 | Three commanded rounds and orderly mid-round quit; separate application checks | [Multi-round example](../../examples/multi-round/README.md) |
+| Local queue accumulation, 2026-09-16 | Ordering alone does not bound pending pushes; local batch waiting reduces the measured backlog | [Ingress pressure](../../prototypes/integration/ingress-pressure/README.md) |
+| Browser consumption credits, 2026-09-16 | Opt-in PTY pause/resume and finite completion; watermark overshoot observed | [PTY pressure](../../prototypes/integration/pty-pressure/README.md) |
+| Producer waiting, 2026-09-17–18 | Synchronous writes waited during paused reading and overlapped the composed browser hold | [Isolated probe](../../prototypes/integration/pty-pressure/upstream.md), [composed run](../../prototypes/integration/pty-pressure/composed.md) |
+| Permanent consumer stall, 2026-09-19 | Stop forwarding, request child termination, observe exit, and fail the connection | [Stall experiment](../../prototypes/integration/pty-pressure/stalled.md) |
 
-The prototype policy is to move the viewport toward the replacement Block's
-first rendered row, clamped to the available viewport range. It does not claim
-to map the old internal position into new content. Existing tail following,
-incremental mappings, capacity rejection, and selection rules remain unchanged.
+These findings retain important distinctions: zero stdout drain events did not
+mean zero waiting; a high watermark is not a hard memory limit; stopping after
+partial rendering is not rollback. The anchored-Update policy is a terminal
+choice, and clamping below one screen does not preserve separate off-tail
+intent in the current renderer.
 
-Implemented and checked on 2026-09-14: seven
-[Node cases](../../prototypes/integration/xterm-protocol-endpoint/anchored-update.test.ts)
-exercise growth, shrinkage, same-height/empty content, queued Extend, resize,
-one complete-leading-Block capacity arrangement, and capacity rejection. Three
-[browser cases](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/anchored-update.ts)
-check target versus unaffected selection/copy, new versus replaced searchable
-text, and following ordinary output after shrinkage below one screen.
+## Pre-trial Checklist Completed on 2026-09-19
 
-Self-review also found that shrinking below one screen could remove required
-blank Buffer rows and leave the native cursor at its old row. The fix retains
-those rows and moves the cursor with following content. In this arrangement
-the viewport clamps to zero; the current renderer uses physical viewport
-coordinates and does not preserve separate off-tail intent when all content
-fits. This is a recorded implementation limit, not a new protocol rule.
+1. **Cleanup failures.** [Fault-injection tests](../../prototypes/integration/pty-demo/connection.test.ts)
+   exercise missing/late exit, failed kill, unresponsive socket closure,
+   trailing output, and failed exit notification. The shared bridge keeps its
+   child slot until both exit and socket closure are observed. Fake events
+   and timers test failure ordering; the real stalled-consumer browser run
+   supplies separate bundled-ConPTY evidence.
+2. **Resource accounting.** [Trial budgets](trial-resource-budgets.md) bound
+   selected retained content, identity/replay structures, and owned pending
+   input. Content overflow rejects atomically; identity/replay exhaustion stops
+   execution rather than forgetting protocol meaning. Closed and evicted
+   records remain charged. These are opt-in local policies, not negotiated
+   limits, general reclamation, or total process-memory bounds.
+3. **Application failure handling.** [Lifecycle tests](../../examples/streaming-text/lifecycle.test.mjs)
+   distinguish unsupported/silent startup negotiation from failure after
+   protocol output starts. Tested runtime failures stop later sends without
+   fallback; cleanup restores input mode and removes handlers. Synthetic
+   streams are not OS-level input-mode fault tests.
+4. **Content samples.** The [sample report](trial-content-samples.md) records
+   seven Node and four browser cases for literal code, Chinese, long lines,
+   selected Unicode sequences, and unsupported Tab mapping. Stored Buffer
+   text is not evidence of glyph shaping or general Unicode interaction.
 
-Type checking, 168 Node tests, the browser build, and 69 browser endpoint
-scenarios passed locally. These counts include earlier regression cases;
-they do not prove general layout correctness, sustained use, or recovery.
-The subsequent checkpoints below advance step 2 and parts of steps 3 and 4;
-resource reclamation, backpressure, and step 5 remain open.
+That checkpoint passed type checking, 224 Node tests, four affected browser
+builds, 73 browser endpoint scenarios, two single-round and two multi-round
+browser checks, and the permanent-consumer-stall check. The latter three
+fixtures use local Windows bundled ConPTY. Normal examples select the trial
+budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
-## Follow-up: Eviction and Fault Containment
+## Remaining Work and Decision Points
 
-The agreed boundary is that a fully evicted Block must not be restored by content
-Operations, and that execution must stop if a later failure leaves consistency
-unrecoverable or unknown. The decisions are recorded in
-[capacity semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity)
-and [execution failure](../protocol/contexts.md#12-unrecoverable-execution-failure).
-The existing `resource_exhausted` code is used for otherwise valid modifications
-of fully evicted content; no new wire code or Message is introduced.
+- **Pi trial scope:** assess one real application path, its supported output,
+  fallback, and the terminal host needed to run it. No upstream compatibility
+  or maintainer acceptance has been established.
+- **Capacity and retention:** partial-Block or unmanaged-row eviction, general
+  snapshot reclamation, and long-session behavior remain open. Full-Block
+  eviction semantics are already [defined](../protocol/terminal-native-behavior.md#5-scrollback-capacity);
+  they do not need to be redesigned.
+- **Failure and pressure:** no automatic rollback/recovery, whole-process memory
+  bound, fairness guarantee, or general policy for slow-but-progressing consumers.
+  See the [host contract](../../terminal/README.md#host-adapter-boundary).
+- **Compatibility:** wider Unicode interaction, arbitrary terminal controls,
+  Unix, SSH/tmux, and other terminals need targeted evidence from actual
+  integration requirements.
 
-The [eviction test](../../prototypes/integration/xterm-protocol-endpoint/evicted-block.test.ts)
-checks rejection, no resurrection, ID retention, and fresh Append. The
-[fault tests](../../prototypes/integration/xterm-protocol-endpoint/fatal-render.test.ts)
-inject partial native output followed by an exception and verify stopped
-rendering and blocked session reuse through direct and mixed input. The
-terminal endpoint also stops on a synchronous adapter accept exception.
-
-This is fault containment, not rollback or automatic restart. Already committed
-logical snapshots may differ from partial rendering and remain diagnostic only.
-Hosts must retire the failed session; a new Context or ingress wrapper does
-not repair it. Snapshot-memory reclamation, partial eviction, fault-frequency
-measurement, and queue/backpressure limits are not implemented by this step.
-
-The follow-up passed type checking, 172 Node tests (including isolated build
-consumers), both affected browser builds, 69 browser endpoint regressions, and
-the two existing real-PTY terminal-example checks. Injected-failure evidence is
-from the Node tests, not a real browser crash or transport-recovery experiment.
-
-## Follow-up: Finite Multi-round Interaction
-
-Implemented on 2026-09-15 in the
-[multi-round example](../../examples/multi-round/README.md). A built-SDK child
-accepts commands for at most three simulated rounds and supports quitting during
-generation. Earlier thinking changes after tool and answer Blocks exist. The
-example reuses terminal-host wiring and the existing PTY bridge; no protocol
-semantics or new transport layer are introduced.
-
-Two browser scenarios checked three-round completion with retained-content
-search and orderly mid-round quit through bundled ConPTY. Four application
-checks cover command handling, the Operation sequence, pause cancellation, and
-the prepared plain-text fallback outside the checkout. The README records run
-commands and the limits: finite ASCII content is not an endurance, resource-limit,
-or recovery result. Selection/copy and scrolling remain available for manual
-observation; this new runner does not assert those native behaviors.
-
-Accumulation under a faster producer is the next question. The local experiment
-below isolates one queue; host/transport measurements are still needed before
-selecting limits or backpressure. General memory reclamation and partial
-eviction remain separate unresolved work.
-
-## Follow-up: Local Ingress Accumulation
-
-The 2026-09-16 [pressure experiment](../../prototypes/integration/ingress-pressure/README.md)
-holds the first Extend's rendering while the SDK supplies a finite burst. Across
-16, 64, and 256 Extends, outstanding local pushes grow with the burst. Waiting
-for each batch to finish limits outstanding pushes to that batch in these runs;
-all tested policies finish with identical content and closed Contexts.
-
-This confirms that ordered processing alone is not a queue bound. The byte
-counters are not process-memory measurements, and the fixture can await local
-render completion in a way an external TUI cannot. Browser event queues,
-WebSocket buffering, and PTY output are outside this experiment.
-
-The follow-up below instruments the host/transport boundary with experimental
-watermarks, without changing the synchronous SDK interface. Local transport
-backpressure remains a direction to test, not a selected wire-level design.
-
-## Follow-up: Browser-to-PTY Consumption Credits
-
-The 2026-09-16 [PTY pressure experiment](../../prototypes/integration/pty-pressure/README.md)
-adds opt-in local bridge byte credits and pauses/resumes PTY reading. A real SDK
-child's 256 Updates rendered correctly through the browser; all credited bytes
-drained and the Context closed normally. Existing examples leave the option off.
-
-The observed peak exceeded the high watermark because callback chunks can cross
-it. The producer reported no stdout drain waits, so this does not yet prove that
-slower browser consumption constrains application production. These findings
-narrow the claim to a functioning browser-to-PTY-reader control path.
-
-The producer-side follow-up below isolates this remaining question. Hard
-queue/memory bounds, policy for a permanently stalled consumer, and general
-memory reclamation remain unresolved.
-
-## Follow-up: Synchronous Producer Waiting
-
-On 2026-09-17 the [upstream comparison](../../prototypes/integration/pty-pressure/upstream.md)
-ran the same finite SDK workload through bundled ConPTY with normal reading and
-a two-second pause. An independent local measurement pipe showed the paused
-producer remaining inside its sixth Update; its synchronous write returned
-after about two seconds when reading resumed. Drain counters stayed zero.
-All 128 Updates in each run decoded in order and both Contexts closed normally.
-
-This narrows the earlier interpretation: lack of drain events did not exclude
-producer waiting. The isolated path has no browser or renderer, and these results
-do not measure OS buffer sizes or establish end-to-end bounded memory. The
-composed follow-up below connects this workload to browser consumption credits.
-
-## Follow-up: Browser Hold and Producer Waiting
-
-On 2026-09-18 the [composed experiment](../../prototypes/integration/pty-pressure/composed.md)
-ran 128 larger Updates through the browser credit window. A roughly two-second
-producer write overlapped the browser's controlled two-second hold. All Updates
-rendered in order, final content matched, credited bytes drained, and the Context
-closed normally. The smaller browser scenario also passed as a regression.
-
-This supplies evidence of upstream waiting in the composed local path, not a
-hard queue or process-memory bound. No production flow-control default changes.
-The follow-up below tests host-side termination of a permanently stalled
-consumer. Hard limits and general memory reclamation remain separate work.
-
-## Follow-up: Stalled Consumer Shutdown
-
-The 2026-09-19 [stall experiment](../../prototypes/integration/pty-pressure/stalled.md)
-adds an opt-in consumption-progress timeout to the local bridge. With the first
-Update held indefinitely, the host stops forwarding, terminates the child,
-observes its exit, and closes the transport as a failure. The browser stops its
-old endpoint without rendering the held replacement or claiming rollback.
-
-The cleanup path must resume/discard internal pipe output after termination:
-the initial kill-only attempt did not observe exit with the pipe paused. This
-is a bundled-ConPTY implementation finding, not a protocol requirement.
-The checkpoint below adds fault tests for unconfirmed exit and close-handshake
-fallback and selects local trial resource budgets. Hard process-memory bounds,
-slow-but-progressing consumers, and other PTY platforms remain unresolved.
-
-## Follow-up: Pre-trial Failure and Resource Checks
-
-Completed on 2026-09-19, in this order:
-
-1. **Cleanup failures.** The shared bridge now has
-   [fault-injection tests](../../prototypes/integration/pty-demo/connection.test.ts)
-   for missing/late exit, failed kill, unresponsive socket close, outstanding
-   trailing output, and failed exit notification. It retains the single-child
-   slot until both exit and socket closure are observed. Fake sockets and timers
-   exercise failure branches; the real stalled-consumer browser check was also
-   rerun through bundled ConPTY. This is not OS-level fault injection.
-2. **Retained-state and pending-input budgets.** The
-   [local trial policy](trial-resource-budgets.md) bounds selected content,
-   identity/replay structures, and queued input. Content overflow uses existing
-   atomic rejection; identity/replay exhaustion stops the execution session
-   instead of forgetting protocol meaning. Closed and evicted records still
-   count. This is not general reclamation or a whole-process memory bound.
-3. **Application failure handling.** The streaming example's
-   [lifecycle tests](../../examples/streaming-text/lifecycle.test.mjs) distinguish
-   unsupported/silent startup negotiation from failure after protocol output
-   starts. Runtime failure stops later sends without ordinary-text fallback;
-   exit paths restore input mode and remove handlers. Synthetic TTY streams
-   supply failures. Both single-round and multi-round real-PTY browser checks
-   were rerun with the shared host budgets enabled.
-4. **Fixed content samples.** The [sample report](trial-content-samples.md)
-   records seven Node cases and four browser cases for literal code, Chinese,
-   long lines, selected Unicode sequences, and known unsupported Tab mapping.
-   Checks distinguish retained text from font shaping and broader native UX;
-   rejected edits preserve the previous state and permit a supported next edit.
-
-Type checking, 224 Node tests, and the four affected browser builds passed.
-The browser runs passed 73 endpoint scenarios, two single-round checks, two
-multi-round checks, and the permanent-consumer-stall check. The latter three
-fixtures use local Windows bundled ConPTY, not a cross-platform transport matrix.
-
-These checks complete this bounded pre-trial checklist, not production readiness.
-The next useful step is a read-only Pi integration assessment: identify its
-rendering boundary and map one finite interaction to the current API before
-proposing an upstream change. Partial eviction, general reclamation, broader
-Unicode mapping, and cross-platform transport remain explicit limitations.
-
-## Deferred
-
-No new Operation, optional content type, stable API, npm publication, adapter
-extraction, or repository milestone is needed for this first step. Revisit the
-order when an experiment or prospective implementer supplies a concrete reason.
+No new Operation, optional content type, stable API, npm publication, production
+adapter extraction, or milestone is required merely to start that assessment.

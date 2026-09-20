@@ -32,8 +32,8 @@ plumbing, not additions to the protocol's wire Message schema.
 The host also has an opt-in byte-credit window used only by the
 [PTY pressure experiment](../pty-pressure/README.md). Its `consumed`/`flow`
 JSON controls drive local PTY pause/resume and measurements, not protocol
-acknowledgements. This demonstration and the existing application examples
-leave that option disabled; their transport behavior is unchanged.
+acknowledgements. This demonstration and the normal application examples
+leave that option disabled.
 
 ## Run
 
@@ -96,7 +96,11 @@ checks two earlier extensions with a later Chinese/Tab selection.
 The separate [pressure fixtures](../pty-pressure/README.md) opt into byte credits
 and a [consumption timeout](../pty-pressure/stalled.md). This demo and the normal
 examples do not enable them. PTY shutdown drains/discards remaining internal
-output after requesting termination so a paused pipe can finish cleanup.
+output after requesting termination so a paused pipe can finish cleanup. The
+shared [connection helper](connection.ts) retains the single-child slot until
+both child exit and socket closure are observed; an unconfirmed exit prevents
+another connection from starting a child. [Fault tests](connection.test.ts)
+exercise cleanup ordering using fake PTY/socket events, not OS fault injection.
 
 - The [transport probe](../pty-transport/README.md) recorded a return-path failure
   on this machine's older system ConPTY. This host explicitly uses the approved
