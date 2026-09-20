@@ -3,13 +3,13 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { Type } from "typebox";
-import type { Api, Model } from "@earendil-works/pi-ai";
+import type { Api, Model, Transport } from "@earendil-works/pi-ai";
 import {
   createAgentSession, DefaultResourceLoader, defineTool, ModelRuntime, SessionManager, SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
 /** Real Pi session, with only one fixed, read-only tool and no user resource discovery. */
-export async function createTrialSession(runtime: ModelRuntime, model: Model<Api>, toolPauseMs = 10) {
+export async function createTrialSession(runtime: ModelRuntime, model: Model<Api>, toolPauseMs = 10, transport?: Transport) {
   const parent = resolve(tmpdir());
   const cwd = await mkdtemp(join(parent, "tui-pi-session-"));
   const cleanup = async () => {
@@ -22,7 +22,7 @@ export async function createTrialSession(runtime: ModelRuntime, model: Model<Api
   let toolCalls = 0;
   try {
     const settings = SettingsManager.inMemory({
-      compaction: { enabled: false }, retry: { enabled: false }, cacheWarming: "off",
+      compaction: { enabled: false }, retry: { enabled: false }, cacheWarming: "off", transport,
     });
     const loader = new DefaultResourceLoader({
       cwd, agentDir: cwd, settingsManager: settings,

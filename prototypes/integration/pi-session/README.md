@@ -14,10 +14,11 @@ composing the [TUI SDK](../../../sdk/README.md),
 [terminal host](../../../examples/terminal-host/README.md). It tests application use of
 [Operation semantics](../../../docs/protocol/operations.md), not a new protocol.
 
-**The Pi session is real; its model responses are a local deterministic fixture.**
-The trial pins the published Pi SDK to 0.86.1. It exercises actual session events
-and a read-only tool without model network requests or user credentials. Live
-model acceptance is pending maintainer configuration, not counted as completed.
+**The default Pi session uses a local deterministic model fixture.** The trial
+pins the published Pi SDK to 0.86.1 and exercises actual session events and a
+read-only tool without model network requests or user credentials. A separate,
+opt-in OpenAI Codex subscription entry now also has finite live browser evidence
+for completion, search, and cancellation; see the recorded boundaries below.
 
 The original hand-authored replay remains useful for isolated mapping tests.
 Its consumed-field slice follows [Pi's agent event definitions][agent-events]
@@ -37,6 +38,8 @@ Those fixtures omit unused fields and are not a full Pi compatibility test.
 | `session-runner.ts` | Subscribe to actual Pi events, select transcript events, and contain listener failures/cancellation. |
 | `application.ts` | Own stdin routing, negotiation, output budget, cancellation, Context close, and cleanup. |
 | `main.ts`, `fixtures/provider.ts`, `fixtures/sample.txt` | Run the local model fixture and read its fixed sample; no live provider selection. |
+| `main-live.ts`, `live-source.ts` | Opt-in OpenAI Codex subscription source using Pi's own local OAuth storage. |
+| `live-source.test.ts`, `live-cancel-check.ts`, `live-cancel-check.test.ts` | Reject missing/wrong credentials or unknown models offline, and provide an explicitly armed one-shot browser cancellation check. |
 | `session.test.ts`, `application.test.ts` | Exercise the installed Pi SDK and application lifecycle using in-process byte transport. |
 | `vite.config.ts`, `browser.ts`, `index.html` | Launch the fixed child through the existing PTY bridge and reuse the supporting terminal host. |
 | `checks.html`, `checks.ts` | Run two browser scenarios against fresh child/terminal instances. |
@@ -107,9 +110,10 @@ input stream. Negotiation happens before constructing the Pi session. Redirected
 or unsupported output prints a short notice without starting Pi; this is not
 a full traditional-terminal fallback frontend.
 
-The source uses an allocated temporary working directory, in-memory credentials
-and session storage, and disables resource discovery, compaction, automatic
-retry, and cache warming. Its only tool reads `fixtures/sample.txt`; it cannot
+The source uses an allocated temporary working directory and in-memory session
+storage, and disables resource discovery, compaction, automatic agent retry,
+and cache warming. Fixture credentials are in memory; live credentials use Pi's
+local store. Its only tool reads `fixtures/sample.txt`; it cannot
 choose another path or execute shell commands. The local provider returns a
 tool call and then requires its actual result before the final answer.
 
@@ -176,14 +180,66 @@ Recorded on 2026-09-20:
   creation, encoded terminal rejection, input EOF, idle deadline, output budget,
   cleanup, and the earlier synthetic mapping cases.
 
-The Node endpoint fixtures alone do not render; browser evidence comes only
-from the two scenarios above. These checks do not establish live provider
-behavior, stock editor/extension compatibility, rich content support, sustained
-producer pressure, long-running stability, or other terminal/OS compatibility.
+The Node endpoint fixtures alone do not render. The fixture browser evidence
+above does not establish live provider behavior. Neither it nor the finite live
+results below establish stock editor/extension compatibility, rich content
+support, sustained producer pressure, long-running stability, or other
+terminal/OS compatibility.
 
-Next: use maintainer-provided model configuration to run the same finite path
-against a real provider, checking its actual streaming/tool/abort behavior.
-Do not treat the local fixture result as that acceptance check.
+## Opt-in subscription trial
+
+`pnpm prototype:pi-live` starts the same host with an OpenAI Codex source.
+It requires an `openai-codex` OAuth entry in `~/.pi/agent/auth.json`, created
+through Pi's login flow. Never paste tokens in chat or commit this file.
+The source does not read Codex's credential cache and does not fall back to
+an API key. Models/config extensions are not loaded from the user directory.
+
+The initial model is `gpt-5.5` with low thinking effort; `PI_TRIAL_MODEL` can
+select another ID in the pinned Pi Codex catalog. Catalog presence is not proof
+of account entitlement. Token refresh and model requests use Pi's provider.
+Live model requests explicitly use Pi's `sse` transport setting after the
+WebSocket failure recorded below. This affects the Pi-to-model connection, not
+our OSC carrier or the browser-to-PTY WebSocket bridge.
+Starting a turn consumes subscription allowance and sends the fixed prompt,
+system instructions, tool definition, and sample result to OpenAI, not project
+files. The same finite application limits and read-only tool apply.
+
+Fixture mode remains the default. The automatic browser checks page is disabled
+in live mode because it assumes deterministic responses and should not silently
+issue model calls. For a deliberate cancellation check, select **Cancel once
+assistant text appears** before starting one turn. The helper watches the
+displayed report and presses the ordinary cancel button once mutable assistant
+text is visible; it never starts a model call. If the answer finishes before
+that state is observed, the run is not cancellation evidence.
+
+### Live checkpoint, 2026-09-20
+
+- OpenAI Codex subscription, `gpt-5.5`, low thinking, Pi 0.86.1, Windows bundled
+  ConPTY, and the experimental xterm host. No Kimi model was used.
+- With provider transport `auto`, one browser run completed the tool but failed
+  on the final assistant response with `WebSocket error`. Prior content remained
+  searchable, the child exited 1 without the completion marker, and EOF closed
+  the previously open Context. The transport failure's root cause is unresolved.
+- With explicit SSE, two browser runs completed with four sealed Blocks, an
+  explicit Context close before EOF, and child exit 0. The tool result and final
+  answer were visible, and searching `Trial sample:` succeeded. One of these
+  runs finished before a manual cancel could be sent; it counts only as completion.
+- In a separate SSE run, the armed one-shot check cancelled the final response
+  after `Trial` appeared. That partial text remained visible with an abort label;
+  `Request was aborted` was searchable, the Context explicitly closed, and the
+  child exited 0 with `[stopped by user]`, not the completion marker.
+
+These observations close this finite real-session/host trial, not general Pi
+compatibility. SSE success does not prove that WebSocket is broken generally
+or that every provider failure recovers. A local provider-error regression now
+checks rejection of completion after the tool result and Context closure at EOF.
+No live model call is part of `pnpm test`.
+
+After these changes, type checking, 33 focused Node tests, all 257 Node tests,
+and both fixture/live browser builds passed. The two automatic local-fixture
+browser checks were rerun and passed; the live checks page was verified to
+disable automatic calls. These are finite regression results, not exhaustive
+coverage or long-running stability evidence.
 
 [agent-events]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/agent/src/types.ts
 [session-events]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/agent-session.ts#L153

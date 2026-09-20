@@ -7,8 +7,8 @@ import { createFixtureModel } from "./fixtures/provider.ts";
 import { createTrialSession } from "./session-source.ts";
 import { runPiSession } from "./session-runner.ts";
 
-async function setup() {
-  const model = await createFixtureModel();
+async function setup(failRequest?: number) {
+  const model = await createFixtureModel(10, failRequest);
   const source = await createTrialSession(model.runtime, model.model);
   const endpoint = new TerminalProtocolEndpoint({ completeBaselineSupported: true });
   const client = new TuiClient({ write(bytes) {
@@ -63,5 +63,21 @@ test("cancelling a real Pi stream retains partial text, stops before tools, and 
     assert.equal(snapshot.blocks.length, 2);
     assert(snapshot.blocks[1].content.data.includes("Reading\n[aborted]"));
     assert.equal(snapshot.state, "closed");
+  } finally { await f.cleanup(); }
+});
+
+test("a model error after the tool result rejects completion and leaves prior content available until EOF closes the Context", { timeout: 15_000 }, async () => {
+  const f = await setup(2);
+  try {
+    await assert.rejects(runPiSession(f.session, f.adapter), /Pi response ended with error/);
+    assert.equal(f.requestCount(), 2);
+    assert.equal(f.toolCalls(), 1);
+    const snapshot = f.endpoint.context(f.context.id)!;
+    assert.equal(snapshot.state, "open");
+    assert.equal(snapshot.blocks.length, 4);
+    assert(snapshot.blocks[2].content.data.includes("Trial sample: mutable history"));
+    assert(snapshot.blocks[3].content.data.includes("[error]"));
+    f.endpoint.finish();
+    assert.equal(f.endpoint.context(f.context.id)!.state, "closed");
   } finally { await f.cleanup(); }
 });

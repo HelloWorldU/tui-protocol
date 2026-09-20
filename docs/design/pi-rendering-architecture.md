@@ -174,11 +174,12 @@ Pi runtime behavior nor upstream acceptance. The research checkout is local unde
 `.tmp/pi-research`; the separate existing Pi checkout was left untouched.
 
 Follow-up: the [Pi session experiment](../../prototypes/integration/pi-session/README.md)
-retains the synthetic replay and now runs the pinned Pi SDK with a local model
-fixture and one real read-only tool through ConPTY and the experimental xterm
-host. Two browser scenarios check completion/search and mid-stream cancellation.
-Live model acceptance awaits configuration; stock UI compatibility and Pi
-producer backpressure remain unproven. This later experiment is separate from
+retains the synthetic replay and now runs the pinned Pi SDK with local fixtures
+and an opt-in OpenAI subscription source through ConPTY and the experimental
+xterm host. Finite browser evidence covers completion/search and cancellation;
+the record also preserves a model WebSocket failure and the explicit SSE choice.
+Stock UI compatibility and Pi producer backpressure remain unproven.
+This later experiment is separate from
 the read-only source investigation above.
 
 [main]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/main.ts#L736

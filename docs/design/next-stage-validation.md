@@ -16,13 +16,13 @@ The [read-only Pi assessment](pi-rendering-architecture.md) traces its rendering
 boundary and candidate interfaces. It recommends mapping one finite interaction
 through a separate Pi SDK frontend before considering a stock-UI integration
 or upstream change. The [Pi session experiment](../../prototypes/integration/pi-session/README.md)
-now connects the pinned Pi SDK, a deterministic local model provider, and one
-read-only tool through SDK bytes, Windows ConPTY, and the experimental xterm
-host. Completion and mid-stream cancellation have browser evidence; live model
-acceptance awaits maintainer configuration. This is not the stock Pi UI.
+now connects the pinned Pi SDK and one read-only tool through SDK bytes, Windows
+ConPTY, and the experimental xterm host. Both local fixtures and a finite OpenAI
+subscription trial have browser evidence for completion/search and cancellation.
+The live source uses SSE after a recorded model WebSocket failure whose root
+cause remains unresolved. This is not the stock Pi UI or a general stability claim.
 Other terminals still need their own rendering/history integration; extracting
-a production xterm adapter is not a
-prerequisite for assessing an application.
+a production xterm adapter is not a prerequisite for assessing an application.
 
 ## Completed Work and Evidence
 
@@ -77,9 +77,10 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
 ## Remaining Work and Decision Points
 
-- **Pi trial scope:** assess one real application path, its supported output,
-  fallback, and the terminal host needed to run it. No upstream compatibility
-  or maintainer acceptance has been established.
+- **Pi integration scope:** the finite SDK frontend trial above is complete.
+  Before expanding it, choose which actual Pi workflow to support next and assess
+  its output, fallback, and terminal-host requirements. Stock UI/extension
+  compatibility and maintainer acceptance have not been established.
 - **Capacity and retention:** partial-Block or unmanaged-row eviction, general
   snapshot reclamation, and long-session behavior remain open. Full-Block
   eviction semantics are already [defined](../protocol/terminal-native-behavior.md#5-scrollback-capacity);
@@ -92,4 +93,4 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
   integration requirements.
 
 No new Operation, optional content type, stable API, npm publication, production
-adapter extraction, or milestone is required merely to start that assessment.
+adapter extraction, or milestone is required merely to assess the next workflow.

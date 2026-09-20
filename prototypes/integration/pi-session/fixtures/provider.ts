@@ -3,7 +3,7 @@ import { createAssistantMessageEventStream, InMemoryCredentialStore, type Assist
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
 /** Local provider fixture; never opens a model connection or reads real credentials. */
-export async function createFixtureModel(pauseMs = 10) {
+export async function createFixtureModel(pauseMs = 10, failRequest?: number) {
   const runtime = await ModelRuntime.create({
     credentials: new InMemoryCredentialStore(), modelsPath: null,
     allowModelNetwork: false, refreshOnCreate: false,
@@ -25,6 +25,7 @@ export async function createFixtureModel(pauseMs = 10) {
       void (async () => {
         try {
           if (invocation > 2) throw new Error("Local fixture permits only two model requests");
+          if (invocation === failRequest) throw new Error("Injected model connection failure");
           const toolResult = [...context.messages].reverse().find(item => item.role === "toolResult");
           if (invocation === 2 && (!toolResult || !toolResult.content.some(part =>
             part.type === "text" && part.text.includes("mutable history keeps old output readable")))) {
