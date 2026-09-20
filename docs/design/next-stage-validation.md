@@ -12,11 +12,12 @@ Windows bundled ConPTY. The pre-trial checklist below is implemented and has
 bounded test evidence; it does not establish production readiness, complete
 conformance, or general terminal compatibility.
 
-The next step is a read-only Pi integration assessment: identify its rendering
-boundary and map one finite interaction to the current API before proposing
-an upstream change. Other terminals still need their own rendering/history
-integration; extracting a production xterm adapter is not a prerequisite for
-assessing an application.
+The [read-only Pi assessment](pi-rendering-architecture.md) traces its rendering
+boundary and candidate interfaces. It recommends mapping one finite interaction
+through a separate Pi SDK frontend before considering a stock-UI integration
+or upstream change; that trial has not been implemented. Other terminals still
+need their own rendering/history integration; extracting a production xterm
+adapter is not a prerequisite for assessing an application.
 
 ## Completed Work and Evidence
 

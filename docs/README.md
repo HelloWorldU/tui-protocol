@@ -23,6 +23,7 @@ here.
 | [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan; completed checkpoints and remaining trial work |
+| [Pi rendering architecture](design/pi-rendering-architecture.md) | Upstream architecture research and integration assessment | Read-only source trace; no Pi runtime trial |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |
