@@ -15,9 +15,11 @@ conformance, or general terminal compatibility.
 The [read-only Pi assessment](pi-rendering-architecture.md) traces its rendering
 boundary and candidate interfaces. It recommends mapping one finite interaction
 through a separate Pi SDK frontend before considering a stock-UI integration
-or upstream change; that trial has not been implemented. Other terminals still
-need their own rendering/history integration; extracting a production xterm
-adapter is not a prerequisite for assessing an application.
+or upstream change. The first [synthetic event replay](../../prototypes/integration/pi-session/README.md)
+now checks that mapping through SDK bytes and terminal Session. It does not yet
+connect a live Pi session or renderer. Other terminals still need their own
+rendering/history integration; extracting a production xterm adapter is not a
+prerequisite for assessing an application.
 
 ## Completed Work and Evidence
 

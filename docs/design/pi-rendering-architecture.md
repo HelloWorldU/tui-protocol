@@ -169,9 +169,14 @@ visible. After that trial, assess whether a stock-UI integration is worth
 the additional transcript/editor and rich-content work above.
 
 No Pi code was changed, dependencies installed, model requests made, or Pi
-tests run for this note. No runtime behavior or upstream acceptance has been
-established. The research checkout is local under `.tmp/pi-research`; the
-separate existing Pi checkout was left untouched.
+tests run for this source investigation. No Pi runtime behavior or upstream
+acceptance has been established. The research checkout is local under
+`.tmp/pi-research`; the separate existing Pi checkout was left untouched.
+
+Follow-up: the [synthetic event-mapping experiment](../../prototypes/integration/pi-session/README.md)
+implements a restricted plain-text mapping through our SDK, codec, and Session.
+It uses hand-authored consumed-field fixtures, not a live Pi dependency, and
+does not yet test the stock UI, real terminal rendering, or producer pressure.
 
 [main]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/main.ts#L736
 [runtime]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/agent-session-runtime.ts

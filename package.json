@@ -9,6 +9,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prototype:pi-session": "node prototypes/integration/pi-session/replay.ts",
+    "test:pi-session": "node --test prototypes/integration/pi-session/*.test.ts",
     "prototype:pty-stalled": "vite --config prototypes/integration/pty-pressure/vite.config.ts --mode stalled",
     "build:pty-stalled": "vite build --config prototypes/integration/pty-pressure/vite.config.ts --mode stalled --outDir ../../../.tmp/pty-stalled-dist --emptyOutDir",
     "prototype:pty-composed": "vite --config prototypes/integration/pty-pressure/vite.config.ts --mode composed",
@@ -40,7 +42,7 @@
     "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
     "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
     "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",
-    "test": "node --test scripts/*.test.ts examples/multi-round/*.test.mjs examples/streaming-text/*.test.ts examples/streaming-text/*.test.mjs sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/ingress-pressure/*.test.ts prototypes/integration/pty-demo/*.test.ts prototypes/integration/pty-pressure/report.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
+    "test": "node --test scripts/*.test.ts examples/multi-round/*.test.mjs examples/streaming-text/*.test.ts examples/streaming-text/*.test.mjs sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/ingress-pressure/*.test.ts prototypes/integration/pi-session/*.test.ts prototypes/integration/pty-demo/*.test.ts prototypes/integration/pty-pressure/report.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

@@ -37,6 +37,7 @@ prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.
     ingress-pressure/         Controlled SDK-to-renderer backlog measurement.
+    pi-session/               Synthetic Pi event mapping through SDK bytes and terminal Session.
     protocol-endpoint/        Retained bytes-to-state experiment record; code is in terminal/.
     pty-demo/                 Fixed TUI process through ConPTY to browser history.
     pty-pressure/             Browser byte credits, PTY pause/resume, and producer-waiting experiments.
