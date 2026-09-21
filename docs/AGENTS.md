@@ -18,6 +18,8 @@ also provides a convenient human-readable index.
 
 ## Editing rules
 
+- Organize content around the document's purpose and subject. Avoid defensive
+  exposition and repetitive disclaimers.
 - Define each fact or decision in one authoritative document and link to it
   elsewhere instead of maintaining parallel definitions.
 - Preserve the boundaries between requirements, protocol semantics, wire

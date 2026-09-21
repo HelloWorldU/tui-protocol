@@ -8,10 +8,9 @@ It composes the private history mechanism from the [xterm-headless
 prototype](../../xterm-headless/README.md) with browser-hosted `@xterm/xterm`
 6.0.0. The fixture writes one printable ASCII prompt and input line after the
 Block history, moves the xterm cursor within that input, and focuses xterm's
-textarea. Those writes model observable terminal state; they are not proposed
-protocol Messages or an input-widget API.
+textarea to model active terminal input.
 
-## Proven
+## Observed Behavior
 
 Five browser scenarios demonstrate that, within the tested fixture:
 
@@ -25,17 +24,16 @@ Five browser scenarios demonstrate that, within the tested fixture:
 - a synthetic browser composition remains active and sends no input data while
   an earlier Block is updated.
 
-This provides narrow experimental evidence for [Active Input
+These scenarios check [Active Input
 State](../../../docs/protocol/terminal-native-behavior.md#10-active-input-state).
 
 The separate [browser endpoint native-state cases](../xterm-browser-protocol-endpoint/scenarios/chinese-native-state.ts)
 compose Chinese/Tab history, OSC Messages, and an unwrapped ASCII input line,
 including synthetic composition across reflow and content Operations. Its
 [capacity case](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
-also checks input through Chinese Update-driven eviction. These do not change
-this standalone page's scenario count or demonstrate a real IME.
+also checks input through Chinese Update-driven eviction.
 
-## Not Proven
+## Scope and Limits
 
 - The composition scenario dispatches browser `CompositionEvent` objects. It
   does not prove compatibility with a real operating-system IME, mobile
@@ -46,9 +44,8 @@ this standalone page's scenario count or demonstrate a real IME.
 - Append while input is active is not tested because coordinating new output
   with the TUI's current input is outside historical Block mutation.
 - Partial-Block and Append-driven capacity eviction are not tested.
-- The experiment applies Block Operations directly to the history fixture. It
-  does not compose the OSC codec or protocol Session and does not establish
-  cross-terminal or cross-browser compatibility.
+- Operations are applied directly to the history fixture. The composed endpoint
+  supplies the separate OSC/Session path; cross-browser behavior is untested.
 
 ## Run
 

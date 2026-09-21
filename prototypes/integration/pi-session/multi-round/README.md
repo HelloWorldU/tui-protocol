@@ -9,8 +9,7 @@ This extends the [finite Pi session trial](../README.md), reusing its event
 mapping, the [SDK](../../../../sdk/README.md), and the
 [experimental terminal host](../../../../examples/terminal-host/README.md).
 It exercises [Context lifecycle](../../../../docs/protocol/contexts.md) across
-turns. It is a separate plain-text frontend, not Pi's stock interactive UI,
-a general coding environment, or a production terminal.
+turns through a separate plain-text frontend.
 
 ## Stage-three completion boundary
 
@@ -19,9 +18,7 @@ experimental terminal. Its acceptance checks are retained multi-round model
 context; continuation after assistant/tool cancellation; old reading,
 selection/copy and search during subsequent output; fail-stop and cleanup;
 and a separately recorded, deliberately initiated subscription trial.
-These bounded checks are complete at the 2026-09-21 checkpoint below.
-It does not include the stock Pi editor, arbitrary tools, durable sessions,
-an unmodified external terminal, packaging a desktop app, or production readiness.
+The 2026-09-21 checkpoint below records the completed acceptance checks.
 
 ## Run
 
@@ -35,7 +32,8 @@ Open `http://127.0.0.1:4178/`, connect, wait for `[ready 1/5]`, enter a prompt,
 and choose **Send prompt**. This default uses a deterministic local model
 provider through the actual pinned Pi 0.86.1 SDK: it reads the fixed sample,
 echoes the entered prompt, and includes the preceding prompt if one exists.
-It does not reason about arbitrary questions, contact a model, or read credentials.
+It runs locally without model requests or credentials.
+For generated answers to arbitrary prompts, use the opt-in live source below.
 
 **Cancel current turn** retains whatever partial response Pi has produced and,
 when Pi settles without reporting an error, permits another prompt after the
@@ -46,9 +44,8 @@ selection, and copy use the existing experimental host. Reload for a fresh
 conversation; the form draft stays after sending because transport delivery
 does not mean the application accepted it.
 
-Only the form supplies prompts. Terminal keystrokes are not forwarded in this
-page; this avoids competing with protocol replies or pretending to implement
-Pi's editor. Busy prompts are rejected with a notice, not queued or used as
+Only the form supplies prompts; terminal keystrokes are not forwarded.
+Busy prompts are rejected with a notice, not queued or used as
 steering messages. Application controls are newline-delimited JSON on ordinary
 stdin after protocol-response decoding; they are not new protocol Messages.
 
@@ -68,7 +65,7 @@ Automatic fixture checks are disabled in live mode. An optional, explicitly
 armed one-shot helper clicks Cancel after visible assistant text; it never
 starts a prompt. A [four-prompt live checkpoint](live-checkpoint.md) records
 tool use, retained context, assistant cancellation, a subsequent successful
-prompt, search, and exit. This finite result is not provider-reliability evidence.
+prompt, search, and exit.
 
 Both commands share port 4178 with the other PTY examples; run one at a time.
 Stop the server with Ctrl+C. Builds require the development host and its injected
@@ -102,18 +99,16 @@ connection token to run; they are not standalone deployments.
 The initial implementation stopped after cancelling the sample tool: Pi tried
 to prepare another model request with an already-aborted signal, and its
 [`lazyStream` setup handling][pi-lazy] classified that exception as an ordinary
-assistant error. This was observed in the pinned local-provider setup, not a
-claim about all providers or Pi versions.
+assistant error in the pinned local-provider setup.
 
 The trial source now installs Pi's public
 [`shouldStopAfterTurn` hook][pi-agent] to stop when the active run signal is
 aborted. The [agent loop][pi-loop] calls it after settling tool results, before
 the next model turn. The cancelled tool's error result stays visible, the round
 is marked aborted, its Context closes, and the next user prompt can run.
-No upstream files or returned errors are rewritten. Genuine model errors still
-fail the connection; we do not recognize cancellation by matching error text.
-This does not guarantee cancellation of an unresponsive tool/provider or turn
-every error racing with cancellation into a resumable outcome.
+The hook uses the abort signal rather than matching returned error text.
+Genuine model errors, including ones racing with cancellation, still fail the
+connection.
 
 ## Files
 
@@ -166,7 +161,7 @@ and the multi-round, single-round Pi, and terminal-host browser builds passed.
 The original two single-round Pi browser scenarios were rerun and passed.
 The live page's warning and disabled automatic-check page were separately
 checked before the [finite subscription run](live-checkpoint.md). Builds retain
-the existing xterm bundle-size warning. Counts are recorded checks, not exhaustive coverage.
+the existing xterm bundle-size warning.
 
 The Node checks additionally exercise UTF-8 split input, malformed/oversized
 commands, busy-prompt rejection, immediate cancellation, active/idle quit,
@@ -179,10 +174,12 @@ selection/scroll methods and the real copy handler with an in-memory clipboard
 sink; it does not test a physical mouse drag, the OS clipboard, or long-duration
 usability. Wider native-capability evidence remains in the host's separate suites.
 
-The viewport stays 40 by 8. No new resize, capacity-reclamation, arbitrary
-Unicode interaction, backpressure, multi-client, reconnect, persistence, Unix,
-SSH/tmux, stock Pi editor/extensions, rich Markdown, or other-terminal support
-is claimed. Pinned xterm private interfaces and OSC 9002 remain experimental.
+This trial keeps a 40-by-8 viewport and one in-memory conversation on Windows
+bundled ConPTY. Resize, capacity reclamation, broader Unicode interaction,
+backpressure, and reconnect behavior need separate checks. Integrating Pi's
+stock editor/extensions, rich Markdown, persistent sessions, or other terminal
+hosts remains follow-up work. The host uses pinned private xterm interfaces and
+experimental OSC 9002.
 
 [pi-lazy]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/ai/src/api/lazy.ts
 [pi-agent]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/agent/src/agent.ts

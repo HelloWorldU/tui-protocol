@@ -70,23 +70,21 @@ Operations, raw scalar positions, and a CRLF pair split across Operations.
 The [browser fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
 exercise selected copy/search outcomes, fully and partially selected Tabs
 through reflow, and one mixed-output copy case. Their [README](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
-records limitations. Label spelling and tab-stop implementation in those
-fixtures are terminal choices, not protocol requirements.
+records their setup and limitations, including the chosen labels and tab stops.
 
 The [Chinese browser fixtures](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
 exercise Chinese/Tab copy through reflow, endpoints inside two-cell characters,
 and raw-scalar suffix replacement after resize. Their width mapping is restricted
-to ASCII and basic CJK ideographs under the pinned xterm default Unicode provider;
-it is not a protocol-wide width table or evidence for general Unicode layout.
+to ASCII and basic CJK ideographs under the pinned xterm default Unicode provider.
 The [Chinese search cases](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-search.ts)
-add bounded evidence for current-projection search across reflow and content
+exercise current-projection search across reflow and content
 changes. The [search record](../../prototypes/integration/xterm-browser-search/README.md#private-search-offset-workaround)
 describes the private-addon workaround needed to preserve repeated matches.
 
 The endpoint [capacity tests](../../prototypes/integration/xterm-protocol-endpoint/capacity.test.ts)
 and [browser capacity record](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md)
-add bounded evidence for expanded text near capacity, including rejected
+exercise expanded text near capacity, including rejected
 growth and selection behavior when exactly one complete oldest Block is evicted.
 Two [Chinese capacity search cases](../../prototypes/integration/xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
-add retained-versus-evicted match evidence at one complete-Block boundary using
-the pinned basic-CJK width fixture, not a general Unicode capacity guarantee.
+check retained and evicted matches at one complete-Block boundary using
+the pinned basic-CJK width fixture.

@@ -20,8 +20,8 @@ Operations committed by the Session are accepted by this adapter. Tests await
 `drain()` before observing the resulting xterm.js history.
 
 An optional experimental parser addon registers OSC `9002` with the xterm.js
-parser and forwards completed payloads to the same endpoint. It is a narrow
-bridge experiment, not yet a complete mixed-stream ingress implementation.
+parser and forwards completed payloads to the same endpoint. Its framing and
+ordering restrictions are recorded under Experimental Boundaries below.
 
 A separate experimental raw mixed-stream ingress asks the reference decoder
 to preserve ordinary bytes, then executes ordinary xterm.js writes and
@@ -29,7 +29,7 @@ completed protocol events through one asynchronous queue. Its experimental
 native-control observer covers the bounded line erase, display erase,
 scrollback clear, and full-reset cases listed below.
 
-## Proven
+## Observed Behavior
 
 - Tested Capability and Context control bytes establish a supported protocol
   path before Block Operations are sent.
@@ -149,10 +149,9 @@ If the exact excess cannot be removed as complete leading Blocks, it rejects
 the Operation before Block mutation. ASCII and basic CJK use the pinned width
 fixture for exact row estimates; other printable scalars retain a conservative
 two-cell estimate. If that estimate alone crosses capacity, the Operation is rejected
-rather than using an inexact count to schedule trimming. This closes the
-previously observed split-state cases for the tested ASCII and repeated-CJK
-content and dimensions; it is not evidence that all renderer failures are
-detected before Block mutation.
+rather than using an inexact count to schedule trimming. The tested ASCII and
+repeated-CJK cases now reject before Session commit and keep content and rendered
+rows unchanged.
 
 A separate tested path permits normal trimming only when the exact required
 row count consists of complete oldest Blocks and the changed or newly appended
@@ -163,8 +162,12 @@ Append fixture additionally requires no earlier render to be pending, a
 dedicated contiguous managed layout, and an exact fixture row count (ASCII in
 the tested Append case). It trims one
 complete leading Block; a following tested Update trims the next one. Later
-queued rendering remains ordered. This is a narrow feasibility result, not a
-general trimming implementation.
+queued rendering remains ordered. Append layouts that fail these preconditions,
+including ones containing unmanaged rows, return `resource_exhausted` when
+trimming would be required. Partial-Block and unmanaged-row eviction remain
+unsupported. The range index discards evicted rows; Session retains logical
+snapshots and identities. Later content changes to an evicted Block are covered
+under Eviction and Unrecoverable Rendering Failure below.
 
 ## Experimental Boundaries
 
@@ -184,8 +187,7 @@ expansion at a full five-row Buffer: rejection leaves raw content and rows
 unchanged, and a smaller Extend still accepts the original content-state ID.
 A queued case fills the remaining row with a Tab expansion, rejects the next
 ESC expansion, and then successfully applies ReplaceSuffix using the accepted
-Tab Operation's ID. These are bounded preflight checks, not general renderer
-failure-atomicity evidence.
+Tab Operation's ID.
 The shared [projection](../../xterm-headless/plain-text.ts) uses `<U+XXXX>`
 labels and fixed logical-line Tab stops from the host's `tabStopWidth` option.
 Those are terminal fixtures for [Plain Text Content](../../../docs/protocol/plain-text.md),
@@ -207,10 +209,8 @@ The [browser endpoint](../xterm-browser-protocol-endpoint/README.md) separately
 tests projected-text growth that evicts one complete oldest Block, preserving
 an unaffected reading position and Tab copy source or clearing an evicted one.
 
-- xterm.js history replacement still uses private core fields and is not a
-  proposed public API or production implementation.
-- `XtermTerminalAdapter` is an integration-prototype boundary, not a stable or
-  proposed Terminal API.
+- `XtermTerminalAdapter` and its xterm.js private-core access are experimental
+  integration interfaces.
 - Most tests still send incoming bytes directly to the protocol-only endpoint.
   The parser-addon tests add one narrow real-parser path, but a PTY,
   multiplexer, remote transport, and bidirectional connection are not part of
@@ -223,9 +223,9 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   and would continue rather than interrupt that assembly. The positive tests
   therefore use single-frame Messages, and this addon is not a complete
   mixed-stream ingress.
-- The synchronous OSC addon still does not prove ordering against adjacent
-  ordinary bytes. Only the separate raw mixed-stream ingress waits for each
-  accepted Block render before executing later stream traffic.
+- Only the raw mixed-stream ingress waits for each accepted Block render before
+  executing later stream traffic. Ordering against adjacent ordinary bytes
+  remains unverified for the synchronous OSC addon.
 - The explicit private Block ranges exclude the one tested intervening
   unmanaged row. Arbitrary terminal controls, styled or image output, and
   Unicode layout beyond the listed repeated-CJK and Chinese/Tab cases remain
@@ -237,20 +237,14 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
 - Control-label projection is tested for the defined C0/DEL/C1 ranges, not all
   Unicode formatting or bidirectional characters. Tab stops are held fixed
   while content is retained; runtime Tab-setting changes are not tested.
-- Known Update, Extend, and ReplaceSuffix capacity exhaustion is checked before
-  Session commit, but accepted Operations still render asynchronously
-  afterward. The prototype does not provide general failure atomicity,
-  recovery or backpressure for other renderer failures. A thrown render now
-  stops this endpoint and skips later queued renders as recorded below; this
-  is containment, not rollback of partial rendering.
-- The capacity preflight accounts for current unmanaged rows in the tested
-  no-pending-render case, but it does not implement or prove safe eviction of
-  unmanaged rows. Mixed capacity layouts beyond the listed conservative
-  rejection remain unproven. Its unmapped-Unicode estimate may reject a
-  layout that xterm.js could fit. Capacity preflight counts expanded controls
-  and Tabs. It now aligns Tabs beside basic CJK ideographs `U+4E00..U+9FFF`
-  under the pinned default Unicode provider, but rejects Tabs beside other
-  Unicode. The [Chinese capacity browser cases](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
+- Accepted Operations render asynchronously after Session commit. A thrown
+  render stops the endpoint as detailed below. General rollback and recovery
+  are not implemented.
+- Capacity preflight counts expanded controls and Tabs. It aligns Tabs beside
+  basic CJK ideographs `U+4E00..U+9FFF` under the pinned default Unicode provider
+  and rejects Tabs beside other Unicode. Conservative estimates for unmapped
+  Unicode may reject a layout xterm could fit.
+  The [Chinese capacity browser cases](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
   exercise one Update-driven complete-Block eviction with the basic-CJK fixture;
   the [Chinese Append browser cases](../xterm-browser-protocol-endpoint/scenarios/chinese-append-capacity.ts)
   add one exact two-row eviction arrangement. Three [queued Node cases](capacity.test.ts)
@@ -268,56 +262,22 @@ an unaffected reading position and Tab copy source or clearing an evicted one.
   selective erase, character or line insertion and deletion, scrolling
   regions, printable overwrite, soft reset, `scrollOnEraseInDisplay: true`, and
   other alternate-buffer effects remain unproven.
-- The mixed-stream reading-anchor evidence is limited to one retained ASCII
-  row at the viewport top while an earlier Block grows and shrinks. Other
-  unmanaged anchor positions and resize/reflow or capacity interactions remain
-  untested. A separate [browser endpoint
-  composition](../xterm-browser-protocol-endpoint/README.md) exercises two
-  protocol-only ASCII adjacent-managed-Block copy fixtures. Its raw
-  mixed-ingress path exercises twelve more printable-ASCII selection-and-copy
-  fixtures: seven single-boundary-crossing Operation fixtures, one exact-tail
-  Extend fixture, one two-boundary multi-wrap Extend fixture, one mixed-boundary
-  resize round trip, and two capacity fixtures whose trim matches one complete
-  leading managed Block.
+- The headless mixed-stream reading-anchor case uses one retained ASCII row
+  at the viewport top while an earlier Block grows and shrinks. Other unmanaged
+  anchor positions and their resize/capacity interactions need further checks.
 - The positive Capability result remains a configured host assertion, not
   evidence that this headless experiment satisfies the complete terminal
   baseline.
-- Accepted Append-driven trimming requires no pending render, a dedicated
-  contiguous managed layout, an exact fixture row count, and an excess composed
-  exactly of complete leading Block ranges; the current evidence covers one
-  such Block. When trimming would be required, Append layouts that fail those
-  preconditions, including layouts containing unmanaged rows, use the
-  conservative `resource_exhausted` path; other exact Append arrangements
-  remain unproven. Partial-Block trimming is still unsupported. Content
-  modification of a fully trimmed Block is rejected with `resource_exhausted`
-  and does not restore it. Complete Update of the Block containing the reading
-  anchor now uses the bounded prototype policy recorded below.
-- The xterm.js Buffer and range index discard a trimmed Block's rendered rows,
-  but the in-memory Session retains its logical snapshot. This experiment does
-  not yet demonstrate complete memory reclamation. Full eviction rejects later
-  content changes without changing lifecycle; retained identity prevents reuse.
-- `@xterm/headless` 6.0.0 exposes no selection service or selection API, so
-  selection and copying are not exercised by the headless tests in this
-  integration. A separate [browser-host
-  experiment](../xterm-browser-selection/README.md)
-  exercises complete-Update and single-line ASCII ReplaceSuffix selection
-  cases, two resize/reflow cases, both complete-Block capacity eviction
-  outcomes, and selection preservation across Extend, Append, and Seal without
-  composing this endpoint. A separate [browser search
-  experiment](../xterm-browser-search/README.md) checks Search behavior for
-  Update, Extend, ReplaceSuffix, Append, Seal, resize/reflow, and the tested
-  complete-Block capacity boundary without composing this endpoint. Content
-  metadata, active input, mouse selection, and other real user interaction
-  remain untested in this headless fixture. A [browser protocol endpoint
-  experiment](../xterm-browser-protocol-endpoint/README.md) composes all five
-  current Block Operation Messages encoded in OSC with reading position,
-  selection, search, tail-following, lifecycle rejection, and active input
-  checks. It composes those browser states with the tested resize/reflow and
-  Update-driven complete-Block capacity boundary. A separate Append-driven
-  capacity fixture covers only reading position, selection and copy, and the
-  new Block's single appearance at the tail when one complete leading Block is
-  removed. Selection evidence is limited to the listed ASCII and basic-CJK/Tab
-  fixtures and their tested dimensions.
+
+### Browser Evidence
+
+`@xterm/headless` 6.0.0 exposes no selection service. The separate
+[selection](../xterm-browser-selection/README.md) and
+[search](../xterm-browser-search/README.md) experiments apply Operations directly
+to browser history. The [browser protocol endpoint](../xterm-browser-protocol-endpoint/README.md)
+adds encoded OSC Messages, Session execution, and native-state checks, including
+mixed-output selections. That record lists the tested ASCII/basic-CJK/Tab
+layouts, resize dimensions, and complete-Block eviction cases.
 
 ## Updating the Block Being Read
 
@@ -334,9 +294,9 @@ capacity rejection, and shrinking below one screen. The last case checks blank
 screen rows and the native cursor; once all content fits, the physical viewport
 also lies at the tail. The prototype does not retain a separate off-tail intent
 in that arrangement. Existing Extend and ReplaceSuffix mappings are unchanged.
-Three composed [browser cases](../xterm-browser-protocol-endpoint/scenarios/anchored-update.ts)
+Three composed ASCII [browser cases](../xterm-browser-protocol-endpoint/scenarios/anchored-update.ts)
 add selection/copy/search checks and ordinary output after shrinking below one
-screen. They use ASCII fixtures, not general Unicode or failure-recovery tests.
+screen.
 
 ## Eviction and Unrecoverable Rendering Failure
 

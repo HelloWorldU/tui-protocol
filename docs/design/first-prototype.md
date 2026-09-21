@@ -6,9 +6,9 @@
 | Related RFC | [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md) |
 
 This working note records the first prototype's scenario and later incremental
-extensions. It is non-normative, not the current project plan. The
-[Operation draft](../protocol/operations.md) owns semantics; the
-[validation plan](next-stage-validation.md) tracks implementation progress.
+extensions. The [Operation draft](../protocol/operations.md) defines the current
+semantics; the [validation plan](next-stage-validation.md) tracks implementation
+progress.
 
 ## Validation Scenario
 
@@ -61,8 +61,7 @@ Operations as applicable.
 #### Update
 
 `Update` targets an existing mutable Block by ID and supplies its complete new
-content snapshot. It is a semantic replacement, not a character-level patch
-or a sequence of terminal rendering commands.
+content snapshot.
 
 The terminal decides how to reflow and render the replacement. Updating a
 sealed or unknown Block is invalid.
@@ -74,8 +73,7 @@ snapshot at its render cadence rather than sending one Operation per token.
 Later design work has defined the initial semantics and wire schema of
 [Extend](../protocol/operations.md#extend). It adds only at the logical end of
 a mutable `text/plain` Block and names the exact prior content state on which
-it depends. This preserves causal ordering between streamed fragments without
-turning Update into a character-level patch.
+it depends. This preserves causal ordering between streamed fragments.
 
 The executable path now implements Extend through the shared codec,
 terminal Session/Endpoint, and xterm integration. The
@@ -125,8 +123,7 @@ internally to preserve a reading anchor.
 - Repeated-query and backoff guidance; negotiation windows and timeout policies
   are caller-owned, while unsupported-terminal fallback is application-owned.
 - Whether a future version needs an old-to-new anchor mapping for complete
-  Update. The current draft does not require one; this is not a missing
-  replacement operation.
+  Update. The current draft does not require one.
 - How far to extend the current incremental-Operation evidence beyond the
   tested plain-text xterm.js scenarios without weakening complete
   Update as the recovery path.

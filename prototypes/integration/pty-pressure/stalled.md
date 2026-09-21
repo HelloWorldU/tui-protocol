@@ -53,8 +53,8 @@ The [watchdog tests](../pty-demo/consumption-watchdog.test.ts) use simulated tim
 to check duplicate offsets, advancing consumption, full drain, new output,
 idle connections, and disposal. The [cleanup tests](../pty-demo/stop-pty.test.ts)
 check kill-before-resume ordering and visibility of thrown cleanup errors.
-These are not OS process-termination tests; the browser fixture supplies the
-separate real-PTY check. `pnpm build:pty-stalled` checks bundling only.
+The browser fixture supplies the real-PTY termination check.
+`pnpm build:pty-stalled` checks bundling only.
 
 On 2026-09-19, the local browser check passed with `childExitObserved: true`,
 close code 1011, and zero rendered Updates. Reloading on the same host and running
@@ -71,15 +71,13 @@ and the new watchdog. The five-second setting is an experiment choice, not a
 protocol requirement or a recommended production timeout. Broader use needs
 application-specific tolerance for slow consumers.
 
-Neither a process-memory bound nor cross-platform child-tree cleanup is proven.
+Process memory remains unmeasured; cross-platform child-tree cleanup is untested.
 The browser stall is controlled, not an actual browser crash. The shared host
-[connection wiring](../pty-demo/connection.ts) now has six
+[connection wiring](../pty-demo/connection.ts) has
 [fault-injection tests](../pty-demo/connection.test.ts): failed kill/missing then
 late exit, ignored close handshake, exit during cleanup, abrupt disconnect,
 unconsumed output after child exit, normal final-credit closure, and a thrown
 exit notification. They use fake PTY/socket events and simulated timers, not
-OS fault injection. Ordinary
-disconnect now also retains the single-child slot until exit is observed.
-This verifies the tested host event ordering, not every native cleanup failure.
-Partial renders remain governed by existing fatal-stop semantics. No SDK API,
-wire format, Operation acknowledgement, or protocol error code changes.
+OS fault injection. Ordinary disconnect also retains the single-child slot
+until exit is observed.
+Partial renders remain governed by existing fatal-stop semantics.

@@ -1,8 +1,9 @@
 # TypeScript TUI SDK
 
-Application-facing access to the draft Block protocol: capability negotiation,
-Context handles, and the five content Operations. This is the start of a
-reusable client, not a stable API or a published package.
+An experimental TypeScript client for the draft Block protocol: capability
+negotiation, Context handles, and the five content Operations. It is available
+as source and a local JavaScript build; the package is unpublished and its API
+may change.
 
 ## Layout and scope
 
@@ -11,12 +12,10 @@ reusable client, not a stable API or a published package.
 - `test/client.test.ts` checks client behavior and interoperability with the
   [terminal protocol module](../terminal/README.md).
 
-The SDK imports the [shared protocol implementation](../protocol/README.md).
-Its runtime source no longer depends on `prototypes/`; its tests exercise the
-terminal module, while the PTY demo still uses experimental rendering. Source
-and local compiled output are available, but this is not yet a published npm distribution. The
-[protocol drafts](../docs/README.md) remain authoritative; SDK conveniences do
-not introduce new wire semantics.
+The SDK imports the [shared protocol implementation](../protocol/README.md)
+and implements the semantics in the [protocol drafts](../docs/README.md).
+Interoperability tests use the terminal module; the PTY examples connect both
+modules to an experimental renderer.
 
 ## Local JavaScript build
 
@@ -24,31 +23,33 @@ Run `pnpm build:sdk` from the repository root. It prints a fresh output director
 under `.tmp/sdk-build-*`, containing ESM JavaScript, TypeScript declarations,
 the MIT license, and private package metadata. Keep the entire directory:
 `sdk/src/index.js` uses the included `node_modules/@tui-protocol/protocol`
-package through its public name. No prototype code,
-PTY library, terminal renderer, or test code is emitted.
+package through its public name. The distribution contains the SDK and shared
+protocol runtime, with declarations and metadata.
 
-The build uses the repository's pinned compiler. It rewrites relative runtime imports
-to `.js`, so the output does not need Node's TypeScript execution support.
+The build uses the repository's pinned compiler and rewrites relative runtime
+imports to `.js` for execution as ordinary JavaScript.
 Each build uses a fresh directory instead of merging with potentially stale
-output; command-line builds are retained for inspection. The metadata remains
-`private: true`; `@tui-protocol/sdk` is a local workspace/distribution name, not
-a registry publication or stable API promise. The shared build helper under
-`scripts/` includes actual dependency files, not links back into this checkout.
+output; command-line builds are retained for inspection. The metadata uses
+`private: true` and the local package name `@tui-protocol/sdk`. The shared build
+helper under `scripts/` copies the dependency files into the distribution.
 The existing distribution-only `./protocol` export is retained as a forwarding
-entry. A supported-runtime matrix and stable exports contract remain deferred.
+entry.
 
 `pnpm test` includes two artifact checks in `test/artifact.test.ts`. They copy
 only build output outside the checkout and exercise package exports: one runs
 a small negotiation/Append/close exchange with a synthetic responder and Node's
 TypeScript support disabled; the other checks an external TypeScript consumer's
 types with the installed compiler. Both remove their own temporary directories.
-These are packaging checks, not new evidence about real terminal compatibility.
 
 ## TUI-side use
 
 Create one client for one end-to-end byte stream. Connect its input before
 starting negotiation. The transport, raw-input mode, ordinary key handling,
 and fallback renderer belong to the application.
+
+The `write` callback must synchronously accept the entire batch into an ordered
+transport; it must not be an async function. Serialize other writes on the
+same stream and report later transport failure through `dispose(error)`.
 
 ```ts
 import { TuiClient } from "@tui-protocol/sdk";
@@ -59,7 +60,7 @@ const client = new TuiClient({
 });
 process.stdin.on("data", bytes => {
   for (const event of client.receive(bytes)) {
-    // Application-owned handlers, not SDK functions:
+    // Application-provided handlers:
     if (event.type === "ordinary") handleInput(event.data);
     if (event.type === "error") handleDiagnostic(event);
     if (event.type === "message" && event.message.kind === "protocol.error") {
@@ -106,29 +107,28 @@ or automatic full Update after an incremental error.
 An explicit close-error response makes the handle available again, consistent
 with the draft's unchanged remote Context. A close timeout leaves that handle
 unusable because its remote state is uncertain. An open timeout may leave an
-unknown remote Context; it does not prove nothing happened. This first client
-does not implement same-ID control recovery: the application must end/recover
-the old stream before relying on a fresh client and negotiation.
+unknown remote Context. Same-ID control recovery is not implemented: the
+application must end/recover the old stream before relying on a fresh client
+and negotiation.
 
-The two-second default is local waiting policy, not a protocol constant. A late
-or unmatched response does not grant support or resolve another request. Do not
-send Operations during a new negotiation: the client blocks even existing
-handles until support is positively confirmed again. Do not
-reuse the client or its handles across reconnections. Retiring the SDK alone
-does not close the underlying transport or terminate remote resources.
+The client's response deadline defaults to two seconds and can be configured.
+A late or unmatched response does not grant support or resolve another request.
+During a new negotiation, the client blocks sends on existing handles until support is
+positively confirmed again. Create a fresh client after reconnection. Transport
+closure and remote-resource cleanup remain the application's responsibility
+when retiring the client.
 
 ## Terminal-side integration
 
-Terminal implementers do not use this TUI client to render Blocks. The
-[terminal host example](../examples/terminal-host/README.md) introduces the
-incoming-byte, response, and renderer connections. For the underlying API, see
-the [terminal protocol module](../terminal/README.md)
-for bytes-to-state/response handling and its Operation adapter contract.
+The [terminal protocol module](../terminal/README.md) handles incoming bytes,
+state changes, and responses on the receiving side. Its Operation adapter
+connects execution to the host's renderer. The
+[terminal host example](../examples/terminal-host/README.md) shows this wiring.
 The [xterm endpoint](../prototypes/integration/xterm-protocol-endpoint/README.md)
 and [PTY demonstration](../prototypes/integration/pty-demo/README.md) show the
-experimental rendering connection. A host must implement the required native
-history/rendering behavior before claiming baseline support; parsing alone is
-insufficient. A reusable production terminal adapter is not supplied here.
+experimental rendering connection. A supporting host must implement the
+protocol's native history and rendering behavior and recognize the experimental
+OSC `9002` carrier.
 
 ## Verification and remaining limits
 
@@ -136,13 +136,9 @@ Run `pnpm typecheck` and `pnpm test` from the root. The SDK tests cover the list
 positive/negative negotiation cases, response correlation, all five Operations
 against the existing endpoint with byte-split responses, explicit base IDs,
 local validation, close errors/timeouts, input diagnostics, and disposal/write
-failure. These checks are bounded examples, not complete protocol conformance.
-The real PTY consumer is verified separately through its guided browser check.
+failure. The real PTY consumer is verified separately through its guided browser
+check.
 
-Only baseline `text/plain` is exposed. Optional content types, package publishing,
-API compatibility guarantees, other languages, control-request recovery, and
-general transport/backpressure handling are deferred. The write callback must
-accept an entire batch synchronously into an ordered transport; it must not be
-an async function. Report asynchronous transport failure via `dispose(error)`.
-The application must serialize other writes on that same stream. The SDK does
-not make an incompatible terminal support the experimental OSC `9002` carrier.
+The client exposes baseline `text/plain`. Optional content types, same-ID
+control-request recovery, and general transport/backpressure handling remain
+future work, along with a supported-runtime matrix and stable package exports.

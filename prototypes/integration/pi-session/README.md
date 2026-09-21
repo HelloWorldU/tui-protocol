@@ -12,18 +12,18 @@ composing the [TUI SDK](../../../sdk/README.md),
 [shared codec](../../../protocol/README.md), and
 [terminal endpoint](../../../terminal/README.md), and experimental
 [terminal host](../../../examples/terminal-host/README.md). It tests application use of
-[Operation semantics](../../../docs/protocol/operations.md), not a new protocol.
+[Operation semantics](../../../docs/protocol/operations.md).
 
 **The default Pi session uses a local deterministic model fixture.** The trial
 pins the published Pi SDK to 0.86.1 and exercises actual session events and a
 read-only tool without model network requests or user credentials. A separate,
-opt-in OpenAI Codex subscription entry now also has finite live browser evidence
-for completion, search, and cancellation; see the recorded boundaries below.
+opt-in OpenAI Codex subscription entry has live browser evidence for completion,
+search, and cancellation in the checkpoint below.
 
 The original hand-authored replay remains useful for isolated mapping tests.
 Its consumed-field slice follows [Pi's agent event definitions][agent-events]
 and [session event additions][session-events] at commit `3390bd9` (0.86.1).
-Those fixtures omit unused fields and are not a full Pi compatibility test.
+Those fixtures retain only the fields consumed by the adapter.
 
 ## Layout
 
@@ -44,17 +44,16 @@ Those fixtures omit unused fields and are not a full Pi compatibility test.
 | `vite.config.ts`, `browser.ts`, `index.html` | Launch the fixed child through the existing PTY bridge and reuse the supporting terminal host. |
 | `checks.html`, `checks.ts` | Run two browser scenarios against fresh child/terminal instances. |
 
-Pi-specific dependencies and policy stay here, outside the generic SDK. This
-is neither a published adapter nor a stock Pi extension. The separate
+Pi-specific dependencies and presentation policy live in this experimental
+frontend. The separate
 [reading UX comparison](ux/README.md) uses fixed actual Pi sessions to compare
 three reading/selection scenarios against Pi's regular frontend.
 
 The [entered-prompt multi-round trial](multi-round/README.md) separately extends
 this mapping to one retained Pi conversation with a form, cancellation followed
-by another turn, and a five-turn local limit. Its own record distinguishes
-local-provider browser evidence from its separately recorded four-prompt live
-subscription run. Tool-boundary cancellation now uses Pi's public stop-after-turn
-hook; the multi-round record explains the source finding and scope.
+by another turn, and a five-turn local limit. That record includes local-provider
+checks, a four-prompt live subscription run, and the use of Pi's public
+stop-after-turn hook for tool-boundary cancellation.
 
 ## Trial mapping
 
@@ -68,9 +67,9 @@ hook; the multi-round record explains the source finding and scope.
 | Tool-result message start/end | Do not duplicate output already supplied by completed tool execution; require its known, sealed call ID. |
 | Agent end | Finish only without retry, an active assistant, or an unfinished tool. The replay/application then closes the Context. |
 
-These are **experiment presentation choices**, not Pi's UI or protocol rules.
-Thinking is always visible with a label. Text parts are joined with blank lines;
-Markdown stays literal. Tool-call arguments and intermediate call construction
+In this trial's plain-text frontend, thinking is always visible with a label.
+Text parts are joined with blank lines; Markdown stays literal.
+Tool-call arguments and intermediate call construction
 are not displayed; tool execution has its own Block. No folding, editing after
 completion, or theme changes exist here, which is why sealing on message end
 is acceptable for this trial. A stock-UI integration must revisit that choice.
@@ -139,9 +138,8 @@ bound or upstream flow-control mechanism. Abort cannot recall already sent
 Operations. No unbounded application event queue is introduced.
 
 Dependencies are isolated in this private workspace package and pinned in the
-lockfile. Initial installation used `pnpm install --ignore-scripts`; this
-experiment does not require a global Pi installation. Workspace release-age
-exceptions name only the six pinned Pi 0.86.1 packages. The trial has a separate TypeScript project with
+lockfile. Workspace release-age exceptions name only the six pinned Pi 0.86.1
+packages. The trial has a separate TypeScript project with
 `skipLibCheck` for upstream declaration issues (NodeNext JSON imports and an
 optional MCP declaration dependency). Our source remains strictly checked
 against the installed SDK; the other repository projects keep their existing
@@ -170,15 +168,14 @@ For the browser trial, open `http://127.0.0.1:4178/`, connect, wait for `[ready]
 then start or cancel. `http://127.0.0.1:4178/checks.html` runs the two checks.
 This host currently requires Windows bundled ConPTY and reuses the existing
 loopback/token-guarded bridge. It uses experimental OSC 9002 and the experimental
-xterm adapter, not an unmodified external terminal. Node 24+ and the repository's
-pnpm dependencies are required; no Pi login or model key is needed.
+xterm adapter. Node 24+ and the repository's pnpm dependencies are required;
+no Pi login or model key is needed for the default fixture.
 
 Recorded on 2026-09-20:
 
 - Replay, strict source type checking, 29 focused Node tests, the 253-test Node
-  suite, and the browser build passed. These counts describe this checkpoint,
-  not exhaustive input coverage. The build reports the existing large xterm
-  bundle warning; it is not evidence of runtime correctness.
+  suite, and the browser build passed. The build reports the existing large
+  xterm bundle warning.
 - Real Pi session plus local provider: two streamed responses, one executed
   read-only tool, and four sealed Blocks in an explicitly closed Context.
 - Browser completion: the tool result appears once and remains searchable
@@ -189,11 +186,10 @@ Recorded on 2026-09-20:
   creation, encoded terminal rejection, input EOF, idle deadline, output budget,
   cleanup, and the earlier synthetic mapping cases.
 
-The Node endpoint fixtures alone do not render. The fixture browser evidence
-above does not establish live provider behavior. Neither it nor the finite live
-results below establish stock editor/extension compatibility, rich content
-support, sustained producer pressure, long-running stability, or other
-terminal/OS compatibility.
+The Node endpoint fixtures check logical state; the browser runs check rendering
+and interaction. This trial uses a separate plain-text frontend. Stock Pi
+editor/extensions, rich content, sustained producer pressure, and long-running
+or cross-platform behavior remain outside its coverage.
 
 ## Opt-in subscription trial
 
@@ -238,17 +234,14 @@ that state is observed, the run is not cancellation evidence.
   `Request was aborted` was searchable, the Context explicitly closed, and the
   child exited 0 with `[stopped by user]`, not the completion marker.
 
-These observations close this finite real-session/host trial, not general Pi
-compatibility. SSE success does not prove that WebSocket is broken generally
-or that every provider failure recovers. A local provider-error regression now
-checks rejection of completion after the tool result and Context closure at EOF.
-No live model call is part of `pnpm test`.
+A local provider-error regression checks rejection of completion after the tool
+result and Context closure at EOF. Live model calls are opt-in and separate
+from `pnpm test`.
 
 After these changes, type checking, 33 focused Node tests, all 257 Node tests,
 and both fixture/live browser builds passed. The two automatic local-fixture
 browser checks were rerun and passed; the live checks page was verified to
-disable automatic calls. These are finite regression results, not exhaustive
-coverage or long-running stability evidence.
+disable automatic calls.
 
 [agent-events]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/agent/src/types.ts
 [session-events]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/agent-session.ts#L153

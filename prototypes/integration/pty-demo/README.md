@@ -12,7 +12,7 @@ in its child process and composes the [reference codec](../../../protocol/README
 It exercises the [Operation](../../../docs/protocol/operations.md),
 [framing](../../../docs/protocol/framing.md), and
 [terminal-native](../../../docs/protocol/terminal-native-behavior.md) drafts
-across a process boundary; it does not define new protocol semantics.
+across a process boundary.
 
 ## Path
 
@@ -104,17 +104,16 @@ exercise cleanup ordering using fake PTY/socket events, not OS fault injection.
 
 - The [transport probe](../pty-transport/README.md) recorded a return-path failure
   on this machine's older system ConPTY. This host explicitly uses the approved
-  bundled DLL through `useConptyDll: true`; it does not upgrade Windows or claim
-  compatibility with other ConPTY builds, Unix PTYs, SSH, or multiplexers.
+  bundled DLL through `useConptyDll: true`. Other ConPTY builds, Unix PTYs, SSH,
+  and multiplexers remain untested here.
 - The host listens only on loopback, requires its expected Origin/Host and a
   per-server random token, starts only the fixed Node producer, validates resize
   dimensions, and limits a connection to ten minutes. No shell-command or
   arbitrary executable API is exposed. Local smoke checks rejected missing
   tokens, wrong Origin/Host, a second client, and invalid resize; reconnect and
-  disconnect completed. This is not an authentication or sandboxing product.
-- Frames use experimental OSC `9002` and the existing pinned private xterm
-  history interfaces. The dependency and build permission for `node-pty` are
-  repository-local; no system policy is changed.
+  disconnect completed. These guards restrict the local demo connection;
+  the child is not sandboxed.
+- Frames use experimental OSC `9002` and pinned private xterm history interfaces.
 - Only this small finite story is exercised. There is no AI SDK, interactive
   line editor, arbitrary output workload, backpressure guarantee, crash recovery,
   capacity-eviction test over PTY, or general Unicode/IME claim.

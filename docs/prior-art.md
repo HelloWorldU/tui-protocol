@@ -4,8 +4,8 @@ Status: living research note
 
 Last reviewed: 2026-08-30
 
-This document records primary sources that constrain the project. It is not a
-claim that every terminal or proposal has been surveyed.
+This document compares selected terminal mechanisms and application designs
+that inform the project's content model, history behavior, and test scenarios.
 
 ## Protocol and terminal mechanisms
 
@@ -18,8 +18,7 @@ claim that every terminal or proposal has been surveyed.
 | [iTerm2 blocks](https://iterm2.com/documentation-escape-codes.html) | Identified start/end regions | Existing blocks can be folded or unfolded | No arbitrary content replacement anchor | Demonstrates deployed block identity and limited updates |
 
 For this project, SpaceTerm is the closest prior-art design reference. Its
-protocol already answers several questions this project must not casually
-reinvent:
+protocol provides designs for:
 
 - block identity and live-block lifecycle;
 - capability negotiation;
@@ -32,8 +31,7 @@ reinvent:
 terminal](https://github.com/taquangtrung/spaceterm/blob/main/README.md), and
 [its core models scrollback as a block
 list](https://github.com/taquangtrung/spaceterm/blob/main/crates/core/src/lib.rs).
-The unresolved comparison is not whether TBP can identify and patch a block;
-it can. The question is whether TBP can be extended or profiled to define
+The remaining comparison is whether TBP can be extended or profiled to define
 mutation and anchor behavior for terminal-owned history with terminal-native
 interaction.
 
@@ -69,9 +67,7 @@ The surveyed mechanisms cover pieces of the problem:
 
 No surveyed source currently specifies all three target properties together:
 terminal-owned native history, correct mutation after content leaves the
-active screen, and preservation of a logical reading anchor. This is a
-bounded conclusion from the sources above, not proof that no such work
-exists.
+active screen, and preservation of a logical reading anchor.
 
 The project uses an independent logical protocol because its baseline concerns
 terminal-owned mutable history and reading-anchor preservation rather than a

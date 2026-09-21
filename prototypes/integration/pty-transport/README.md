@@ -4,8 +4,8 @@ This integration probe asks whether a real child process can exchange the
 current experimental OSC `9002` capability Messages through Windows ConPTY.
 It composes the [reference codec](../../../protocol/README.md),
 [protocol Session](../../protocol-session/README.md), and `node-pty` `1.1.0`.
-This probe itself does not connect the browser renderer. The separate
-[PTY demonstration](../pty-demo/README.md) builds on its transport result.
+The separate [PTY demonstration](../pty-demo/README.md) builds on this transport
+result with browser rendering.
 
 ## Method
 
@@ -48,23 +48,19 @@ no Windows component is replaced or upgraded.
 ## Host Choice
 
 The maintainer approved using the tested bundled ConPTY for the first Windows
-demonstration. This is a host dependency constraint, not a wire-format change
-or a claim that the old system path works. The demo selects the bundled DLL
-explicitly; the probe still measures both paths without silently falling back.
+demonstration. The demo selects the bundled DLL explicitly; the probe measures
+both paths independently.
 
-## Not Proven
+## Scope and Lifecycle
 
-- One small query/response is not complete negotiation, Context setup, Block
-  rendering, arbitrary frame size or chunking, output ordering, or backpressure.
-- The ordinary pipe control is not a PTY or a replacement for PTY validation.
-- Browser integration, interactive input, resize, real IME, system clipboard,
-  child failure recovery, and renderer failure handling are not exercised.
-- Linux/macOS PTYs, SSH, multiplexers, other Node/ConPTY versions, and other
-  Windows builds remain untested. This probe runs ConPTY cases only on Windows.
-- The standalone probe has an eight-second watchdog per child and explicitly
-  exits after the children finish and its JSON report is flushed, because the
-  Windows library may retain background handles. This is not a production host
-  lifecycle design.
+The probe checks one small query/response and an ordinary-input sentinel on the
+listed Windows transports. Context setup, rendering, larger frames, ordering,
+backpressure, and failure recovery need separate experiments. Other platforms,
+Node/ConPTY versions, SSH, and multiplexers are untested here.
+
+Each child has an eight-second watchdog. The standalone probe explicitly exits
+after the children finish and its JSON report is flushed, because the Windows
+library may retain background handles.
 
 ## Run
 

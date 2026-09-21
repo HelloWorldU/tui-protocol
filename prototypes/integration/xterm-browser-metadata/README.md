@@ -11,7 +11,7 @@ bold weight into native xterm cells. It uses SGR only to create those cell
 attributes; neither SGR nor this temporary representation is a proposed
 protocol encoding or content type.
 
-## Proven
+## Observed Behavior
 
 Five browser scenarios demonstrate that, for the tested printable ASCII and
 cell-style fixture:
@@ -24,10 +24,10 @@ cell-style fixture:
 - Complete-Block capacity eviction removes the evicted Block's style without
   changing styling in a retained Block.
 
-This provides narrow experimental evidence for [Content
+These scenarios check [Content
 Metadata](../../../docs/protocol/terminal-native-behavior.md#9-content-metadata).
 
-## Not Proven
+## Scope and Limits
 
 - Links, decorations, semantic annotations, and metadata beyond foreground
   color and bold weight are not tested.
@@ -36,10 +36,9 @@ Metadata](../../../docs/protocol/terminal-native-behavior.md#9-content-metadata)
 - Incremental Operations are not tested because metadata editing depends on a
   future optional content representation's own schema and semantics.
 - Partial-Block or Append-driven capacity eviction is not tested.
-- The fixture writes private xterm cell attributes after applying an Operation.
-  It does not select an implementation API or content encoding.
-- The experiment does not compose the OSC codec or protocol Session and does
-  not establish cross-terminal or cross-browser compatibility.
+- Operations are applied directly to the history fixture, followed by private
+  xterm cell-attribute writes. OSC/Session composition and cross-browser behavior
+  remain untested.
 
 ## Run
 

@@ -30,7 +30,7 @@ The protocol remains a draft, and implementations are experimental.
 
 - [RFCs](rfcs/README.md)
 - [Prior art](prior-art.md)
-- [Validation plan and design notes](design/next-stage-validation.md)
+- [Validation plan](design/next-stage-validation.md)
 
 ## Implementation & Evidence
 

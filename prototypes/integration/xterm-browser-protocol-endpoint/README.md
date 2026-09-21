@@ -20,10 +20,7 @@ Block ranges rather than running against independent copies of history.
 
 ## Verification Checkpoint
 
-The current regression batch covers the listed ASCII/basic-CJK and Tab fixtures,
-not every combination of terminal state. No new protocol semantics are selected
-by these tests. This is a bounded checkpoint for moving on to host integration,
-not a claim that terminal-native behavior is complete.
+The regression batch covers these ASCII/basic-CJK and Tab fixtures:
 
 | Area | Evidence in this batch |
 | --- | --- |
@@ -34,13 +31,7 @@ not a claim that terminal-native behavior is complete.
 | Mixed output | [Chinese managed content beside ordinary ASCII](scenarios/chinese-mixed-selection.ts) |
 | Queued capacity decisions | [Node tests](../xterm-protocol-endpoint/capacity.test.ts) reject edits of an evicted Block while preserving a retained update chain |
 
-Deferred work includes resize that itself triggers capacity eviction, partial
-or unmanaged-row trimming, broader Unicode and literal-Tab queries, real input
-methods and clipboard interaction, and PTY/multiplexer/cross-terminal hosts.
-Styled metadata needs a content representation first. These are distinct
-extensions, not outcomes established by this checkpoint.
-
-## Proven
+## Observed Behavior
 
 The [real PTY demonstration](../pty-demo/README.md) supplies separate,
 environment-specific process-to-browser evidence. Its later-Chinese-Block
@@ -163,7 +154,7 @@ managed Tabs and normalizes copied newlines. `getSelection()` still exposes
 xterm's displayed text; the copy-event payload is the copy oracle. Tab settings
 are held fixed while content is retained.
 
-Three [Chinese/Tab scenarios](scenarios/plain-text-chinese.ts) add narrow evidence:
+Three [Chinese/Tab scenarios](scenarios/plain-text-chinese.ts) check:
 
 - selecting and copying `中文\t结果` survives a `20`-to-`5`-to-`9`-to-`20`-column
   resize sequence, without copying the unused cell before a wrapped wide glyph;
@@ -200,8 +191,7 @@ and evicts exactly the two rows of the oldest Tab-containing Block:
   reading moves to the nearest retained Block without following the tail.
 
 Both scenarios check the complete resulting Buffer rows and retain the evicted
-Block's raw Session snapshot. They do not demonstrate partial-Block eviction,
-Unicode alignment, or operating-system clipboard behavior.
+Block's raw Session snapshot.
 
 Two [Chinese capacity search scenarios](scenarios/chinese-capacity.ts) use the
 same dimensions with Chinese/Tab Blocks. An Update grows from one to four rows
@@ -241,60 +231,32 @@ scenario's assertion. This supplies narrow cross-layer evidence for the
 [Terminal-Native Behavior](../../../docs/protocol/terminal-native-behavior.md)
 requirements.
 
-## Not Proven
+## Scope and Limits
 
-- Search and ordinary user selection are separate scenarios because xterm.js's
-  search addon presents its current match through the terminal selection.
-- Content metadata is not composed because the protocol has not defined an
-  optional styled content representation.
-- The protocol-only scenarios exercise all five current Block Operation kinds,
-  the listed resize dimensions, the original Update-driven complete-Block
-  capacity boundary and the projected-text cases above, plus the ASCII and
-  Chinese Append fixtures whose trim exactly matches one complete leading
-  managed Block. They also exercise two
-  adjacent-managed-Block copy fixtures, one with and one without an existing
-  trailing line break, but only the outcomes listed above.
-- Partial-Block trimming, Append-driven eviction outside the listed exact
-  complete-leading-Block fixtures, dimensions beyond those listed, and Unicode
-  interaction beyond the listed Chinese/Tab copy and search fixtures remain
-  outside this experiment. The fixed corpus adds text-retention checks only.
-- Capacity eviction removes the tested Block's rendered range while Session
-  retains its logical snapshot. The experiment does not define forgotten-Block
-  lifecycle or prove complete memory reclamation.
-- Append while input is active remains outside the experiment because
-  coordinating new output with the TUI's current input is not historical Block
-  mutation.
-- Seal has no active-input scenario because it changes Session lifecycle
-  without enqueueing a content render; the experiment claims only the tested
-  lifecycle, rejection, selection, and search outcomes.
-- The composition event is synthetic and does not prove compatibility with a
-  real operating-system IME.
-- Private xterm core fields, search-addon reconstruction, and the search-offset
-  workaround remain experimental fixtures, not a proposed public Terminal API.
-- The original mixed-stream selection evidence covers twelve printable-ASCII fixtures
-  and synthetic browser copy events: seven single-boundary-crossing Operation
-  fixtures at `20` columns, one exact-tail Extend fixture, one two-boundary
-  Extend fixture with two soft wraps, one `20`-to-`10`-to-`20`-column resize
-  round trip, and two capacity fixtures whose trim exactly matches one complete
-  leading managed Block. Beyond the additional Chinese case above, Unicode,
-  line breaks within selected content other
-  than the tested trailing LF at an adjacent-managed-Block boundary, other
-  resize dimensions, capacity trimming that reaches unmanaged or partial-Block
-  rows, mouse selection, and the operating-system clipboard remain untested.
-- The additional plain-text fixtures do not establish general Unicode cell
-  mapping, rectangular selection, or literal-Tab search-query behavior. Only
-  fully selected Tabs are reconstructed; partial-Tab selections use the
-  selected display spaces. Tabs alongside Unicode outside the mapped basic-CJK
-  range are conservatively rejected by this host's capacity preflight. The new
-  Chinese fixtures do not exercise emoji, combining sequences, Unicode-provider
-  changes, or Chinese mixed-output and eviction behavior beyond the listed
-  cases above. The Chinese
-  search cases do not test literal-Tab queries, general navigation, or search
-  decorations.
-- Arbitrary ordinary terminal output, a real PTY and TUI process, multiplexers,
-  remote transport, other terminals, and cross-browser behavior are not
-  tested by this fixture. See the separate PTY demonstration linked above for
-  its fixed Windows process scenario and narrower compatibility findings.
+- The fixtures use private xterm core fields, addon reconstruction, and a
+  version-bound search-offset workaround. Search and ordinary selection are
+  checked separately because the addon displays its match through selection.
+- Capacity cases trim exact complete leading Blocks. Partial-Block or
+  unmanaged-row trimming and resize-triggered eviction remain untested.
+  Session retains evicted snapshots, so rendered-row removal does not reclaim
+  all logical state.
+- Selection/search mapping covers the listed ASCII/basic-CJK/Tab layouts and
+  dimensions. Emoji, combining sequences, Unicode-provider changes, rectangular
+  selection, literal-Tab queries, broader navigation, and search decorations
+  remain untested. Tabs beside unmapped Unicode are conservatively rejected by
+  capacity preflight. The fixed content corpus checks text retention only.
+- Mixed-output checks use the listed ordinary ASCII rows and managed boundaries.
+  Embedded line breaks within mixed selections beyond the tested adjacent-Block
+  trailing LF, arbitrary terminal controls, and other layout combinations need
+  further checks.
+- Copy and composition use synthetic browser events. Physical mouse selection,
+  OS clipboard use, real IMEs, and cross-browser behavior remain untested.
+- Append with active input needs output/editor coordination beyond historical
+  mutation. Seal has no active-input scenario because it enqueues no content
+  render. Styled metadata awaits an optional content representation.
+- This fixture feeds bytes in-process. The linked PTY demonstration supplies
+  the fixed Windows process scenario; multiplexers, remote transports, and
+  other terminal hosts require separate validation.
 
 ## Updating the Block Being Read
 

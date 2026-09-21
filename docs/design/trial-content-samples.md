@@ -1,11 +1,11 @@
 # Fixed content samples before application integration
 
-Experimental evidence, not a complete Pi output corpus or Unicode support claim.
+This experiment checks how the xterm integration stores and reflows a fixed
+set of text samples before application integration.
 The [fixed corpus](../../prototypes/integration/xterm-protocol-endpoint/content-samples.ts)
 contains Chinese explanation with literal fenced code, a code line containing
 160 repeated characters, emoji/combining text including a ZWJ sequence, and
-Chinese Tab/CRLF output. `text/plain` displays Markdown syntax literally;
-this does not add Markdown rendering.
+Chinese Tab/CRLF output. `text/plain` displays Markdown syntax literally.
 
 ## Results
 
@@ -20,20 +20,19 @@ test the positive samples through Append, a 40–20–40 column round trip, and
 Update. The native Buffer text remained equal to the explicitly expected text.
 They ran with the existing browser endpoint suite: 73 scenarios passed locally.
 
-The Unicode checks assert stored Buffer text, **not font shaping, grapheme width,
-emoji presentation, selection/copy, or search correctness** for those sequences.
-Existing Chinese/Tab selection and search cases remain their own evidence. A
-future Pi spike must not infer general emoji interaction support from this corpus.
+For these Unicode samples, assertions inspect stored Buffer text. Font shaping,
+grapheme width, emoji presentation, selection/copy, and search need separate
+checks. Existing Chinese/Tab interaction cases are linked from the
+[plain-text evidence](../protocol/plain-text.md#experimental-evidence).
 
 ## Remaining constraints
 
 The pinned renderer has exact mapping only for its tested ASCII/basic-CJK range.
 Unmapped text next to Tab is conservatively rejected with the existing
-`resource_exhausted` preparation result. This is a renderer limitation, not a
-claim that the protocol forbids that Unicode. Large Blocks and mixed capacity
-layouts can likewise be rejected; partial-Block eviction is not implemented.
+`resource_exhausted` preparation result. This renderer restriction applies to
+otherwise valid protocol text. Large Blocks and mixed capacity layouts can
+likewise be rejected; partial-Block eviction is not implemented.
 
-Keep these cases as a reproducible trial baseline. Actual Pi output, styled
-ordinary traffic, more native control combinations, bidi text, shaping, and
-other terminals need evidence from the later integration. This step identifies
-known acceptance/rejection boundaries rather than silently claiming support.
+The corpus provides a reproducible acceptance/rejection baseline. Further
+integration work needs samples from actual Pi output, styled ordinary traffic,
+more native control combinations, bidi text, shaping, and other terminals.

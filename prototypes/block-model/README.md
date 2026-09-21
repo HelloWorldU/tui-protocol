@@ -1,8 +1,7 @@
 # Block Model Prototype
 
-This prototype tests the semantic model from
-[the first prototype design note](../../docs/design/first-prototype.md). It is
-not a wire-protocol implementation.
+This in-memory prototype tests the semantic model from
+[the first prototype design note](../../docs/design/first-prototype.md).
 
 The model provides:
 

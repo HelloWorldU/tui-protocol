@@ -2,8 +2,7 @@
 
 This directory retains the original experiment record. Implementation and tests
 now live in [the terminal module](../../terminal/README.md), under
-`terminal/src/session.ts` and `terminal/test/session.test.ts`. The evidence below
-describes these Session checks, not all later integrations of the module.
+`terminal/src/session.ts` and `terminal/test/session.test.ts`.
 Later [resource-budget checks](../../docs/design/trial-resource-budgets.md)
 cover opt-in retained-state limits separately from this original experiment.
 
@@ -19,7 +18,7 @@ It exercises the current drafts for:
 - [Logical wire message model](../../docs/protocol/wire-format.md); and
 - [Error codes](../../docs/protocol/error-codes.md).
 
-## Proven
+## Observed Behavior
 
 - The tested host-declared supported and unsupported Capability outcomes are
   correlated, and retrying the same control request returns its original
@@ -55,7 +54,7 @@ It exercises the current drafts for:
 - The tested two Contexts maintain independent Block and Operation namespaces
   while reusing the same Block and Operation IDs.
 
-## Experimental Boundaries
+## Setup and Host Responsibilities
 
 - `context-N` identifiers are deterministic test fixtures. Context IDs remain
   opaque on the wire, and this allocation format is not proposed behavior.
@@ -68,8 +67,6 @@ It exercises the current drafts for:
   that has already determined frame-external traffic made a managed Block's
   rendering or reliable range untrustworthy. The Session does not inspect
   terminal controls or rendered rows itself.
-- The exported TypeScript API and its in-memory snapshots are experimental,
-  not a stable terminal or SDK interface.
 - The session accepts already validated logical Messages and implements only
   the baseline `text/plain` representation.
 - `handleInvalidMessage()` is a separate experimental integration hook for
@@ -82,16 +79,15 @@ It exercises the current drafts for:
   terminal-originated Message into the terminal-side session. It is not a
   wire-level `protocol.error`.
 
-## Not Proven
+## Scope
 
-- Integration with the reference codec, a byte stream, terminal parser,
-  multiplexer, or bidirectional PTY.
-- Terminal rendering, scrollback integrity, reflow, or reading-anchor
-  preservation.
-- Optional content types, real resource detection, renderer integration,
-  recovery from partial rendering, request cache limits, timeouts, abandoned
-  Contexts, resets, or authentication.
-- A stable public API or compatibility with future protocol versions.
+These checks observe validated Messages and in-memory Session state. Byte
+transport is exercised by the [Endpoint experiment](../integration/protocol-endpoint/README.md);
+rendered history and reading behavior are exercised by the
+[xterm integration](../integration/xterm-protocol-endpoint/README.md).
+The original Session experiment covers baseline `text/plain` and host-triggered
+lifecycle events. Resource detection, partial-render failures, timeouts, and
+authentication require host integration.
 
 ## Run
 

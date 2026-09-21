@@ -8,11 +8,10 @@ It composes the private history mechanism from the [xterm-headless
 prototype](../../xterm-headless/README.md), logical selection mapping from the
 [browser selection prototype](../xterm-browser-selection/README.md),
 browser-hosted `@xterm/xterm` 6.0.0, and `@xterm/addon-search` 0.16.0.
-Recreating the addon and restoring a surviving current match after each
-fixture Operation is an experimental integration mechanism, not a proposed
-Terminal API.
+The experimental wrapper recreates the addon and restores a surviving current
+match after each fixture Operation to refresh its search cache.
 
-## Proven
+## Observed Behavior
 
 In one browser scenario, searching for text in a mutable Block selects that
 text as the current match. After a complete `Update` replaces the Block:
@@ -21,7 +20,7 @@ text as the current match. After a complete `Update` replaces the Block:
 - searching again cannot find text from the old snapshot; and
 - text in the replacement snapshot is searchable.
 
-This provides narrow experimental evidence for the current-projection rule in
+This checks the current-projection rule in
 [Terminal-Native
 Behavior](../../../docs/protocol/terminal-native-behavior.md#8-search).
 
@@ -54,14 +53,12 @@ rather than restoring the previous search result. Explicit find-next still
 works. The [Pi reading comparison](../pi-session/ux/README.md) exposed this
 missing ownership check: the fixture previously treated any selection as its
 last search match. It now compares the selected text and endpoints before
-restoring a search. These cases do not cover every selection/search UX.
+restoring a search.
 
 The [browser endpoint's plain-text fixtures](../xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
 separately demonstrate that a visible ESC label is searchable and copies as
 that label, while its raw control sequence is not found. The search addon sees
-the terminal's display projection, not Session's raw text. Those fixtures are
-not part of this standalone twelve-scenario run; literal-Tab queries and general
-Unicode search mapping remain untested beyond the composed cases below.
+the terminal's display projection, not Session's raw text.
 
 Four [Chinese search scenarios](../xterm-browser-protocol-endpoint/scenarios/chinese-search.ts)
 run through the composed OSC endpoint, not this standalone page. They check:
@@ -77,14 +74,11 @@ run through the composed OSC endpoint, not this standalone page. They check:
   a `20`-to-`9`-to-`20` resize round trip.
 
 These cases use the [basic-CJK width fixture](../xterm-browser-protocol-endpoint/README.md).
-They do not establish general Unicode search behavior or a protocol navigation
-policy. The standalone page reports twelve scenarios.
 
 Two additional [composed Chinese capacity cases](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
 check an Update evicting one complete two-row Chinese/Tab Block at `8` columns,
 `3` viewport rows, and `6` scrollback rows. The retained match keeps its character,
 copy payload, and mapped endpoints; the evicted match clears and leaves search.
-These are not standalone search scenarios and do not test partial-Block trimming.
 
 ## Private Search-Offset Workaround
 
@@ -105,7 +99,10 @@ conversion against headless Buffer cells, and the four browser cases check its
 composed outcomes. This is a version-bound prototype workaround, not an upstream
 fix or a public search API. Addon reconstruction still handles cache invalidation.
 
-## Not Proven
+## Scope and Limits
+
+The standalone page runs twelve scenarios by applying Operations directly to
+the history fixture. The composed endpoint adds the OSC and Session path.
 
 - Partial-Block capacity eviction is not tested. The standalone page has no
   Append-driven eviction case; the [composed Chinese Append cases](../xterm-browser-protocol-endpoint/scenarios/chinese-append-capacity.ts)
@@ -115,11 +112,8 @@ fix or a public search API. Addon reconstruction still handles cache invalidatio
   emoji, multiline queries, and literal-Tab queries are not tested.
 - Search-result counts, decorations, general navigation behavior, keyboard shortcuts,
   accessibility, and cross-browser behavior are not tested.
-- The private history mutation bypasses xterm.js write events, and the search
-  addon exposes no public line-cache invalidation API. Recreating it is only a
-  feasibility workaround.
-- The experiment applies Block Operations directly to the history fixture. It
-  does not compose the OSC codec or protocol Session.
+- Private history mutation bypasses xterm.js write events. With no public
+  line-cache invalidation API, the wrapper recreates the addon after mutation.
 
 ## Run
 

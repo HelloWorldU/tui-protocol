@@ -1,17 +1,16 @@
 # Pi Rendering Architecture and Candidate Integration Boundaries
 
-Read-only research note, 2026-09-20. Upstream facts below refer to
-[earendil-works/pi at `3390bd9`](https://github.com/earendil-works/pi/tree/3390bd93630965a12a0a1a5c36ce890ec22f7e1d),
-whose coding-agent package declares version 0.86.1. This is a static trace of
-the interactive CLI and selected SDK/RPC interfaces, not a full repository
-audit, executed Pi trial, or compatibility claim. Recommendations are ours,
-not upstream decisions or new protocol requirements.
+Source investigation, 2026-09-20, based on
+[Pi 0.86.1 at `3390bd9`](https://github.com/earendil-works/pi/tree/3390bd93630965a12a0a1a5c36ce890ec22f7e1d),
+tracing the interactive CLI, rendering path, and candidate SDK/RPC interfaces
+for our protocol frontend. Integration assessments below are our design
+judgments; subsequent experiments are linked at the end.
 
 ## 1. The Overall Path
 
 Pi separates agent execution from presentation. The default interactive CLI
-connects them through session events; `pi-tui` lays out components and updates
-the terminal. It is a UI library inside Pi, not the terminal emulator.
+connects them through session events. Its `pi-tui` UI library lays out
+components and emits drawing commands for the terminal emulator.
 
 ```text
 User prompt
@@ -32,9 +31,9 @@ User prompt
                      terminal emulator
 ```
 
-The last two stages describe the normal deployment boundary, not a transport
-implemented by `pi-tui`. In particular, Pi's `Terminal` interface is a process
-I/O abstraction; it is not our terminal-side Session or history adapter.
+Pi's `Terminal` interface abstracts process I/O. `ProcessTerminal` connects it
+to stdin/stdout; the deployment's transport carries those bytes to the terminal
+emulator, where our terminal-side Session and history adapter would run.
 
 | Part | Responsibility on this path |
 | --- | --- |
@@ -47,8 +46,7 @@ I/O abstraction; it is not our terminal-side Session or history adapter.
 
 Sources: [CLI composition][main], [runtime ownership][runtime],
 [agent construction][sdk-source], [agent event production][agent-loop],
-[session event delivery][session]. This diagram follows the CLI branch in
-`main.ts`; it does not assume every package in Pi's monorepo participates in it.
+[session event delivery][session].
 
 ## 2. Follow One Streaming Response
 
@@ -62,7 +60,7 @@ Sources: [CLI composition][main], [runtime ownership][runtime],
 4. On `message_end`, it supplies the final assistant content. Tool execution
    has its own start/update/end events and component updates.
 5. These handlers call `ui.requestRender()`. `TuiBase` coalesces requests and
-   schedules rendering; this is not one terminal write per model token.
+   schedules rendering.
 6. Components implement `render(width): string[]`. The regular renderer
    compares rendered lines, constructs cursor/erase/output sequences, and
    writes through `Terminal.write(...)`; `ProcessTerminal` writes to stdout.
@@ -74,9 +72,10 @@ Sources: [interactive event handlers][interactive-events],
 Input runs the other way: `ProcessTerminal` reads stdin and separates input
 sequences; `TuiBase` handles terminal replies/listeners and forwards remaining
 input to the focused component. The editor/interactive mode interprets a
-submission and calls the session. Resize requests another render. Thus input
-parsing, protocol replies, editor focus, and output cannot be treated as wholly
-independent channels ([process I/O][terminal], [TUI input handling][tui]).
+submission and calls the session. Resize requests another render. Protocol
+replies and keystrokes share the input parser, which routes them to query
+handlers or the focused component ([process I/O][terminal],
+[TUI input handling][tui]).
 
 ## 3. Two Different History Strategies
 
@@ -89,9 +88,6 @@ The setting defaults to `regular`; `createInteractiveTui` selects the renderer
 | `fullscreen` / `TuiAltScreen` | Enters the alternate screen and manages viewport scrolling, selection, and transcript search inside the application; clipboard handling is wired by the coding-agent renderer factory. |
 
 Sources: [regular rendering][main-screen], [fullscreen rendering][alt-screen].
-These are implementation observations, not reproduced UX bugs. Fullscreen
-does not mean selection/search are absent: Pi implements those interactions
-itself rather than relying on the main-screen scrollback for that UI.
 
 **Our inference:** the regular transcript is the closer first comparison for
 our goal of terminal-owned mutable history. Replacing fullscreen behavior
@@ -101,16 +97,14 @@ would additionally change who owns those interactions.
 
 | Boundary | Available interface | Assessment for our project |
 | --- | --- | --- |
-| Session events | Pi SDK: `createAgentSession`, `session.subscribe`, `session.prompt` | Cleanest candidate for a small, separate protocol frontend. Preserves structured content, but does not reuse the stock interactive UI automatically. |
-| Headless process | `pi --mode rpc`, JSONL commands/events over stdin/stdout | Another frontend boundary with process isolation. Pi RPC is not our terminal wire protocol; it needs a translator. Its documented extension-UI support is narrower than interactive mode. |
-| Interactive presentation | `InteractiveMode`, components, `createInteractiveTui` | Best place to study reuse of the existing UI, but requires handling transcript/editor/layout coupling. The factory currently chooses two concrete renderers, not a documented third-party protocol backend. |
+| Session events | Pi SDK: `createAgentSession`, `session.subscribe`, `session.prompt` | Cleanest candidate for a small protocol frontend. Preserves structured content; presentation is supplied by the new frontend. |
+| Headless process | `pi --mode rpc`, JSONL commands/events over stdin/stdout | Provides process isolation and requires translating Pi RPC into our terminal protocol. Its documented extension-UI support is narrower than interactive mode. |
+| Interactive presentation | `InteractiveMode`, components, `createInteractiveTui` | Candidate for reusing the existing UI. Requires handling transcript/editor/layout coupling and extending a factory that currently selects two concrete renderers. |
 | Extension UI | Widgets, custom focused/overlay components, custom editor, tool/message renderers | Useful customization inside Pi's presentation system. These hooks do not by themselves replace the built-in assistant transcript renderer. |
-| `Terminal.write` / stdout | Already-rendered strings and terminal commands | Useful for observing output; too late to directly obtain Block identity, logical content, or lifecycle. Not a semantic adapter by itself. |
+| `Terminal.write` / stdout | Already-rendered strings and terminal commands | Useful for observing output; explicit content identity and lifecycle are available at earlier layers. |
 
 Sources: [SDK documentation][sdk-doc], [RPC documentation][rpc-doc],
 [extension UI/tool/message contracts][extensions], [renderer factory][renderer-factory].
-The assessments in the last column are our inferences, not claims that these
-interfaces have been integrated or that extensions cannot perform other work.
 
 ## 5. Couplings That Change the Integration Design
 
@@ -118,13 +112,13 @@ interfaces have been integrated or that extensions cannot perform other work.
   text/thinking into themed Markdown components, spacing, and sometimes OSC
   133 markers. Our baseline [plain text](../protocol/plain-text.md) executes
   neither ANSI drawing sequences nor Markdown. Copying `render(width)` output
-  into a Block would not preserve Pi's UI semantics. A first trial should
-  explicitly choose a plain-text projection, not silently strip styling and
-  claim equivalent rendering ([assistant component][assistant]).
+  into a Block would not preserve Pi's UI semantics. A first trial can use a
+  plain-text projection; retaining styled Markdown requires further content
+  and rendering design ([assistant component][assistant]).
 - **Generation end versus display lifetime.** Thinking visibility can still
   change after generation. Therefore `message_end` is not automatically a
-  `Seal` for a Block whose visible content may later change. A restricted trial
-  can omit folding, but must state that limitation ([assistant component][assistant]).
+  `Seal` for a Block whose visible content may later change
+  ([assistant component][assistant]).
 - **Transcript versus active controls.** Interactive mode composes chat with
   header, status, widgets, editor, and footer, and selects a fullscreen layout
   when appropriate. Sending transcript Blocks while leaving an unmodified
@@ -139,55 +133,43 @@ interfaces have been integrated or that extensions cannot perform other work.
   ([session delivery][session], [our SDK contract](../../sdk/README.md#api-behavior)).
 - **Session replacement versus Block identity.** `/new`, resume, and fork can
   replace the Pi session and rebind UI subscriptions. Trial-local Block IDs
-  and our Context lifetime must be mapped explicitly, not assumed identical
-  to Pi's persistence IDs ([runtime][runtime], [SDK runtime notes][sdk-doc]).
+  and our Context lifetime need an explicit mapping to Pi's session lifecycle
+  ([runtime][runtime], [SDK runtime notes][sdk-doc]).
 - **Replies versus keystrokes.** Pi already interprets keyboard-protocol and
-  other terminal replies. Our negotiation/responses must be routed without
-  feeding them into the editor or disrupting Pi's existing queries. Merely
-  adding a second independent stdin listener is not a verified solution
+  other terminal replies. Our negotiation/responses need to join this routing
+  so the editor receives keystrokes and each query handler receives its replies
   ([process I/O][terminal], [TUI input handling][tui]).
 
 ## 6. Recommended Next Step
 
-Our recommendation is a **separate, finite Pi SDK frontend trial** first,
-not an upstream patch or replacement of all `pi-tui` rendering. It offers a
-small path from real Pi events to our current SDK without reverse-engineering
-terminal drawing commands. It would prove that path only, not integration
-with the stock Pi interactive UI or all Pi extensions.
+The initial recommendation was a **separate, finite Pi SDK frontend trial**.
+Session events preserve the structured content needed for a protocol adapter.
+This lets us test the mapping before taking on Pi's existing editor, rich
+presentation, and extension UI.
 
-Before coding, specify one mapping: one prompt, streamed assistant text,
-one tool result, and completion/abort, using baseline plain text. Define
-trial-owned Block IDs, when content remains mutable, error/queue handling,
-and what happens without protocol support. Replay captured or synthetic
-events first; a live model run would be a separate validation step.
+The proposed mapping covers one prompt, streamed assistant text, one tool
+result, and completion/abort using baseline plain text. It needs trial-owned
+Block IDs, content lifecycles, error/queue handling, and an unsupported-terminal
+policy. Replay comes first, followed by a live model run.
 
-Run it only in an explicitly supporting host, initially our experimental
-[terminal host](../../examples/terminal-host/README.md). Pi-side changes
-cannot add mutable history support to an arbitrary unmodified terminal.
-Keep the [existing compatibility limits](next-stage-validation.md#remaining-work-and-decision-points)
-visible. After that trial, assess whether a stock-UI integration is worth
-the additional transcript/editor and rich-content work above.
+The receiver must implement mutable history, initially through our experimental
+[terminal host](../../examples/terminal-host/README.md). The
+[validation plan](next-stage-validation.md#remaining-work-and-decision-points)
+tracks subsequent integration choices and compatibility work.
 
-No Pi code was changed, dependencies installed, model requests made, or Pi
-tests run for this source investigation. That investigation established neither
-Pi runtime behavior nor upstream acceptance. The research checkout is local under
-`.tmp/pi-research`; the separate existing Pi checkout was left untouched.
+## Subsequent Experiments
 
-Follow-up: the [Pi session experiment](../../prototypes/integration/pi-session/README.md)
+The [Pi session experiment](../../prototypes/integration/pi-session/README.md)
 retains the synthetic replay and now runs the pinned Pi SDK with local fixtures
 and an opt-in OpenAI subscription source through ConPTY and the experimental
 xterm host. Finite browser evidence covers completion/search and cancellation;
 the record also preserves a model WebSocket failure and the explicit SSE choice.
-Stock UI compatibility and Pi producer backpressure remain unproven.
-This later experiment is separate from
-the read-only source investigation above.
 
-The subsequent [reading UX comparison](../../prototypes/integration/pi-session/ux/README.md)
+The [reading UX comparison](../../prototypes/integration/pi-session/ux/README.md)
 records three fixed paired scenarios using actual `InteractiveMode` as the
 regular baseline. It observes reading/selection differences for earlier-tool
-shrink and resize, but not tail streaming. Capturing that baseline is not
-integration of our protocol into Pi's stock UI, and the two frontends remain
-different in features and presentation.
+shrink and resize; both paths preserve reading during tail streaming. The
+comparison uses a simplified protocol frontend alongside Pi's regular UI.
 
 [main]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/main.ts#L736
 [runtime]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/agent-session-runtime.ts

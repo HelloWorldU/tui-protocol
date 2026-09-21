@@ -79,8 +79,7 @@ are measured findings, not pass criteria. The real-PTY test is separate from the
 default Node suite and is skipped outside Windows.
 
 Local verification passed the paired real-PTY integration test, type checking,
-and all 181 default Node tests. Browser checks were not rerun: this follow-up
-adds an isolated producer/probe and does not change the existing browser or bridge.
+and all 181 default Node tests.
 
 The parent closes the local measurement server and kills an unfinished child on
 failure. The standalone runner exits after flushing its report because node-pty
@@ -91,10 +90,8 @@ may retain background handles. No browser or listening TCP port is needed.
 The earlier browser experiment established consumption-credit-to-PTY-reader
 control; this follow-up establishes reader-to-producer waiting in isolation.
 The [composed follow-up](composed.md) now tests the larger workload through the
-browser and observes overlapping producer waiting. These are still **not an
-end-to-end bound or a guarantee for every TUI**.
+browser and observes overlapping producer waiting.
 
-Do not change SDK semantics or add Operation acknowledgements on this basis.
 The [stalled-consumer experiment](stalled.md) subsequently tested host-side
 termination; the [trial budgets](../../../docs/design/trial-resource-budgets.md)
 bound selected example queues and retained state. Total buffer ownership/size,

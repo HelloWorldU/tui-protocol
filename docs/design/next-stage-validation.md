@@ -1,36 +1,31 @@
 # From Controlled Experiments to Trial Use
 
-Working plan, updated 2026-09-21. Engineering judgments and priorities, not
-new protocol requirements or a release commitment. The [protocol drafts](../README.md)
-remain authoritative for agreed semantics.
+Working plan, updated 2026-09-21. This document tracks implementation evidence
+and engineering priorities. Agreed semantics are recorded in the
+[protocol drafts](../README.md).
 
 ## Current Assessment
 
 The codec, SDK, terminal Session, and experimental xterm renderer form an
 executable path. Fixed single-round and multi-round applications run through
-Windows bundled ConPTY. The pre-trial checklist below is implemented and has
-bounded test evidence; it does not establish production readiness, complete
-conformance, or general terminal compatibility.
+Windows bundled ConPTY. The pre-trial checklist below is implemented, with
+recorded tests for each item.
 
-The [read-only Pi assessment](pi-rendering-architecture.md) traces its rendering
-boundary and candidate interfaces. It recommends mapping one finite interaction
-through a separate Pi SDK frontend before considering a stock-UI integration
-or upstream change. The [Pi session experiment](../../prototypes/integration/pi-session/README.md)
-now connects the pinned Pi SDK and one read-only tool through SDK bytes, Windows
+Following the [Pi architecture assessment](pi-rendering-architecture.md), the
+[Pi session experiment](../../prototypes/integration/pi-session/README.md)
+connects the pinned Pi SDK and one read-only tool through SDK bytes, Windows
 ConPTY, and the experimental xterm host. Both local fixtures and a finite OpenAI
 subscription trial have browser evidence for completion/search and cancellation.
 The live source uses SSE after a recorded model WebSocket failure whose root
-cause remains unresolved. This is not the stock Pi UI or a general stability claim.
-Other terminals still need their own rendering/history integration; extracting
-a production xterm adapter is not a prerequisite for assessing an application.
+cause remains unresolved. The trial uses a separate plain-text frontend;
+Pi's editor and extension UI remain integration work. Other terminals need
+their own rendering/history integration.
 
 A separate [paired Pi reading comparison](../../prototypes/integration/pi-session/ux/README.md)
 uses fixed actual Pi sessions and captured pre-PTY output. Both frontends
 preserved reading during tail streaming. In the tested earlier-tool shrink and
 resize cases, the protocol frontend preserved reading/selection where Pi's
 regular frontend did not. Neither path showed duplication of the checked text.
-The simplified frontend is not feature-equivalent to Pi; this narrows the UX
-claim, not the remaining compatibility or long-session work.
 
 The [entered-prompt multi-round Pi frontend](../../prototypes/integration/pi-session/multi-round/README.md)
 completes the bounded third-stage interactive trial: one in-memory Pi
@@ -41,12 +36,11 @@ stop-after-turn hook avoids preparing another model request after tool
 cancellation; genuine errors still stop the connection. A separate
 [four-prompt subscription checkpoint](../../prototypes/integration/pi-session/multi-round/live-checkpoint.md)
 observed live context retention and assistant cancellation then continuation.
-This is a finite supporting-host frontend, not a production terminal or full Pi UI.
 
 ## Completed Work and Evidence
 
-The linked records own scenario details, measured values, commands, and limits.
-Dates describe recorded checkpoints, not tests rerun on every document edit.
+The linked records provide scenario details, measurements, commands, and
+limits for each dated checkpoint.
 
 | Work | Recorded result | Evidence |
 | --- | --- | --- |
@@ -58,11 +52,11 @@ Dates describe recorded checkpoints, not tests rerun on every document edit.
 | Producer waiting, 2026-09-17–18 | Synchronous writes waited during paused reading and overlapped the composed browser hold | [Isolated probe](../../prototypes/integration/pty-pressure/upstream.md), [composed run](../../prototypes/integration/pty-pressure/composed.md) |
 | Permanent consumer stall, 2026-09-19 | Stop forwarding, request child termination, observe exit, and fail the connection | [Stall experiment](../../prototypes/integration/pty-pressure/stalled.md) |
 
-These findings retain important distinctions: zero stdout drain events did not
-mean zero waiting; a high watermark is not a hard memory limit; stopping after
-partial rendering is not rollback. The anchored-Update policy is a terminal
-choice, and clamping below one screen does not preserve separate off-tail
-intent in the current renderer.
+The pressure experiments observed producer waiting even with zero stdout drain
+events, and queues could exceed their high watermark. After partial rendering
+failure, the host stops with the partial state retained. The anchored-Update
+experiment uses a terminal-chosen policy; below one screen of content, viewport
+clamping loses separate off-tail reading intent.
 
 ## Pre-trial Checklist Completed on 2026-09-19
 
@@ -76,17 +70,18 @@ intent in the current renderer.
    selected retained content, identity/replay structures, and owned pending
    input. Content overflow rejects atomically; identity/replay exhaustion stops
    execution rather than forgetting protocol meaning. Closed and evicted
-   records remain charged. These are opt-in local policies, not negotiated
-   limits, general reclamation, or total process-memory bounds.
+   records remain charged. Hosts opt into these local limits; total process
+   memory and reclamation still need separate handling.
 3. **Application failure handling.** [Lifecycle tests](../../examples/streaming-text/lifecycle.test.mjs)
    distinguish unsupported/silent startup negotiation from failure after
    protocol output starts. Tested runtime failures stop later sends without
-   fallback; cleanup restores input mode and removes handlers. Synthetic
-   streams are not OS-level input-mode fault tests.
+   fallback; cleanup restores input mode and removes handlers. These tests
+   inject failures through synthetic streams.
 4. **Content samples.** The [sample report](trial-content-samples.md) records
    seven Node and four browser cases for literal code, Chinese, long lines,
-   selected Unicode sequences, and unsupported Tab mapping. Stored Buffer
-   text is not evidence of glyph shaping or general Unicode interaction.
+   selected Unicode sequences, and unsupported Tab mapping. Assertions inspect
+   stored Buffer text and Session content; glyph shaping and native interaction
+   for these Unicode sequences need further tests.
 
 That checkpoint passed type checking, 224 Node tests, four affected browser
 builds, 73 browser endpoint scenarios, two single-round and two multi-round
@@ -99,20 +94,14 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 - **Pi integration scope:** the bounded entered-prompt trial above is complete.
   Next choose an actual coding workflow and explicit tool/file permissions before
   exposing project access, or assess stock-UI reuse if preserving Pi's editor,
-  Markdown, and extensions is the next priority. These are scope decisions, not
-  reasons to silently enable Pi's default tools in this read-only trial.
-  Stock UI/extension compatibility, a full fallback frontend, and maintainer
-  acceptance have not been established.
+  Markdown, and extensions is the next priority. A full fallback frontend and
+  an upstream proposal also remain future work.
 - **Capacity and retention:** partial-Block or unmanaged-row eviction, general
   snapshot reclamation, and long-session behavior remain open. Full-Block
-  eviction semantics are already [defined](../protocol/terminal-native-behavior.md#5-scrollback-capacity);
-  they do not need to be redesigned.
-- **Failure and pressure:** no automatic rollback/recovery, whole-process memory
-  bound, fairness guarantee, or general policy for slow-but-progressing consumers.
+  eviction follows the [existing semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity).
+- **Failure and pressure:** automatic rollback/recovery, whole-process memory
+  bounds, fairness, and a policy for slow-but-progressing consumers remain open.
   See the [host contract](../../terminal/README.md#host-adapter-boundary).
 - **Compatibility:** wider Unicode interaction, arbitrary terminal controls,
   Unix, SSH/tmux, and other terminals need targeted evidence from actual
   integration requirements.
-
-No new Operation, optional content type, stable API, npm publication, production
-adapter extraction, or milestone is required merely to assess the next workflow.

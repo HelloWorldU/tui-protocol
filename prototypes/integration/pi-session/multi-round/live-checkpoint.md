@@ -1,7 +1,6 @@
 # Finite live multi-round checkpoint
 
-Recorded 2026-09-21. This is evidence for the [entered-prompt frontend](README.md),
-not a general Pi compatibility or production-stability result.
+Recorded 2026-09-21 for the [entered-prompt frontend](README.md).
 
 ## Setup
 
@@ -31,12 +30,9 @@ control when the displayed report contained nonempty mutable assistant text;
 it did not start a prompt or infer cancellation merely from a click. Browser
 observations separately verified the aborted outcome and next ready state.
 
-## What this does not establish
+## Coverage
 
-This run verifies finite live follow-up and assistant-stream cancellation then
-continuation through this supporting host. Tool-time cancellation and native
-reading/selection/copy during subsequent output have separate deterministic
-browser evidence in the [main record](README.md#verification), not live evidence
-from this run. It does not establish provider reliability, other transports or
-terminals, long-session retention, OS clipboard behavior, stock Pi UI parity,
-or automatic recovery after genuine errors. No upstream Pi files were changed.
+The four live prompts exercised tool use, retained conversation, assistant-stream
+cancellation, and continuation. Tool-time cancellation and native
+reading/selection/copy during subsequent output were checked with the local
+deterministic provider in the [main record](README.md#verification).

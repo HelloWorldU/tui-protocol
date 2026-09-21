@@ -30,12 +30,11 @@ The counters surround `ingress.push()` and decrement when its Promise settles:
 While held, only the first Extend has reached Session commit and no fragment
 has rendered. After release, assertions check exact Session text and rendered
 rows, all Extends completed, zero outstanding counters, a following ordinary
-`DONE` line appearing once, and successful Seal/Context closure. This does not
-promise atomic agreement between Session and renderer during execution.
+`DONE` line appearing once, and successful Seal/Context closure. Session commit
+precedes rendering while the barrier is held; agreement is checked after drain.
 
-No sleep-based throughput target is used. The controlled stall isolates a queue
-property; it does not simulate a particular terminal speed or benchmark latency.
-The batch sizes are experiment fixtures, not selected limits or wire semantics.
+The controlled stall isolates queue growth. Batch sizes are experiment fixtures;
+latency and throughput are not measured.
 
 ## Observed results
 
@@ -49,8 +48,7 @@ Local run on 2026-09-16, pinned xterm 6.0, 80-by-8 viewport, 1000 scrollback row
 
 All nine runs drained and passed the final-state assertions. Larger numeric IDs
 change encoded lengths, so the peak bytes for an eight-write batch need not be
-those of the first held batch. This table is one bounded observation, not a
-capacity recommendation. The three parameterized regression tests compare all
+those of the first held batch. The three parameterized regression tests compare all
 three policies at each size and check their byte totals agree.
 Type checking and the full 179-test Node suite passed in the same checkout.
 
@@ -60,8 +58,8 @@ The current ingress can preserve these fragments in order while outstanding
 input grows with a burst. Waiting at this local boundary limits outstanding
 pushes in the tested arrangements; ordering alone does not provide such a limit.
 
-That is **not yet end-to-end backpressure**. The fixture's producer can directly
-await the terminal's local completion Promise; an external TUI cannot. The
+The fixture's producer can directly await the terminal's local completion
+Promise; an external TUI cannot. The
 [SDK callback](../../../sdk/src/client.ts) accepts bytes synchronously and an
 Operation ID means sent, not rendered. Making that callback `async` would not
 cause the current SDK to wait.
@@ -71,8 +69,7 @@ unbudgeted queue. The [trial resource policy](../../../docs/design/trial-resourc
 now bounds owned pending input in the terminal-host example and its mixed
 ingress. The separate [PTY pressure experiments](../pty-pressure/README.md)
 test optional bridge credits and pause/resume, including a producer-waiting
-follow-up. Neither addition turns this local comparison into evidence of a
-whole-process memory bound or changes the SDK's synchronous writer contract.
+follow-up.
 
 ## Run and limits
 
@@ -90,6 +87,4 @@ This checks one Block, finite Extend sequences, fixed ASCII layout, and normal
 completion after an artificial stall. It does not measure process memory,
 retained Session history, PTY/OS/WebSocket buffers, sustained throughput,
 browser responsiveness, native selection/search, eviction, or fault recovery.
-The xterm adapter still uses private APIs and experimental OSC 9002. No stable
-transport API, automatic rate control, or general terminal compatibility is
-established by these results.
+The xterm adapter uses private APIs and experimental OSC 9002.

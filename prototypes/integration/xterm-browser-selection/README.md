@@ -9,11 +9,10 @@ Seal.
 
 It composes the private history mechanism from the [xterm-headless
 prototype](../../xterm-headless/README.md) with the public selection and copy
-surface of browser-hosted `@xterm/xterm` 6.0.0. The wrapper and its use of
-private xterm.js Buffer internals are experimental fixtures, not a proposed
-Terminal integration API.
+surface of browser-hosted `@xterm/xterm` 6.0.0. Its experimental wrapper accesses
+private xterm.js Buffer internals.
 
-## Proven
+## Observed Behavior
 
 - In one browser scenario, selecting text in a later Block and growing an
   earlier Block moves the selection to the later Block's new physical rows.
@@ -22,7 +21,7 @@ Terminal integration API.
 - In one browser scenario, a complete `Update` of the selected Block clears
   both its visible selection and subsequent copy source.
 
-These scenarios provide narrow experimental evidence for the complete
+These scenarios check the complete
 `Update` rules in [Terminal-Native
 Behavior](../../../docs/protocol/terminal-native-behavior.md#7-selection-and-copying).
 
@@ -48,9 +47,8 @@ The browser run further demonstrates that:
   selected text.
 
 The browser fixture converts each tested selection to a Block ID and ASCII
-display-projection offsets before resize, then reconstructs physical selection coordinates
-after xterm.js reflow. This is a tested implementation fixture, not a proposed
-Terminal integration design.
+display-projection offsets before resize, then reconstructs physical selection
+coordinates after xterm.js reflow.
 
 The browser run also demonstrates both sides of the tested capacity boundary:
 
@@ -77,66 +75,40 @@ These cases exercise one single-line ASCII selection and do not require a
 special logical remapping because none of the Operations replaces the selected
 content.
 
-The selection wrapper is also composed by the [browser protocol endpoint
-prototype](../xterm-browser-protocol-endpoint/README.md). Its protocol-only path
-exercises two ASCII adjacent-managed-Block copy fixtures, one with and one
-without an existing trailing line break, and one Append-driven capacity fixture
-whose trim exactly matches one complete leading managed Block containing the
-selection. Its raw mixed-ingress path exercises twelve more printable-ASCII
-fixtures: seven single-boundary-crossing Operation fixtures at `20` columns,
-one exact-tail Extend fixture, one two-boundary Extend fixture with two soft
-wraps, one `20`-to-`10`-to-`20`-column resize round trip, and two capacity
-fixtures whose trim exactly matches one complete leading managed Block. These
-scenarios are not part of this standalone browser run.
+## Composed Endpoint Checks
 
-The endpoint's [plain-text scenarios](../xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
-also exercise normalized multiline copy through reflow, fully selected Tab
-copy through reflow, a Tab/control prefix retained by Extend and ReplaceSuffix,
-and one Tab-containing mixed selection. This wrapper now uses the shared
-[plain-text projection](../../xterm-headless/plain-text.ts) for logical selection
-mapping and a [copy handler](plain-text-copy.ts) for the copy-event payload.
-`getSelection()` remains xterm's displayed text, not the Tab-preserving payload.
-See the [endpoint record](../xterm-browser-protocol-endpoint/README.md) for the
-fixture choices, partial-Tab evidence, and remaining Unicode and rectangular-selection
-boundaries.
+The [browser protocol endpoint](../xterm-browser-protocol-endpoint/README.md)
+reuses this wrapper with OSC bytes and Session execution. Its record owns the
+additional adjacent-Block, mixed-output, and Append-driven eviction results.
+Further projection checks live in:
 
-The same endpoint's [capacity fixtures](../xterm-browser-protocol-endpoint/scenarios/capacity.ts)
-also exercise Tab-preserving copy when projected text growth evicts an earlier
-complete Block, and copy-source clearing when it evicts the selected Block.
-These additional cases do not change this standalone page's scenario count.
+- [Plain text](../xterm-browser-protocol-endpoint/scenarios/plain-text.ts):
+  normalized newlines, complete and partial Tabs, visible controls, and reflow.
+- [Projected-text capacity](../xterm-browser-protocol-endpoint/scenarios/capacity.ts):
+  retained Tab copy and evicted selection clearing.
+- [Chinese/Tab selection](../xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts):
+  two-cell ideographs, whole-character endpoints, resize, and content changes.
+- [Chinese Update eviction](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts),
+  [Chinese Append eviction](../xterm-browser-protocol-endpoint/scenarios/chinese-append-capacity.ts),
+  and [Chinese/ordinary mixed output](../xterm-browser-protocol-endpoint/scenarios/chinese-mixed-selection.ts).
 
-The endpoint's [Chinese/Tab fixtures](../xterm-browser-protocol-endpoint/scenarios/plain-text-chinese.ts)
-also exercise basic-CJK selection/copy through resize and subsequent Operations.
-The shared wrapper maps two-cell ideographs and expands interior selection
-endpoints to whole characters; a partial Tab still copies only its selected
-spaces. See the endpoint record for the pinned width profile and tested sizes.
+The wrapper uses the shared [plain-text projection](../../xterm-headless/plain-text.ts)
+for logical selection mapping and a [copy handler](plain-text-copy.ts) for the
+copy payload. `getSelection()` exposes displayed text; copying reconstructs
+fully selected Tabs, while partial Tabs contribute only selected spaces.
 
-The endpoint additionally tests [Chinese Update-driven eviction](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts),
-[Chinese Append-driven eviction](../xterm-browser-protocol-endpoint/scenarios/chinese-append-capacity.ts),
-and [Chinese/Tab selection crossing ordinary ASCII output](../xterm-browser-protocol-endpoint/scenarios/chinese-mixed-selection.ts).
-Those cases preserve retained copy sources and clear evicted or replaced ones;
-the mixed case includes a `20`-to-`9`-to-`20` resize round trip. They do not
-change the standalone page's eleven-scenario count.
+## Scope and Limits
 
-## Not Proven
+This standalone page runs eleven ASCII scenarios by applying Operations directly
+to the history fixture. Selection and synthetic copy events exercise xterm's
+browser surface; physical mouse dragging, the OS clipboard, accessibility, and
+cross-browser behavior remain untested.
 
-- Mouse-driven selection, the operating-system clipboard, accessibility
-  selection, and cross-browser behavior are not exercised.
-- Mixed-boundary resize/reflow is limited to the listed ASCII and Chinese
-  round trips. Mixed capacity evidence is limited to
-  trimming exactly one complete leading managed Block and does not exercise a
-  trim that reaches unmanaged rows.
-- Unicode beyond the listed Chinese fixture, embedded line breaks within
-  either side of a mixed selection, and
-  dimensions and positions beyond the listed fixtures remain untested.
-- Partial-Block capacity eviction remains outside the selection experiment. The
-  standalone browser run does not exercise Append-driven eviction; the composed
-  endpoint covers only the listed exact complete-leading-Block fixtures.
-- Beyond the composed endpoint's basic-CJK fixtures, wide, combining, and other
-  non-ASCII selection mapping is not implemented. The standalone page still
-  exercises its original eleven ASCII scenarios.
-- The experiment applies Block Operations directly to the history fixture. It
-  does not compose the OSC codec or protocol Session.
+The wrapper maps ASCII and the composed endpoint's basic-CJK fixtures. Other
+wide characters, combining sequences, and broader Unicode mapping are not
+implemented. Capacity evidence covers exact complete-leading-Block eviction;
+partial-Block and unmanaged-row trimming remain outside these checks. The
+endpoint record specifies the tested mixed-output dimensions and line boundaries.
 
 ## Run
 

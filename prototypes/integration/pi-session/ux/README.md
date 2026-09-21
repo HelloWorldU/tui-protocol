@@ -13,8 +13,7 @@ adapter, [SDK](../../../../sdk/README.md), and experimental
 [xterm endpoint](../../xterm-protocol-endpoint/README.md) with
 [selection/copy](../../xterm-browser-selection/README.md) and
 [search](../../xterm-browser-search/README.md). It tests the existing
-[terminal-native behavior](../../../../docs/protocol/terminal-native-behavior.md),
-not new protocol requirements.
+[terminal-native behavior](../../../../docs/protocol/terminal-native-behavior.md).
 
 ## Controlled setup
 
@@ -22,20 +21,17 @@ not new protocol requirements.
   and two fixed, read-only sample tools. No live model, credentials, repository
   files, shell tools, extensions, or persistent session storage are used.
 - Pi's own `InteractiveMode` and regular renderer produce the baseline drawing
-  commands. The trial supplies its public Terminal interface; it does not
-  reimplement the renderer. Tool views are expanded before the turn so neither
-  side truncates the tool text. This is an explicit UI setting, not the default
-  collapsed-tool comparison.
+  commands through its public Terminal interface. Both sides show expanded tool
+  views, selected before the turn, so neither truncates the tool text.
 - Both outputs reach xterm.js 6.0.0, initially 60 columns by 12 rows with 2,000
   scrollback rows. The protocol side uses our experimental history adapter.
   Private loopback WebSocket controls and isolated workers capture output
   **before PTY**. This comparison does not retest ConPTY, CLI keyboard parsing,
   startup terminal negotiation, or transport chunk boundaries.
 - Fixture gates pause generation/tool completion until the browser has placed
-  its reading position and selection. They make the observation repeatable;
-  they are not producer backpressure or a realistic timing distribution. The
-  streaming continuation is a finite burst of 18 line fragments, not a sustained
-  high-frequency workload.
+  its reading position and selection, making the observation repeatable.
+  Streaming then continues in a burst of 18 line fragments. Timing is controlled
+  by the fixture rather than sampled from normal use.
 - The full ordered presentation-event traces must match. `semantic-trace.ts`
   retains message content, tool identities/results, lifecycle, and errors. It
   omits timestamps and duplicated aggregate history at `agent_end`, whose system
@@ -78,21 +74,17 @@ terminal's copy event with an in-memory clipboard sink, not the operating
 system clipboard. Viewport checks read the real browser xterm buffer after
 queued output settles; they do not measure transient flicker between frames.
 
-**Interpretation:** this paired experiment supplies bounded evidence of a
-reading/selection benefit in two conditions. It did not reproduce duplicate
-scrollback in Pi and does not justify claiming that all historical-output bugs
-are solved. The regular renderer's
+**Interpretation:** the protocol frontend preserved reading and selection in
+the shrinking-tool and resize scenarios where the regular frontend lost them.
+Neither frontend duplicated the checked content. The regular renderer's
 [redraw paths](https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/tui/src/tui-main-screen.ts)
 are consistent with the observed selection/viewport loss; this is not a
 separate causal isolation of every renderer decision.
 
-Our frontend still omits the native editor/footer, styled Markdown, folding,
-and extension UI. Thus the comparison is not feature-equivalent, a performance
-benchmark, a fullscreen-mode comparison, or evidence of production reliability.
-It does not show that a protocol change is the only possible way to improve Pi.
-The [earlier live ConPTY trial](../README.md#live-checkpoint-2026-09-20) remains
-separate evidence; this experiment must not be described as three live-model
-or full CLI end-to-end tests.
+The comparison is limited to these reading tasks: our frontend omits the native
+editor/footer, styled Markdown, folding, and extension UI. Fullscreen mode and
+performance are untested. The [earlier live ConPTY trial](../README.md#live-checkpoint-2026-09-20)
+records the separate live-model and PTY path.
 
 ## Run and verification
 
@@ -111,19 +103,18 @@ The page displays all six observations. Protocol expectations and equal event
 traces are assertions; baseline differences are recorded outcomes, not assumed
 failures. Worker exit and temporary-directory cleanup must be confirmed before
 starting the next frontend. Local deadlines and queue budgets contain this
-finite fixture; they are not general resource guarantees.
+finite fixture.
 
 Recorded validation on 2026-09-21: type checking, 36 focused Pi Node tests,
 all 260 Node tests, and the Pi UX/search/composed-endpoint browser builds passed.
 Browser runs verified the three paired scenarios, 12 standalone search cases,
 and the existing 73 composed endpoint cases. Builds retain the existing large
-xterm bundle warning. Test counts describe executed cases, not complete coverage.
+xterm bundle warning.
 
 `fixture.ts` owns the fixed provider/tools, `capture-terminal.ts` the baseline
 I/O interface, `worker.ts` frontend composition, and `server.ts` isolated local
 workers. `browser-host.ts` connects the browser terminal and records native
-state; `browser.ts` defines the three paired checks. No upstream Pi source,
-core protocol, or reusable terminal module is modified by this trial.
+state; `browser.ts` defines the three paired checks.
 
 The combined search-then-manual-selection check initially failed on our side:
 resize restored the previous search result instead of preserving the user's

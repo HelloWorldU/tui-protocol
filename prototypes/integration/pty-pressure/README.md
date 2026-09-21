@@ -10,9 +10,9 @@ It composes a built [SDK](../../../sdk/README.md) application,
 the [bundled-ConPTY bridge](../pty-demo/README.md), and the existing
 [xterm mixed ingress](../xterm-protocol-endpoint/README.md).
 
-This prototype adds **local bridge controls**, not terminal protocol Messages,
-Operation acknowledgements, or a stable flow-control API. Existing examples do
-not enable this optional bridge behavior.
+This prototype uses opt-in **local bridge controls** for consumption credits.
+They operate independently of protocol Messages and Operation outcomes.
+Normal application examples leave them disabled.
 
 ## Workload and accounting
 
@@ -21,7 +21,7 @@ distinct ASCII labels and 2048 repeated characters, Seals, and explicitly closes
 the Context. Its synchronous SDK writer calls Node stdout; if a write returns
 false, the application waits for `drain` before sending the next Operation.
 It reports how often that path was used and, since the 2026-09-18 follow-up,
-the longest synchronous write duration. There is no LLM or arbitrary child command.
+the longest synchronous write duration.
 The [composed follow-up](composed.md) selects a larger fixed workload and a
 two-second browser hold using the same implementation.
 The [stalled-consumer check](stalled.md) holds it indefinitely and verifies
@@ -64,20 +64,15 @@ reached zero. The first recorded run reported:
 - **zero producer stdout drain waits**.
 
 Chunking and counts can vary between runs; the check does not require these exact
-numbers. Zero sampled WebSocket bytes is not proof that all network buffers were
-empty. More importantly, zero producer drain waits means this run **does not
-demonstrate pressure propagating all the way to the application**. It establishes
-the browser-to-PTY-reader control path and correct finite completion, not a
-bounded end-to-end pipeline or a measured throughput improvement.
-Counting drain events also does not determine whether a synchronous TTY write
-itself was delayed; that browser run did not measure producer-side timing.
-The [upstream follow-up](upstream.md) now compares normal and paused ConPTY
-reading with independent producer progress and write-duration measurements.
-It observes synchronous waiting in isolation, not a complete pipeline bound.
-The subsequent [composed measurement](composed.md) observes producer waiting
-overlapping a browser hold in the larger workload; it still establishes no
-hard pipeline memory bound.
-Do not infer a need for new protocol acknowledgements from these results alone.
+numbers. The run demonstrates the browser-to-PTY-reader control path and finite
+completion. Producer waiting remained unresolved: there were no drain waits,
+and synchronous write duration had not yet been measured. Zero sampled
+WebSocket bytes also leaves buffering elsewhere unmeasured.
+
+The [upstream follow-up](upstream.md) compares normal and paused ConPTY reading
+with independent producer progress and write-duration measurements. The
+[composed measurement](composed.md) then observes producer waiting overlapping
+a browser hold in the larger workload. Total pipeline memory remains unmeasured.
 
 ## Run and verification
 
@@ -110,4 +105,4 @@ This is one finite ASCII workload in a fixed 40-by-8 browser terminal using
 experimental OSC 9002 and private xterm APIs. It does not validate general
 Unicode, eviction, clipboard/search, a stalled renderer's recovery, malformed
 peer behavior over a real socket, long-running memory use, other terminals,
-Unix, SSH, or tmux. No SDK or protocol semantics are changed.
+Unix, SSH, or tmux.

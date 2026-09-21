@@ -2,11 +2,10 @@
 
 This directory retains the original experiment record. Implementation, adapter
 interface, and tests now live in [the terminal module](../../../terminal/README.md),
-under `terminal/src/endpoint.ts` and `terminal/test/endpoint.test.ts`. The evidence
-below describes these Endpoint checks, not every downstream integration.
+under `terminal/src/endpoint.ts` and `terminal/test/endpoint.test.ts`.
 Later [resource-budget checks](../../../docs/design/trial-resource-budgets.md)
 and [fatal-stop behavior](../../../terminal/README.md#host-adapter-boundary)
-are recorded separately; the exclusions below describe this original experiment.
+are recorded separately.
 
 This integration prototype asks whether the existing reference codec and
 protocol session can form one deterministic terminal-side path from incoming
@@ -20,7 +19,7 @@ It composes:
 - the [protocol session](../../protocol-session/README.md), which implements
   the current Capability, Context, Block Operation, and error semantics.
 
-## Proven
+## Observed Behavior
 
 - A tested Capability query split across two incoming writes is decoded,
   executed, encoded as a response, and decoded back to the expected supported
@@ -65,10 +64,8 @@ It composes:
   used by the xterm mixed-stream experiment; neither seam creates a new wire
   Message.
 
-## Experimental Boundaries
+## Setup and Host Responsibilities
 
-- The exported TypeScript API is an integration harness, not a stable Terminal
-  or SDK interface.
 - The optional terminal Operation adapter is a synchronous experimental
   execution boundary. Its preparation step can reject an Operation before
   Session commit, and its accept step runs only after a successful commit. It
@@ -88,13 +85,14 @@ It composes:
 - Session state is observed through in-memory snapshots and is not connected
   to a Terminal renderer or history implementation.
 
-## Not Proven
+## Scope
 
-- Integration with a real terminal parser, PTY, multiplexer, remote transport,
-  renderer, scrollback, reflow, or reading-anchor implementation.
-- Backpressure, partial response writes, concurrency, timeouts, authentication,
-  reset behavior, or resource failures outside existing framing limits.
-- A stable public API or compatibility with future protocol versions.
+These checks feed protocol bytes directly into the Endpoint and observe encoded
+responses, adapter calls, and Session state. The
+[xterm integration](../xterm-protocol-endpoint/README.md) supplies rendered-history
+evidence; the [PTY probe](../pty-transport/README.md) tests a real process boundary.
+Backpressure, partial response writes, timeouts, and authentication require
+transport and host policies beyond this original experiment.
 
 ## Run
 

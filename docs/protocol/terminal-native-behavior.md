@@ -205,13 +205,13 @@ Experiment records own the exact scenarios and implementation limitations:
   [input](../../prototypes/integration/xterm-browser-input-state/README.md)
   experiments isolate those native capabilities.
 - [Plain text](plain-text.md#experimental-evidence) links projection tests;
-  [trial content samples](../design/trial-content-samples.md) add Buffer-text
-  evidence without claiming general Unicode selection, search, or shaping.
+  [trial content samples](../design/trial-content-samples.md) check stored
+  Buffer text across content changes and resize.
 
-These fixtures are not complete conformance or cross-terminal evidence. The
-xterm path uses private APIs and narrow ASCII/basic-CJK mappings. Partial-Block
-or unmanaged-row eviction, arbitrary native controls, real IME and OS clipboard
-behavior, and general renderer failure atomicity remain unproven.
+The fixtures use the experimental xterm path with private APIs and narrow
+ASCII/basic-CJK mappings. Partial-Block or unmanaged-row eviction, arbitrary
+native controls, real IME and OS clipboard behavior, general renderer failure
+atomicity, and cross-terminal conformance need further validation.
 
 ## Current Scope
 

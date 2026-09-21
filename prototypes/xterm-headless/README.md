@@ -9,7 +9,7 @@ The spike deliberately uses OSC 777 with a JSON payload. Both the identifier
 and encoding are temporary test fixtures, not the subsequently selected OSC
 carrier and Base64 framing.
 
-## Proven
+## Observed Behavior
 
 - xterm.js can register a custom OSC handler through its proposed parser API
   when `allowProposedApi` is enabled.
@@ -39,8 +39,7 @@ Operations, but it cannot replace rows already stored in xterm.js scrollback.
 It therefore does not render Block content into the xterm buffer.
 
 `private-core-history.ts` separately reaches through xterm.js private fields to
-test the missing mutation. This is intentional prototype scaffolding, not an
-API recommendation. It uses xterm.js markers as a resize-aware Block range
+test the missing mutation. It uses xterm.js markers as a resize-aware Block range
 index. Its internal Extend and ReplaceSuffix projections are exercised by the
 separate
 [xterm protocol endpoint integration](../integration/xterm-protocol-endpoint/README.md)
@@ -48,8 +47,7 @@ and currently materialize the resulting complete Block range.
 `private-core-osc-addon.ts` connects the older temporary OSC transport through
 a deferred Operation queue.
 
-The parser hook is also gated by `allowProposedApi` in xterm.js 6.0.0, so the
-integration is suitable for a spike but not yet a stable compatibility layer.
+The parser hook is also gated by `allowProposedApi` in xterm.js 6.0.0.
 
 A real terminal experiment will need a narrow xterm.js core hook that lets the
 terminal associate logical Blocks with buffer content and re-layout affected
@@ -79,9 +77,7 @@ This suggests a narrow core experiment adjacent to `BufferService`, not a
 general mutable public Buffer API. The Block store should remain the semantic
 source of truth; xterm.js `BufferLine`s are its current materialization.
 
-This is an implementation finding, not yet a protocol requirement. The private
-experiment now provides a concrete test case against which a narrow core API
-can be designed.
+The private experiment provides a concrete test case for this proposed core API.
 
 ## Current Private-Core Limits
 
@@ -128,17 +124,10 @@ can be designed.
   without restoring it by the [composed endpoint](../integration/xterm-protocol-endpoint/README.md#eviction-and-unrecoverable-rendering-failure). The composed
   Session also retains the logical snapshot after this private range index
   drops rendered rows.
-- Browser rendering and selection behavior are not exercised by headless
-  tests. The separate [browser selection
-  experiment](../integration/xterm-browser-selection/README.md) exercises
-  complete-Update, single-line ASCII ReplaceSuffix, and two resize/reflow
-  selection scenarios for that boundary in browser-hosted xterm.js. It also
-  covers both selection outcomes when the tested capacity path evicts one
-  complete oldest Block and selection preservation across Extend, Append, and
-  Seal. A separate [browser search
-  experiment](../integration/xterm-browser-search/README.md) checks Search
-  behavior across Block Operations, resize/reflow, and the same tested
-  complete-Block capacity boundary.
+- Headless tests observe Buffer state. The separate [browser selection
+  experiment](../integration/xterm-browser-selection/README.md) and [browser search
+  experiment](../integration/xterm-browser-search/README.md) exercise native
+  interaction across Operations, reflow, and complete-Block eviction.
 
 ## Run
 
