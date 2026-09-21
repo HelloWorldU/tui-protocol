@@ -1,6 +1,6 @@
 # From Controlled Experiments to Trial Use
 
-Working plan, updated 2026-09-20. Engineering judgments and priorities, not
+Working plan, updated 2026-09-21. Engineering judgments and priorities, not
 new protocol requirements or a release commitment. The [protocol drafts](../README.md)
 remain authoritative for agreed semantics.
 
@@ -23,6 +23,14 @@ The live source uses SSE after a recorded model WebSocket failure whose root
 cause remains unresolved. This is not the stock Pi UI or a general stability claim.
 Other terminals still need their own rendering/history integration; extracting
 a production xterm adapter is not a prerequisite for assessing an application.
+
+A separate [paired Pi reading comparison](../../prototypes/integration/pi-session/ux/README.md)
+uses fixed actual Pi sessions and captured pre-PTY output. Both frontends
+preserved reading during tail streaming. In the tested earlier-tool shrink and
+resize cases, the protocol frontend preserved reading/selection where Pi's
+regular frontend did not. Neither path showed duplication of the checked text.
+The simplified frontend is not feature-equivalent to Pi; this narrows the UX
+claim, not the remaining compatibility or long-session work.
 
 ## Completed Work and Evidence
 

@@ -45,7 +45,9 @@ Those fixtures omit unused fields and are not a full Pi compatibility test.
 | `checks.html`, `checks.ts` | Run two browser scenarios against fresh child/terminal instances. |
 
 Pi-specific dependencies and policy stay here, outside the generic SDK. This
-is neither a published adapter nor a stock Pi extension.
+is neither a published adapter nor a stock Pi extension. The separate
+[reading UX comparison](ux/README.md) uses fixed actual Pi sessions to compare
+three reading/selection scenarios against Pi's regular frontend.
 
 ## Trial mapping
 
@@ -130,9 +132,9 @@ bound or upstream flow-control mechanism. Abort cannot recall already sent
 Operations. No unbounded application event queue is introduced.
 
 Dependencies are isolated in this private workspace package and pinned in the
-lockfile. Initial installation used `pnpm install --ignore-scripts`; there is
-no global Pi installation. Workspace release-age exceptions name only the six
-pinned Pi 0.86.1 packages. The trial has a separate TypeScript project with
+lockfile. Initial installation used `pnpm install --ignore-scripts`; this
+experiment does not require a global Pi installation. Workspace release-age
+exceptions name only the six pinned Pi 0.86.1 packages. The trial has a separate TypeScript project with
 `skipLibCheck` for upstream declaration issues (NodeNext JSON imports and an
 optional MCP declaration dependency). Our source remains strictly checked
 against the installed SDK; the other repository projects keep their existing

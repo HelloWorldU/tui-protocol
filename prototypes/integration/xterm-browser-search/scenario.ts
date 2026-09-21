@@ -2,6 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 
 import { BrowserSearchHistory } from "./search-history.ts";
+import { manualSelectionAfterSearch } from "./manual-selection.ts";
 import "./style.css";
 
 interface ScenarioResult {
@@ -30,6 +31,8 @@ try {
     await runEarlierBlockReflowSearchScenario(),
     await runRetainedCapacitySearchScenario(),
     await runEvictedCapacitySearchScenario(),
+    await manualSelectionAfterSearch("resize"),
+    await manualSelectionAfterSearch("update"),
   ];
   reportPassed(results);
 } catch (error) {

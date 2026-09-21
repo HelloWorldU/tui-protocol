@@ -48,11 +48,19 @@ earlier Block preserves a retained current match, while evicting the Block
 containing the current match clears it. Text in retained Blocks remains
 searchable.
 
+Two additional cases cover a manual selection made after a search. Resize and
+an earlier Block's Update preserve that later selection and its copy payload,
+rather than restoring the previous search result. Explicit find-next still
+works. The [Pi reading comparison](../pi-session/ux/README.md) exposed this
+missing ownership check: the fixture previously treated any selection as its
+last search match. It now compares the selected text and endpoints before
+restoring a search. These cases do not cover every selection/search UX.
+
 The [browser endpoint's plain-text fixtures](../xterm-browser-protocol-endpoint/scenarios/plain-text.ts)
 separately demonstrate that a visible ESC label is searchable and copies as
 that label, while its raw control sequence is not found. The search addon sees
 the terminal's display projection, not Session's raw text. Those fixtures are
-not part of this standalone ten-scenario run; literal-Tab queries and general
+not part of this standalone twelve-scenario run; literal-Tab queries and general
 Unicode search mapping remain untested beyond the composed cases below.
 
 Four [Chinese search scenarios](../xterm-browser-protocol-endpoint/scenarios/chinese-search.ts)
@@ -70,7 +78,7 @@ run through the composed OSC endpoint, not this standalone page. They check:
 
 These cases use the [basic-CJK width fixture](../xterm-browser-protocol-endpoint/README.md).
 They do not establish general Unicode search behavior or a protocol navigation
-policy. The standalone page still reports ten scenarios.
+policy. The standalone page reports twelve scenarios.
 
 Two additional [composed Chinese capacity cases](../xterm-browser-protocol-endpoint/scenarios/chinese-capacity.ts)
 check an Update evicting one complete two-row Chinese/Tab Block at `8` columns,

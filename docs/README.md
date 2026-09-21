@@ -25,6 +25,7 @@ here.
 | [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan; completed checkpoints and remaining trial work |
 | [Pi rendering architecture](design/pi-rendering-architecture.md) | Upstream architecture research and integration assessment | Read-only source trace; trial evidence linked separately |
 | [Pi session integration](../prototypes/integration/pi-session/README.md) | Application integration experiment | Local fixtures and finite OpenAI subscription trial through ConPTY/xterm; completion, search, cancellation, and recorded transport failure |
+| [Pi reading UX comparison](../prototypes/integration/pi-session/ux/README.md) | Paired application/renderer experiment | Three fixed scenarios; regular Pi vs experimental protocol frontend, captured before PTY |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |

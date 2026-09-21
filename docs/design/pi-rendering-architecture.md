@@ -182,6 +182,13 @@ Stock UI compatibility and Pi producer backpressure remain unproven.
 This later experiment is separate from
 the read-only source investigation above.
 
+The subsequent [reading UX comparison](../../prototypes/integration/pi-session/ux/README.md)
+records three fixed paired scenarios using actual `InteractiveMode` as the
+regular baseline. It observes reading/selection differences for earlier-tool
+shrink and resize, but not tail streaming. Capturing that baseline is not
+integration of our protocol into Pi's stock UI, and the two frontends remain
+different in features and presentation.
+
 [main]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/main.ts#L736
 [runtime]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/agent-session-runtime.ts
 [sdk-source]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/sdk.ts#L368

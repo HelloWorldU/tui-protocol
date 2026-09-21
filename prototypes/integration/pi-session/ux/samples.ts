@@ -1,0 +1,11 @@
+export const HISTORY_MARK = "HISTORY-08";
+export const LATER_MARK = "LATER-08";
+export const PROGRESS_MARK = "PROGRESS-08";
+export const numbered = (prefix: string, count: number) => Array.from({ length: count }, (_, i) => `${prefix}-${String(i).padStart(2, "0")} fixed readable text with extra words for narrow-window reflow.`).join("\n");
+export const PROMPT = `Read both fixed samples.\n${numbered("HISTORY", 24)}\nREFLOW: alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau.`;
+export const INITIAL = numbered("STREAM", 18);
+export const CONTINUATION = `\n${numbered("CONTINUE", 18)}`;
+export const PROGRESS = numbered("PROGRESS", 20);
+export const LATER = numbered("LATER", 20);
+export const SUMMARY = "SUMMARY: first sample complete.";
+export const FINAL = "FINAL: both fixed samples complete.";

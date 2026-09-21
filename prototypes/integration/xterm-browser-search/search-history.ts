@@ -15,6 +15,7 @@ export class BrowserSearchHistory {
   readonly #history: BrowserSelectionHistory;
   #search = new SearchAddon();
   #currentTerm: string | undefined;
+  #currentMatch: string | undefined;
 
   constructor(terminal: Terminal) {
     this.#terminal = terminal;
@@ -50,7 +51,8 @@ export class BrowserSearchHistory {
 
   findNext(term: string): boolean {
     const found = this.#search.findNext(term);
-    this.#currentTerm = term;
+    this.#currentTerm = found ? term : undefined;
+    this.#currentMatch = found ? this.#selectionKey() : undefined;
     return found;
   }
 
@@ -82,12 +84,23 @@ export class BrowserSearchHistory {
     const matchSurvived = this.#terminal.hasSelection();
     this.#resetSearch();
     if (matchSurvived && currentTerm !== undefined) {
-      this.#search.findNext(currentTerm);
+      this.findNext(currentTerm);
+    } else {
+      this.#currentTerm = undefined;
+      this.#currentMatch = undefined;
     }
     this.#refresh();
   }
 
   #selectedSearchTerm(): string | undefined {
-    return this.#terminal.hasSelection() ? this.#currentTerm : undefined;
+    // A user selection made since findNext is not owned by the old search.
+    return this.#currentMatch !== undefined && this.#selectionKey() === this.#currentMatch
+      ? this.#currentTerm : undefined;
+  }
+
+  #selectionKey(): string | undefined {
+    const position = this.#terminal.getSelectionPosition();
+    if (!position || !this.#terminal.hasSelection()) return undefined;
+    return JSON.stringify({ position, text: this.#terminal.getSelection() });
   }
 }

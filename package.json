@@ -9,6 +9,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prototype:pi-ux": "vite --config prototypes/integration/pi-session/ux/vite.config.ts",
+    "build:pi-ux": "vite build --config prototypes/integration/pi-session/ux/vite.config.ts --outDir ../../../../.tmp/pi-ux-dist --emptyOutDir",
     "prototype:pi-live": "vite --config prototypes/integration/pi-session/vite.config.ts --mode live",
     "prototype:pi-host": "vite --config prototypes/integration/pi-session/vite.config.ts",
     "build:pi-host": "vite build --config prototypes/integration/pi-session/vite.config.ts --outDir ../../../.tmp/pi-host-dist --emptyOutDir",

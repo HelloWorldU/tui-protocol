@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Pi reading UX comparison</title>
+<style>
+body { font: 16px system-ui; margin: 24px; background: #f5f6f8; color: #17202b; }
+button { padding: 10px 16px; margin: 4px; } pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+#terminal { padding: 12px; background: #111; width: fit-content; }
+table { border-collapse: collapse; } th, td { border: 1px solid #aab; padding: 8px; text-align: left; }
+</style>
+<h1>Pi reading UX comparison</h1>
+<p>Pi 0.86.1: actual regular InteractiveMode vs the experimental plain-text protocol frontend.
+Fixed local model and two read-only fixture tools. No live model, credentials, project files, or shell tools.</p>
+<p>Controlled transport captures output before PTY. This is not a full CLI/ConPTY test or an equivalent-feature UI comparison.</p>
+<button id="run">Run three paired scenarios</button>
+<p id="status">Not run</p><div id="terminal"></div>
+<h2>Expected vs observed</h2><div id="results"></div>
+<details><summary>Recorded observations and transcript checks</summary><pre id="evidence"></pre></details>
+<script type="module" src="./browser.ts"></script></html>
