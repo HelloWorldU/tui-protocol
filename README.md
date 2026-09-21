@@ -28,37 +28,27 @@ protocol.
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
+- [Documentation home](docs/index.md)
 - [RFC 0001: Mutable Terminal History and Reading Anchors](docs/rfcs/0001-mutable-terminal-history-and-reading-anchors.md)
 - [Prior art and project evidence](docs/prior-art.md)
 
-## The problem
+## Run an example
 
-Applications manage meaningful content with an identity and a lifecycle;
-traditional terminal interaction primarily expresses character output and
-screen operations. The terminal does not generally receive the information
-needed to distinguish a revision of existing content from a redraw of rows.
+Try a simulated Agent that revises earlier content in an experimental
+xterm-based terminal host. No model account is required.
 
-This mismatch becomes more visible as interactions remain active and content
-changes over time. Updating earlier output without duplicating history, or
-preserving a user's reading position while content changes, are manifestations
-of that gap—not separate problems to solve with another redraw algorithm.
+On Windows with Node.js 24+ and pnpm installed, run from the repository root:
 
-We want applications to express what content changes, while terminals decide
-how to present it without giving up their native capabilities. The
-[RFC](docs/rfcs/0001-mutable-terminal-history-and-reading-anchors.md) develops
-this responsibility boundary and its initial scope.
+```sh
+pnpm install
+pnpm example:multi-round
+```
 
-## Goals
+Open <http://127.0.0.1:4178/>, choose **Connect application**, wait for
+`[ready]`, then choose **Next round**. Scroll back, select/copy text, or search
+while content changes. Stop the server with Ctrl+C.
 
-The project explores whether a terminal protocol can provide all three of
-these properties together:
-
-1. Preserve terminal-owned scrollback and the native terminal capabilities
-   built around it.
-2. Update or reflow dynamic content after it has left the active screen.
-3. Keep the user's reading position anchored to logical content when output
-   continues or content above it changes.
+See the [example guide](examples/multi-round/README.md) for details and limits.
 
 ## License
 

@@ -4,6 +4,9 @@ This directory is the authoritative index for project documentation. The
 repository README is a short introduction; design reasoning and research live
 here.
 
+For an introduction and grouped reading entry points, start with the
+[documentation home](index.md).
+
 ## Current documents
 
 | Document | Kind | Status |
@@ -73,6 +76,7 @@ The current top-level layout is:
 
 ```text
 docs/
+  index.md        Documentation home and grouped reading entry points
   README.md       Documentation index
   design/         Working design notes for experiments
   prior-art.md    Verified related work and project evidence
