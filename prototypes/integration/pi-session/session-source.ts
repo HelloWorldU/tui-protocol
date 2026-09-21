@@ -9,7 +9,10 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 /** Real Pi session, with only one fixed, read-only tool and no user resource discovery. */
-export async function createTrialSession(runtime: ModelRuntime, model: Model<Api>, toolPauseMs = 10, transport?: Transport) {
+export async function createTrialSession(runtime: ModelRuntime, model: Model<Api>, toolPauseMs = 10, transport?: Transport,
+  options: { maxToolCalls?: number; systemPrompt?: string } = {}) {
+  const maxToolCalls = options.maxToolCalls ?? 1;
+  if (!Number.isSafeInteger(maxToolCalls) || maxToolCalls < 1) throw new Error("Invalid tool execution budget");
   const parent = resolve(tmpdir());
   const cwd = await mkdtemp(join(parent, "tui-pi-session-"));
   const cleanup = async () => {
@@ -27,14 +30,14 @@ export async function createTrialSession(runtime: ModelRuntime, model: Model<Api
     const loader = new DefaultResourceLoader({
       cwd, agentDir: cwd, settingsManager: settings,
       noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
-      systemPromptOverride: () => "Use read_trial_sample once, then briefly report its text. Do not request other tools.",
+      systemPromptOverride: () => options.systemPrompt ?? "Use read_trial_sample once, then briefly report its text. Do not request other tools.",
     });
     await loader.reload();
     const tool = defineTool({
       name: "read_trial_sample", label: "Read trial sample", description: "Read the fixed, non-sensitive local sample.",
       parameters: Type.Object({}),
       execute: async (_id, _params, signal, onUpdate) => {
-        if (++toolCalls > 1) throw new Error("Trial permits one tool execution");
+        if (++toolCalls > maxToolCalls) throw new Error("Trial tool execution budget exceeded");
         onUpdate?.({ content: [{ type: "text", text: "Reading sample..." }], details: {} });
         await delay(toolPauseMs, undefined, { signal });
         const text = (await readFile(new URL("./fixtures/sample.txt", import.meta.url), "utf8")).trimEnd();
@@ -46,6 +49,9 @@ export async function createTrialSession(runtime: ModelRuntime, model: Model<Api
       tools: [tool.name], customTools: [tool], settingsManager: settings,
       sessionManager: SessionManager.inMemory(cwd), resourceLoader: loader,
     });
+    // Public Pi hook: settle cancelled tool results, then stop before preparing
+    // another model request. Do not reclassify provider errors as cancellations.
+    session.agent.shouldStopAfterTurn = (_turn, signal) => signal?.aborted === true;
     return { session, toolCalls: () => toolCalls, async dispose() {
       try { await session.abort(); }
       finally {

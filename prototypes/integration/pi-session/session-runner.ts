@@ -24,6 +24,7 @@ export function transcriptEvent(event: AgentSessionEvent): TrialEvent | undefine
 /** Listener work is synchronous; errors are contained instead of escaping into Pi's event loop. */
 export async function runPiSession(session: AgentSession, adapter: PiEventAdapter, options: {
   signal?: AbortSignal;
+  prompt?: string;
   onEvent?: (event: AgentSessionEvent) => void;
 } = {}): Promise<"completed" | "aborted"> {
   let failure: Error | undefined;
@@ -55,7 +56,7 @@ export async function runPiSession(session: AgentSession, adapter: PiEventAdapte
   options.signal?.addEventListener("abort", abort, { once: true });
   try {
     if (options.signal?.aborted) return "aborted";
-    await session.prompt(TRIAL_PROMPT);
+    await session.prompt(options.prompt ?? TRIAL_PROMPT);
     await aborting;
     if (failure) throw failure;
     if (adapter.state !== "finished") throw new Error("Pi prompt settled without a completed adapter run");

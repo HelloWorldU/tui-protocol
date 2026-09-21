@@ -49,6 +49,13 @@ is neither a published adapter nor a stock Pi extension. The separate
 [reading UX comparison](ux/README.md) uses fixed actual Pi sessions to compare
 three reading/selection scenarios against Pi's regular frontend.
 
+The [entered-prompt multi-round trial](multi-round/README.md) separately extends
+this mapping to one retained Pi conversation with a form, cancellation followed
+by another turn, and a five-turn local limit. Its own record distinguishes
+local-provider browser evidence from its separately recorded four-prompt live
+subscription run. Tool-boundary cancellation now uses Pi's public stop-after-turn
+hook; the multi-round record explains the source finding and scope.
+
 ## Trial mapping
 
 | Input | Trial presentation and Operations |

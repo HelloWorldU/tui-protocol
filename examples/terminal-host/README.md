@@ -15,6 +15,15 @@ optional command buttons, a native-row diagnostic view, and a longer page
 deadline. Those are example controls, not terminal protocol APIs; the original
 page keeps its twelve-second deadline and one-shot application.
 
+The [Pi multi-round trial](../../prototypes/integration/pi-session/multi-round/README.md)
+also reuses the host. Its opt-in form mode disables forwarding terminal
+keystrokes and sends application-owned commands through `sendApplicationInput`;
+protocol replies still use the same return transport. Other pages retain their
+original keyboard forwarding. This helper is local example wiring, not an SDK API.
+Local browser checks also use the exported terminal/history instances and
+`settleHost` to observe actual rendering and copy handling after queued work;
+these exports are not a portable or stable adapter interface.
+
 ## Run
 
 On Windows with Node 24 or newer, from the repository root:

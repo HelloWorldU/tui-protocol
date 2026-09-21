@@ -32,6 +32,17 @@ regular frontend did not. Neither path showed duplication of the checked text.
 The simplified frontend is not feature-equivalent to Pi; this narrows the UX
 claim, not the remaining compatibility or long-session work.
 
+The [entered-prompt multi-round Pi frontend](../../prototypes/integration/pi-session/multi-round/README.md)
+completes the bounded third-stage interactive trial: one in-memory Pi
+conversation with separate display Contexts per turn. Local-provider ConPTY/xterm
+checks cover follow-up, assistant/tool cancellation then continuation, old
+reading/selection/copy, retained search, and orderly exit. Pi's public
+stop-after-turn hook avoids preparing another model request after tool
+cancellation; genuine errors still stop the connection. A separate
+[four-prompt subscription checkpoint](../../prototypes/integration/pi-session/multi-round/live-checkpoint.md)
+observed live context retention and assistant cancellation then continuation.
+This is a finite supporting-host frontend, not a production terminal or full Pi UI.
+
 ## Completed Work and Evidence
 
 The linked records own scenario details, measured values, commands, and limits.
@@ -85,10 +96,13 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
 ## Remaining Work and Decision Points
 
-- **Pi integration scope:** the finite SDK frontend trial above is complete.
-  Before expanding it, choose which actual Pi workflow to support next and assess
-  its output, fallback, and terminal-host requirements. Stock UI/extension
-  compatibility and maintainer acceptance have not been established.
+- **Pi integration scope:** the bounded entered-prompt trial above is complete.
+  Next choose an actual coding workflow and explicit tool/file permissions before
+  exposing project access, or assess stock-UI reuse if preserving Pi's editor,
+  Markdown, and extensions is the next priority. These are scope decisions, not
+  reasons to silently enable Pi's default tools in this read-only trial.
+  Stock UI/extension compatibility, a full fallback frontend, and maintainer
+  acceptance have not been established.
 - **Capacity and retention:** partial-Block or unmanaged-row eviction, general
   snapshot reclamation, and long-session behavior remain open. Full-Block
   eviction semantics are already [defined](../protocol/terminal-native-behavior.md#5-scrollback-capacity);

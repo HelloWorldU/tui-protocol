@@ -26,6 +26,7 @@ here.
 | [Pi rendering architecture](design/pi-rendering-architecture.md) | Upstream architecture research and integration assessment | Read-only source trace; trial evidence linked separately |
 | [Pi session integration](../prototypes/integration/pi-session/README.md) | Application integration experiment | Local fixtures and finite OpenAI subscription trial through ConPTY/xterm; completion, search, cancellation, and recorded transport failure |
 | [Pi reading UX comparison](../prototypes/integration/pi-session/ux/README.md) | Paired application/renderer experiment | Three fixed scenarios; regular Pi vs experimental protocol frontend, captured before PTY |
+| [Pi entered-prompt multi-round trial](../prototypes/integration/pi-session/multi-round/README.md) | Interactive application experiment | Finite supporting-host trial: local native/lifecycle checks and a separate four-prompt subscription checkpoint |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |

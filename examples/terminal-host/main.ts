@@ -20,11 +20,12 @@ for (const [button, command] of commands) {
     if (socket?.readyState === WebSocket.OPEN) socket.send(new TextEncoder().encode(command));
   };
 }
-const terminal = new Terminal({ cols: 40, rows: 8, scrollback: 1000 });
+// Exposed to local experiment checks, not a stable renderer API.
+export const terminal = new Terminal({ cols: 40, rows: 8, scrollback: 1000 });
 terminal.open(document.querySelector<HTMLElement>("#terminal")!);
 
 // This is the pinned browser renderer, not a portable terminal implementation.
-const history = new BrowserSearchHistory(terminal);
+export const history = new BrowserSearchHistory(terminal);
 const endpoint = new XtermProtocolEndpoint(terminal as unknown as HeadlessTerminal, {
   completeBaselineSupported: true, // Experimental fixture assertion, not feature detection.
   history,
@@ -48,8 +49,20 @@ const ingress = new XtermMixedStreamIngress(terminal as unknown as HeadlessTermi
   onDiagnostic(diagnostic) { diagnostics.push(diagnostic.reason); },
 });
 const input = terminal.onData(data => {
-  if (socket?.readyState === WebSocket.OPEN) socket.send(new TextEncoder().encode(data));
+  if (document.body.dataset.inputMode !== "form") sendApplicationInput(data);
 });
+
+/** Host-local form transport; not a terminal protocol API. False means nothing was sent. */
+export function sendApplicationInput(data: string): boolean {
+  if (socket?.readyState !== WebSocket.OPEN || failure || leaving) return false;
+  socket.send(new TextEncoder().encode(data));
+  return true;
+}
+
+export async function settleHost(): Promise<void> {
+  await pending;
+  if (failure) throw failure;
+}
 
 function showState(): void {
   const rendered = document.querySelector<HTMLElement>("#rendered");
