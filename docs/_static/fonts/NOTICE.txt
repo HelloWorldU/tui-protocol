@@ -1,0 +1,13 @@
+Roboto Latin webfonts, served locally by the documentation website.
+Unmodified Google Fonts WOFF2 assets, retrieved 2026-09-22:
+
+roboto-latin.woff2 (normal, variable weight):
+https://fonts.gstatic.com/s/roboto/v51/KFO7CnqEu92Fr1ME7kSn66aGLdTylUAMa3yUBA.woff2
+
+roboto-latin-italic.woff2 (italic, used at weight 400):
+https://fonts.gstatic.com/s/roboto/v51/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs6ljXfMMLoHQuAj-kw.woff2
+
+Upstream license:
+https://github.com/google/fonts/blob/main/ofl/roboto/OFL.txt
+See OFL.txt in this directory. The fonts remain under the SIL Open Font License;
+the repository's MIT license does not replace their license.

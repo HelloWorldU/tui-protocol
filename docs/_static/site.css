@@ -1,0 +1,68 @@
+/* Self-hosted Roboto Latin fonts; attribution and license are in fonts/. */
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/roboto-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Roboto";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/roboto-latin-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* A restrained type scale for long technical documents; rem preserves zoom. */
+body {
+  --font-stack: "Roboto", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-stack--headings: var(--font-stack);
+  --sidebar-item-font-size: 0.9rem;
+  --sidebar-item-line-height: 1.35rem;
+  --sidebar-item-spacing-vertical: 0.35rem;
+  --toc-font-size: 0.875rem;
+}
+.content { max-width: 52rem; }
+
+article {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+article :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  margin-top: 1.85rem;
+  margin-bottom: 0.65rem;
+  text-wrap: pretty;
+}
+article h1 {
+  font-size: 2rem;
+  line-height: 1.25;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+article h2 { font-size: 1.45rem; }
+article h3 { font-size: 1.2rem; }
+article h4 { font-size: 1.075rem; }
+article :is(h5, h6) { font-size: 1rem; }
+article p { margin-top: 0; margin-bottom: 0.9rem; }
+article :is(ul, ol) { margin-top: 0.35rem; margin-bottom: 1rem; }
+article li + li { margin-top: 0.25rem; }
+article table.docutils { font-size: 0.925rem; line-height: 1.55; }
+article .highlight pre { font-size: 0.875rem; line-height: 1.6; }
+.sidebar-brand-text { font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; }
+.toc-tree { line-height: 1.5; }
+
+@media (max-width: 46em) {
+  article h1 { font-size: 1.75rem; }
+  article h2 { font-size: 1.35rem; }
+}

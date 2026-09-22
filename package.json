@@ -9,6 +9,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "docs:build": "node scripts/docs.mjs build",
+    "docs:check": "node scripts/docs.mjs check",
+    "docs:serve": "node scripts/docs.mjs serve",
     "prototype:pi-coding": "vite --config prototypes/integration/pi-session/coding/vite.config.ts",
     "prototype:pi-coding-live": "vite --config prototypes/integration/pi-session/coding/vite.config.ts --mode live",
     "build:pi-coding": "vite build --config prototypes/integration/pi-session/coding/vite.config.ts --outDir ../../../../.tmp/pi-coding-dist --emptyOutDir",

@@ -11,6 +11,7 @@ For an introduction and grouped reading entry points, start with the
 
 | Document | Kind | Status |
 |---|---|---|
+| [Building the documentation website](site.md) | Documentation tooling | Local preview and GitHub Pages |
 | [RFC 0001: Mutable Terminal History and Reading Anchors](rfcs/0001-mutable-terminal-history-and-reading-anchors.md) | Requirements RFC | Draft |
 | [Operation semantics](protocol/operations.md) | Protocol draft | Draft |
 | [Capability negotiation](protocol/capabilities.md) | Protocol draft | Draft |

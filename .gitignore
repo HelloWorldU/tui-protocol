@@ -8,6 +8,10 @@
 node_modules/
 coverage/
 
+# Python documentation tooling
+__pycache__/
+*.pyc
+
 # Environment files
 .env
 .env.*
