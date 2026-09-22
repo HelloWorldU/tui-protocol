@@ -33,6 +33,7 @@ terminal/                     Reusable terminal protocol execution, without a re
   src/                        Session, Endpoint, and host Operation adapter interface.
   test/                       Execution, byte handling, and standalone build checks.
 scripts/                      Shared repository build tooling.
+  docs/                       Documentation build commands, checks, and tooling tests.
 prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
   integration/                Current protocol-layer integration experiments.

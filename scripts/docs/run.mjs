@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-const root = fileURLToPath(new URL("../", import.meta.url));
+const root = fileURLToPath(new URL("../../", import.meta.url));
 const python = resolve(root, ".tmp/docs-venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
 if (!existsSync(python)) {
   console.error("Set up the documentation environment first: see docs/site.md.");
@@ -11,7 +11,7 @@ if (!existsSync(python)) {
 }
 const mode = process.argv[2];
 if (mode === "check") {
-  for (const args of [["docs/test_site.py"], ["docs/check_site.py"]]) {
+  for (const args of [["scripts/docs/test_site.py"], ["scripts/docs/check_site.py"]]) {
     const result = spawnSync(python, args, { cwd: root, stdio: "inherit", windowsHide: true });
     if (result.error || result.status !== 0) {
       if (result.error) console.error(result.error.message);

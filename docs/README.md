@@ -91,6 +91,7 @@ terminal/         Terminal Session, Endpoint, and host adapter contract
 examples/         Runnable application and terminal-host examples
 prototypes/       Executable semantic and implementation experiments
 scripts/          Shared build tooling and repository checks
+  docs/           Website build commands, checks, and tooling tests
 ```
 
 `prototypes/` contains semantic models, xterm.js integration experiments, and

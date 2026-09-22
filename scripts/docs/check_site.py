@@ -51,4 +51,4 @@ def check(root):
 
 
 if __name__ == "__main__":
-    check(Path(__file__).resolve().parents[1] / ".tmp/docs-site")
+    check(Path(__file__).resolve().parents[2] / ".tmp/docs-site")

@@ -13,7 +13,8 @@ from docutils import nodes
 from sphinx import addnodes
 from sphinx.errors import SphinxError
 
-sys.path.insert(0, str(Path(__file__).parent / "_ext"))
+DOCS = Path(__file__).resolve().parents[2] / "docs"
+sys.path.insert(0, str(DOCS / "_ext"))
 from site_support import GROUPS, add_navigation, source_links
 from check_site import check
 
@@ -27,7 +28,7 @@ class SiteTests(unittest.TestCase):
         )
         for value, expected in cases:
             with self.subTest(value=value), patch.dict(os.environ, {"DOCS_BASE_URL": value}):
-                config = runpy.run_path(str(Path(__file__).parent / "conf.py"))
+                config = runpy.run_path(str(DOCS / "conf.py"))
                 self.assertEqual(config["html_baseurl"], expected)
 
     def test_primary_pages_appear_once_in_four_navigation_groups(self):

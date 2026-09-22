@@ -4,6 +4,26 @@ The website renders the repository's Markdown with Sphinx, MyST, and Furo.
 Edit each document in its existing directory; both GitHub and the website use
 that source. Website navigation is configured in `_ext/site_support.py`.
 
+## Tooling Layout
+
+Sphinx configuration and presentation assets stay with the documentation;
+executable build and validation tools live under `scripts/docs/`.
+
+```text
+docs/
+  conf.py              Sphinx configuration
+  requirements.txt     Documentation dependencies
+  _ext/                Sphinx extensions
+  _static/             Styles and fonts
+  _templates/          Page templates
+scripts/docs/
+  run.mjs              Build, check, and local preview commands
+  check_site.py        Generated HTML link and anchor checks
+  test_site.py         Documentation tooling tests
+.github/workflows/
+  docs.yml             CI checks and GitHub Pages deployment
+```
+
 ## Local Setup
 
 Use Python 3.12 or newer. From the repository root on Windows:
