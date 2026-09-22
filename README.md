@@ -52,4 +52,4 @@ See the [example guide](examples/multi-round/README.md) for details and limits.
 
 ## License
 
-[MIT License](LICENSE)
+[Apache License 2.0](LICENSE)

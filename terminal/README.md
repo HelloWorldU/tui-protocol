@@ -26,7 +26,7 @@ pnpm build:terminal
 ```
 
 The command prints a fresh `.tmp/terminal-build-*` directory with ESM JavaScript,
-declarations, the MIT license, and private package metadata. Keep the whole
+declarations, the Apache 2.0 license, and private package metadata. Keep the whole
 directory: `terminal/src/index.js` imports the included
 `node_modules/@tui-protocol/protocol` package by name.
 The exports are `.` for terminal execution and `./protocol` for shared types

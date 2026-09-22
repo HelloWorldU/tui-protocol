@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -24,6 +24,10 @@ test("built terminal and TUI modules exchange all five Operations outside the ch
   assert.equal(files.filter(entry => entry.name.endsWith(".js")).length, 10);
   assert.equal(files.filter(entry => entry.name.endsWith(".d.ts")).length, 10);
   assert(files.every(entry => /\.(js|d\.ts)$/.test(entry.name) || ["package.json", "LICENSE"].includes(entry.name)));
+  for (const directory of [artifact, join(artifact, "node_modules", "@tui-protocol/protocol")]) {
+    assert.equal(JSON.parse(readFileSync(join(directory, "package.json"), "utf8")).license, "Apache-2.0");
+    assert.equal(readFileSync(join(directory, "LICENSE"), "utf8"), readFileSync(new URL("../../LICENSE", import.meta.url), "utf8"));
+  }
   const result = execFileSync(process.execPath, ["--no-experimental-strip-types", "--input-type=module", "-e", `
     import assert from 'node:assert/strict';
     import { TuiClient } from '@tui-protocol/sdk';

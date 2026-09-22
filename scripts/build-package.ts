@@ -19,7 +19,7 @@ export function buildPackage(module: "sdk" | "terminal"): string {
   mkdirSync(dirname(dependency), { recursive: true });
   renameSync(join(output, "protocol"), dependency);
   writeFileSync(join(dependency, "package.json"), JSON.stringify({
-    name: "@tui-protocol/protocol", version: "0.0.0", private: true, type: "module", license: "MIT",
+    name: "@tui-protocol/protocol", version: "0.0.0", private: true, type: "module", license: "Apache-2.0",
     exports: { ".": { types: "./src/index.d.ts", import: "./src/index.js" } },
   }, null, 2) + "\n");
   copyFileSync(join(root, "LICENSE"), join(dependency, "LICENSE"));
@@ -28,7 +28,7 @@ export function buildPackage(module: "sdk" | "terminal"): string {
     writeFileSync(join(output, `protocol.${extension}`), 'export * from "@tui-protocol/protocol";\n');
   }
   writeFileSync(join(output, "package.json"), JSON.stringify({
-    name: `@tui-protocol/${module}`, version: "0.0.0", private: true, type: "module", license: "MIT",
+    name: `@tui-protocol/${module}`, version: "0.0.0", private: true, type: "module", license: "Apache-2.0",
     exports: {
       ".": { types: `./${module}/src/index.d.ts`, import: `./${module}/src/index.js` },
       "./protocol": { types: "./protocol.d.ts", import: "./protocol.js" },

@@ -10,4 +10,4 @@ https://fonts.gstatic.com/s/roboto/v51/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs
 Upstream license:
 https://github.com/google/fonts/blob/main/ofl/roboto/OFL.txt
 See OFL.txt in this directory. The fonts remain under the SIL Open Font License;
-the repository's MIT license does not replace their license.
+the repository's Apache 2.0 license does not replace their license.

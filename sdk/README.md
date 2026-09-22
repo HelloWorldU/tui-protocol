@@ -21,7 +21,7 @@ modules to an experimental renderer.
 
 Run `pnpm build:sdk` from the repository root. It prints a fresh output directory
 under `.tmp/sdk-build-*`, containing ESM JavaScript, TypeScript declarations,
-the MIT license, and private package metadata. Keep the entire directory:
+the Apache 2.0 license, and private package metadata. Keep the entire directory:
 `sdk/src/index.js` uses the included `node_modules/@tui-protocol/protocol`
 package through its public name. The distribution contains the SDK and shared
 protocol runtime, with declarations and metadata.

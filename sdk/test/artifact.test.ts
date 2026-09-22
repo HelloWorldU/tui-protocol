@@ -23,6 +23,10 @@ test("built JavaScript negotiates and sends an Operation outside the checkout wi
   const manifest = JSON.parse(readFileSync(join(artifact, "package.json"), "utf8"));
   assert.equal(manifest.private, true);
   assert.equal(manifest.name, "@tui-protocol/sdk");
+  for (const directory of [artifact, join(artifact, "node_modules", "@tui-protocol/protocol")]) {
+    assert.equal(JSON.parse(readFileSync(join(directory, "package.json"), "utf8")).license, "Apache-2.0");
+    assert.equal(readFileSync(join(directory, "LICENSE"), "utf8"), readFileSync(new URL("../../LICENSE", import.meta.url), "utf8"));
+  }
   const result = execFileSync(process.execPath, ["--input-type=module", "--no-experimental-strip-types", "-e", `
     import assert from 'node:assert/strict';
     import { TuiClient } from '@tui-protocol/sdk';

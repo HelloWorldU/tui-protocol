@@ -1,6 +1,7 @@
 {
   "name": "@tui-protocol/pi-session-trial",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
     "@earendil-works/pi-ai": "0.86.1",

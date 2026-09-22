@@ -1,7 +1,7 @@
 /**
  * Cell traversal adapted from xterm.js addon-search.
  * Copyright (c) 2017 The xterm.js authors. All rights reserved.
- * Licensed under the MIT License; see the repository LICENSE.
+ * Licensed under the MIT License; see LICENSE.xterm in this directory.
  */
 import type { SearchAddon } from "@xterm/addon-search";
 
