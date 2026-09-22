@@ -1,10 +1,14 @@
 import { TuiClient } from "@tui-protocol/sdk";
 import type { ApplicationOptions } from "../application.ts";
-import { PiEventAdapter } from "../event-adapter.ts";
+import { PiEventAdapter, type TrialLimits } from "../event-adapter.ts";
 import { runPiSession } from "../session-runner.ts";
 import { CommandReader, type Command } from "./commands.ts";
 
-export interface MultiRoundOptions extends ApplicationOptions { maxRounds?: number; turnDeadlineMs?: number }
+export interface MultiRoundOptions extends ApplicationOptions {
+  maxRounds?: number;
+  turnDeadlineMs?: number;
+  adapterLimits?: TrialLimits;
+}
 
 /** One retained Pi conversation; each finite turn owns a fresh display Context. */
 export async function runMultiRound(options: MultiRoundOptions): Promise<"quit" | "limit" | "unsupported"> {
@@ -89,7 +93,7 @@ export async function runMultiRound(options: MultiRoundOptions): Promise<"quit" 
       const turnTimer = setTimeout(() => fail(new Error("Pi turn deadline exceeded")), turnDeadlineMs);
       try {
         const context = await client.openContext();
-        adapter = new PiEventAdapter(context);
+        adapter = new PiEventAdapter(context, options.adapterLimits);
         const outcome = await runPiSession(source.session, adapter, { prompt, signal: cancel!.signal });
         if (failure) throw failure;
         await context.close();

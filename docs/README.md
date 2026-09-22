@@ -30,6 +30,7 @@ For an introduction and grouped reading entry points, start with the
 | [Pi session integration](../prototypes/integration/pi-session/README.md) | Application integration experiment | Local fixtures and finite OpenAI subscription trial through ConPTY/xterm; completion, search, cancellation, and recorded transport failure |
 | [Pi reading UX comparison](../prototypes/integration/pi-session/ux/README.md) | Paired application/renderer experiment | Three fixed scenarios; regular Pi vs experimental protocol frontend, captured before PTY |
 | [Pi entered-prompt multi-round trial](../prototypes/integration/pi-session/multi-round/README.md) | Interactive application experiment | Finite supporting-host trial: local native/lifecycle checks and a separate four-prompt subscription checkpoint |
+| [Pi coding trial](../prototypes/integration/pi-session/coding/README.md) | Coding workflow experiment | Generated project: read, reproduce, edit, test, and follow up through the supporting terminal |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |

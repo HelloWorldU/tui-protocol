@@ -9,6 +9,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prototype:pi-coding": "vite --config prototypes/integration/pi-session/coding/vite.config.ts",
+    "prototype:pi-coding-live": "vite --config prototypes/integration/pi-session/coding/vite.config.ts --mode live",
+    "build:pi-coding": "vite build --config prototypes/integration/pi-session/coding/vite.config.ts --outDir ../../../../.tmp/pi-coding-dist --emptyOutDir",
     "prototype:pi-multi": "vite --config prototypes/integration/pi-session/multi-round/vite.config.ts",
     "prototype:pi-multi-live": "vite --config prototypes/integration/pi-session/multi-round/vite.config.ts --mode live",
     "build:pi-multi": "vite build --config prototypes/integration/pi-session/multi-round/vite.config.ts --outDir ../../../../.tmp/pi-multi-dist --emptyOutDir",

@@ -55,6 +55,10 @@ by another turn, and a five-turn local limit. That record includes local-provide
 checks, a four-prompt live subscription run, and the use of Pi's public
 stop-after-turn hook for tool-boundary cancellation.
 
+The [coding trial](coding/README.md) adds two-turn project work: read a generated
+program, reproduce failing tests, edit its source, and verify the fix through
+the same terminal path.
+
 ## Trial mapping
 
 | Input | Trial presentation and Operations |

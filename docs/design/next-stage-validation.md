@@ -1,6 +1,6 @@
 # From Controlled Experiments to Trial Use
 
-Working plan, updated 2026-09-21. This document tracks implementation evidence
+Working plan, updated 2026-09-22. This document tracks implementation evidence
 and engineering priorities. Agreed semantics are recorded in the
 [protocol drafts](../README.md).
 
@@ -36,6 +36,12 @@ stop-after-turn hook avoids preparing another model request after tool
 cancellation; genuine errors still stop the connection. A separate
 [four-prompt subscription checkpoint](../../prototypes/integration/pi-session/multi-round/live-checkpoint.md)
 observed live context retention and assistant cancellation then continuation.
+
+The [coding trial](../../prototypes/integration/pi-session/coding/README.md)
+adds a generated project with two readable files, one editable source, and a
+fixed test command. Local-provider and live subscription runs reproduced three
+failures, applied a quantity fix, passed all six tests, and repeated the tests
+in a second turn. Earlier failure output remained searchable and copyable.
 
 ## Completed Work and Evidence
 
@@ -91,11 +97,10 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
 ## Remaining Work and Decision Points
 
-- **Pi integration scope:** the bounded entered-prompt trial above is complete.
-  Next choose an actual coding workflow and explicit tool/file permissions before
-  exposing project access, or assess stock-UI reuse if preserving Pi's editor,
-  Markdown, and extensions is the next priority. A full fallback frontend and
-  an upstream proposal also remain future work.
+- **Pi integration scope:** the entered-prompt trial and one generated-project
+  coding workflow are complete. Real repository access needs a selected project,
+  explicit permissions, and execution isolation. Stock-UI reuse, a full fallback
+  frontend, and an upstream proposal remain follow-up choices.
 - **Capacity and retention:** partial-Block or unmanaged-row eviction, general
   snapshot reclamation, and long-session behavior remain open. Full-Block
   eviction follows the [existing semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity).
