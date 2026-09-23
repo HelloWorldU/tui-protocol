@@ -8,7 +8,21 @@ code under `prototypes/`.
 
 ## Run
 
-On Windows with Node 24 or newer, from the repository root:
+Use Windows with Git and Node.js 24 or newer. In PowerShell, check `git --version`
+and `node --version`. Install the repository's pnpm version if needed:
+
+```sh
+npm install --global pnpm@11.9.0
+```
+
+Download the project into a directory you choose:
+
+```sh
+git clone https://github.com/HelloWorldU/tui-protocol.git
+cd tui-protocol
+```
+
+If you already have the repository, open a terminal at its root instead. Then:
 
 ```sh
 pnpm install
@@ -16,11 +30,24 @@ pnpm example:multi-round
 ```
 
 Open `http://127.0.0.1:4178/` and choose **Connect application**. Wait for
-`[ready]`, then choose **Next round** or focus the terminal and press `n`.
+`[ready 1/3]`, then choose **Next round** or focus the terminal and press `n`.
 There are at most three rounds. Commands received during generation are dropped,
 not queued. Each round shows a prompt, growing thinking, simulated tool output,
 and an answer. Thinking then shrinks while later content already exists;
 the answer's draft suffix is replaced and extended before being sealed.
+
+### What to try first
+
+1. Run one round. After a few seconds, scroll up inside the terminal: the
+   multi-line thinking has become `Thinking 1: complete`, followed by the tool
+   result and `Answer 1: result`.
+2. Search for `Answer 1: result`: **Find next** should find it. Search for
+   `Gathering context`: it should say **No match**, because that text was replaced.
+3. Wait for `[ready 2/3]`, then run another round. Search for `Answer 1: result`
+   again: the earlier answer remains available alongside the new round.
+
+The important change is in the retained history: earlier content is replaced,
+while later output remains. Search and scrolling let you inspect that directly.
 
 Scroll back, select/copy text, or use **Find next** while output changes. Press
 `q` (or Ctrl+C while the terminal has focus) to stop, including during generation.
@@ -33,6 +60,18 @@ application completion. Reload for a fresh session. Closing the page kills its
 child; stop the server with Ctrl+C. Only one PTY example may use port 4178 at
 a time. The application has a two-minute deadline and the page a 125-second
 deadline; neither automatically reconnects after failure.
+
+### If startup fails
+
+- If PowerShell refuses to run `npm.ps1` or `pnpm.ps1`, use `npm.cmd` or
+  `pnpm.cmd` in the same commands; no execution-policy change is needed.
+- If port 4178 is occupied, stop the other example server with Ctrl+C before
+  starting this one. Open the address printed by the server only after it starts.
+- If the two-minute session deadline expires while reading the instructions,
+  reload the page and connect again.
+
+For a model-driven read/edit/test task, stop this server and follow the
+[Pi coding trial](../../prototypes/integration/pi-session/coding/README.md#use-a-real-model).
 
 ## Application and host separation
 
@@ -53,6 +92,13 @@ negotiation entirely; a TTY without a positive capability response uses fallback
 after negotiation. The application, not the protocol, chooses this behavior.
 
 ## Verification and limits
+
+On 2026-09-23, a fresh clone with an empty pnpm store installed all 141 packages
+and ran both browser scenarios below on Windows x64, Node 24.20.0, and pnpm
+11.9.0. The checkout used the installation-policy fix: explicitly skip the
+published `@google/genai` and `protobufjs` packages' unnecessary install hooks.
+An earlier clean install exposed these unreviewed hooks as a fatal pnpm error.
+No dependencies or build outputs were copied from the development checkout.
 
 The shared host now selects the [trial resource budgets](../../docs/design/trial-resource-budgets.md)
 for retained Session state and queued input. Exhaustion does not trigger an

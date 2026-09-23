@@ -4,7 +4,8 @@
 <body data-deadline-ms="125000">
   <h1>Multi-round protocol example</h1>
   <p>A simulated Agent, three rounds, no external model. While output changes, scroll back, select/copy, or search.</p>
-  <p>Wait for [ready] in the terminal, then press n or Next round. Input while generating is not queued. q quits, including during a round.</p>
+  <p>Connect, wait for [ready 1/3] in the terminal, then press n or Next round. Input while generating is not queued. q quits, including during a round.</p>
+  <p>After the first round, scroll up to see Thinking 1: complete. Search for Answer 1: result (found), then Gathering context (no match): the earlier thinking was replaced, not appended again. Run another round and search for the first answer again.</p>
   <p><a href="/checks.html">Run repeatable browser checks</a></p>
   <button id="connect">Connect application</button>
   <button id="next" disabled>Next round (n)</button>

@@ -37,18 +37,22 @@ protocol.
 Try a simulated Agent that revises earlier content in an experimental
 xterm-based terminal host. No model account is required.
 
-On Windows with Node.js 24+ and pnpm installed, run from the repository root:
+On Windows with Git, Node.js 24+ and pnpm 11.9.0 installed:
 
 ```sh
+git clone https://github.com/HelloWorldU/tui-protocol.git
+cd tui-protocol
 pnpm install
 pnpm example:multi-round
 ```
 
 Open <http://127.0.0.1:4178/>, choose **Connect application**, wait for
-`[ready]`, then choose **Next round**. Scroll back, select/copy text, or search
+`[ready 1/3]`, then choose **Next round**. Scroll back, select/copy text, or search
 while content changes. Stop the server with Ctrl+C.
 
-See the [example guide](examples/multi-round/README.md) for details and limits.
+See the [example guide](examples/multi-round/README.md) for setup help and what
+to observe. To try a real model reading, editing, and testing a generated
+program, follow the [Pi coding trial](prototypes/integration/pi-session/coding/README.md#use-a-real-model).
 
 ## License
 

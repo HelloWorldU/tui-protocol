@@ -5,6 +5,9 @@ packages:
   - prototypes/integration/pi-session
 
 allowBuilds:
+  # Published runtime files are ready to use; these hooks do not build them.
+  '@google/genai': false
+  protobufjs: false
   esbuild: true
   node-pty: true
 
