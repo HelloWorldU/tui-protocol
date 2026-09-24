@@ -28,7 +28,7 @@ protocol.
 
 ## Documentation
 
-- [Documentation home](docs/index.md)
+- [Documentation website](https://tui-protocol.org/)
 - [RFC 0001: Mutable Terminal History and Reading Anchors](docs/rfcs/0001-mutable-terminal-history-and-reading-anchors.md)
 - [Prior art and project evidence](docs/prior-art.md)
 
