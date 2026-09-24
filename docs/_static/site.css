@@ -58,9 +58,66 @@ article p { margin-top: 0; margin-bottom: 0.9rem; }
 article :is(ul, ol) { margin-top: 0.35rem; margin-bottom: 1rem; }
 article li + li { margin-top: 0.25rem; }
 article table.docutils { font-size: 0.925rem; line-height: 1.55; }
+article .table-wrapper table.align-default { margin-left: 0; margin-right: 0; }
 article .highlight pre { font-size: 0.875rem; line-height: 1.6; }
 .sidebar-brand-text { font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; }
 .toc-tree { line-height: 1.5; }
+
+/* Give the landing page a short set of paths instead of another long index. */
+#start-here > ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+#start-here > ul > li {
+  border: 1px solid var(--color-background-border);
+  border-radius: 0.4rem;
+  background: var(--color-background-secondary);
+  margin: 0;
+  padding: 0.9rem 1rem;
+}
+#start-here > ul > li > p { margin: 0; }
+#start-here > ul strong { display: block; margin-bottom: 0.25rem; }
+
+/* Keep document metadata visible without making it the page's focal point. */
+article > section > h1 + .table-wrapper {
+  border: 1px solid var(--color-background-border);
+  border-radius: 0.4rem;
+  background: var(--color-background-secondary);
+  margin-bottom: 1.3rem;
+  width: 100%;
+}
+article > section > h1 + .table-wrapper table.docutils {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  font-size: 0.875rem;
+}
+article > section > h1 + .table-wrapper thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+article > section > h1 + .table-wrapper td {
+  border: 0;
+  padding: 0.35rem 0.7rem;
+}
+article > section > h1 + .table-wrapper tr + tr td {
+  border-top: 1px solid var(--color-background-border);
+}
+article > section > h1 + .table-wrapper td:first-child {
+  color: var(--color-foreground-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  width: 7rem;
+}
 
 @media (max-width: 46em) {
   article h1 { font-size: 1.75rem; }

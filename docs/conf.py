@@ -37,10 +37,12 @@ html_theme_options = {
     "source_directory": "",
     "light_css_variables": {
         "color-brand-primary": "#2457a7", "color-brand-content": "#2457a7",
+        "color-brand-visited": "#2457a7",
         "color-foreground-primary": "#273244",
     },
     "dark_css_variables": {
         "color-brand-primary": "#91baff", "color-brand-content": "#91baff",
+        "color-brand-visited": "#91baff",
         "color-foreground-primary": "#dce2eb",
     },
 }
