@@ -71,6 +71,10 @@ protocol package. This is a development check, not a runtime security boundary.
 3. Run the relevant tests and inspect the complete diff.
 4. Commit the change, push its branch, and open a pull request against `main`.
 
+This repository is the maintainer's personal infrastructure project.
+Committing changes directly to `main` and pushing is acceptable; branches
+and pull requests are optional rather than required.
+
 Treat the root README's `Milestones` as a sparse chronological record of major
 project phase transitions, not a changelog. Agents may propose milestone changes,
 but must not add, remove, or rewrite milestones without explicit maintainer
