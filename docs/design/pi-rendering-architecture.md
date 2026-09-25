@@ -171,6 +171,34 @@ regular baseline. It observes reading/selection differences for earlier-tool
 shrink and resize; both paths preserve reading during tail streaming. The
 comparison uses a simplified protocol frontend alongside Pi's regular UI.
 
+## Upstream developments, 2026-09-25
+
+Checked against Pi 0.87.1 at `b348765`. The renderer-selection and coupling
+assessments above still hold; the facts below postdate the 0.86.1 trace.
+
+- The alternate-screen layout system from `tui-plan.md` has landed:
+  `packages/tui/src/layout.ts`, the `scroll-view`/`v-stack`/`h-stack`
+  components, and a `ViewportTUI` capability interface in
+  `packages/tui/src/tui.ts`. Fullscreen mode composes a scrollable
+  transcript `ScrollView` with a fixed dock, and `switchTuiMode` swaps
+  renderers at runtime behind a proxy. The regular renderer keeps its
+  terminal-scrollback model by design.
+- `createInteractiveTui` still selects between the two concrete renderers;
+  no external renderer registration seam exists. The `TUI` interface in
+  `packages/tui/src/tui.ts` is the contract a third renderer would
+  implement; how an external implementation would be supplied remains
+  unverified and belongs to a future prototype.
+- Cross-project evidence for the three rendering strategies, including the
+  main-screen constraint recorded in Pi issue #7304 and the fullscreen
+  performance record in #9549, is maintained in
+  [prior art](../prior-art.md#application-architecture-evidence).
+- Project record: our upstream
+  [issue #10007](https://github.com/earendil-works/pi/issues/10007) proposing
+  an experimental integration was auto-closed on submission and rejected at
+  triage without a maintainer reply (2026-09-25). Future contact should be
+  shorter, propose one concrete seam, and follow Pi's CONTRIBUTING quality
+  bar.
+
 [main]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/main.ts#L736
 [runtime]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/agent-session-runtime.ts
 [sdk-source]: https://github.com/earendil-works/pi/blob/3390bd93630965a12a0a1a5c36ce890ec22f7e1d/packages/coding-agent/src/core/sdk.ts#L368

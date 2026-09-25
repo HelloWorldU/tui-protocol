@@ -2,7 +2,7 @@
 
 Status: living research note
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-25
 
 This document compares selected terminal mechanisms and application designs
 that inform the project's content model, history behavior, and test scenarios.
@@ -41,8 +41,10 @@ interaction.
 |---|---|---|
 | [Kimi Code PR #2205](https://github.com/MoonshotAI/kimi-code/pull/2205) | Skips repaint only for same-line-count, image-free changes above the viewport | Avoids destructive redraw in a provable subset but explicitly accepts stale scrollback; layout changes retain the destructive baseline |
 | [pi issue #6050](https://github.com/earendil-works/pi/issues/6050) | Documents scrollback clearing during full redraw | Removing the clear alone does not provide historical identity or safe replay semantics |
+| [pi issue #7304](https://github.com/earendil-works/pi/issues/7304) | Documents the main-screen constraint: scrollback can only be appended to or fully cleared, so a reflow above the viewport forces a destructive redraw | Closed as completed the same day; the maintainer's answer was the experimental alternate-screen renderer, declared intended to become the default |
 | [pi alternate-screen renderer](https://github.com/earendil-works/pi/commit/c13ffe18) | Application-owned document, scrolling, selection, and follow mode | Controls reflow and updates but moves live history out of terminal-native scrollback |
-| [OpenAI Codex PR #9640](https://github.com/openai/codex/pull/9640) | Retired a transcript-owned viewport experiment | Strong rewrap and copy behavior came with a long cross-terminal compatibility tail |
+| [pi issue #9549](https://github.com/earendil-works/pi/issues/9549) | Records the alternate-screen cost: large transcripts re-render every frame and each resize re-emits the whole transcript | Open at review time; the application-owned transcript's performance tail remains active upstream work |
+| [OpenAI Codex PR #9640](https://github.com/openai/codex/pull/9640) | Retired a transcript-owned viewport experiment (82,802 deleted lines) | Strong rewrap and copy behavior came with a cross-environment compatibility matrix; the stated successor keeps scrolling, selection, and copy terminal-native |
 | [Claude Code fullscreen renderer](https://code.claude.com/docs/en/fullscreen) | Opt-in alternate-screen, application-owned transcript | Reimplements scrolling, selection, search, and export; classic mode retains native scrollback |
 
 Kimi Code also records the failed general redraw chain:
@@ -51,9 +53,25 @@ Kimi Code also records the failed general redraw chain:
 - [PR #1353](https://github.com/MoonshotAI/kimi-code/pull/1353)
 - [PR #1367](https://github.com/MoonshotAI/kimi-code/pull/1367)
 
-The failure classes reported by that chain are requirements for this
-project's test oracle: blank screens, duplicated scrollback spans, vanished
-rows, growing blank space, and incorrect cursor bookkeeping.
+[PR #1367](https://github.com/MoonshotAI/kimi-code/pull/1367) names the
+structural cause: the fork's anchor pinned buffer row indices while content
+shifted underneath, so interacting edge cases accumulated faster than they
+could be stabilized; the revert knowingly re-accepts the destructive-redraw
+symptom. The failure classes reported by that chain are requirements for
+this project's test oracle: blank screens, duplicated scrollback spans,
+vanished rows, growing blank space, and incorrect cursor bookkeeping.
+
+Pi's tracker disposition is further evidence: later reports of the same
+main-screen symptom ([#8465](https://github.com/earendil-works/pi/issues/8465),
+[#9240](https://github.com/earendil-works/pi/issues/9240),
+[#9424](https://github.com/earendil-works/pi/issues/9424),
+[#9769](https://github.com/earendil-works/pi/issues/9769), and
+[#10030](https://github.com/earendil-works/pi/issues/10030)) were closed as
+not planned. A contributor comment on
+[#8465](https://github.com/earendil-works/pi/issues/8465#issuecomment-5380520517)
+frames the remaining options as alternate-screen rendering or
+terminal-protocol changes; no maintainer endorsement of the protocol
+direction is on record.
 
 ## Current conclusion
 
