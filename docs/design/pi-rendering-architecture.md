@@ -187,7 +187,8 @@ assessments above still hold; the facts below postdate the 0.86.1 trace.
   no external renderer registration seam exists. The `TUI` interface in
   `packages/tui/src/tui.ts` is the contract a third renderer would
   implement; how an external implementation would be supplied remains
-  unverified and belongs to a future prototype.
+  unverified and belongs to a future prototype. The trial design is drafted
+  in [Pi stock-UI protocol trial](pi-stock-ui-trial.md).
 - Cross-project evidence for the three rendering strategies, including the
   main-screen constraint recorded in Pi issue #7304 and the fullscreen
   performance record in #9549, is maintained in
