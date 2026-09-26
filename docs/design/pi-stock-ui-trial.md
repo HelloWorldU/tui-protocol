@@ -18,6 +18,25 @@ acceptance; it is to learn whether terminal-owned mutable history can coexist
 with a real application's stock UI, and to turn "a suitable integration seam"
 from an open question into a measured patch.
 
+## Terms
+
+- **Transcript**: the growing conversation record (prompts, assistant text,
+  tool results) that scrolls into history.
+- **Chrome**: the application's interactive controls around the transcript
+  (editor, footer, status); never protocol-owned in this trial.
+- **Writer**: whichever side's bytes can change a given screen row — the
+  terminal's Block adapter applying protocol frames, or Pi's renderer
+  emitting ANSI drawing bytes.
+- **Ownership**: the rule that every screen row has exactly one writer at a
+  time. Two writers holding separate models of the same rows produce the
+  documented failure classes (duplicated spans, blank space, cursor
+  misbookkeeping).
+- **Boundary**: the moving line between terminal-owned history (Blocks) and
+  the app-owned active screen (chrome), maintained by the terminal-side
+  adapter.
+- **Seam**: the smallest upstream change that lets an outside implementation
+  connect without forking internals; this trial measures it as a patch.
+
 ## Scope
 
 - Pinned upstream: Pi 0.87.1 at `b348765`. The session-event trials stay
@@ -33,6 +52,13 @@ from an open question into a measured patch.
   performance measurement.
 
 ## The central unknown: one writer per region
+
+Two one-writer configurations already exist and neither conflicts:
+unmodified Pi, where its renderer draws everything; and our existing trials,
+where the application emits only protocol frames and the terminal's adapter
+draws everything. This trial is the first configuration with two writers on
+one screen — the patch makes Pi emit protocol frames for the transcript
+while its renderer keeps drawing chrome.
 
 InteractiveMode composes transcript components with chrome in one component
 tree, and `TuiMainScreen` renders the whole tree. If transcript components
