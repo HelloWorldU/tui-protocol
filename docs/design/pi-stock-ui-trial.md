@@ -39,7 +39,7 @@ from an open question into a measured patch.
 
 ## Scope
 
-- Pinned upstream: Pi 0.87.1 at `b348765`. The session-event trials stay
+- Pinned upstream: Pi 0.87.1 at `2b0a123`. The session-event trials stay
   pinned at 0.86.1; this trial follows interactive-UI development instead.
 - Transcript mapping follows the existing trial: user prompts become
   immediately sealed Blocks, assistant text becomes one mutable Block per
@@ -67,12 +67,18 @@ writers own one region (the conflicting-writers risk recorded in the
 architecture trace). The trial exists to pick and validate an ownership
 strategy:
 
-- **S1 (first attempt): suppress transcript components, chrome-only tree.**
-  When protocol mode is active, InteractiveMode does not add assistant/tool
-  components to the TUI tree. The tree contains only chrome, so the stock
-  renderer owns the active screen while the terminal owns the history above
-  it. Protocol frames share the single output stream with chrome drawing
-  bytes; the codec already accepts such mixed streams.
+- **S1 (first attempt): transcript components off the mounted tree,
+  chrome-only rendering.** Verified crash-free at the pin (2026-09-26):
+  InteractiveMode updates transcript components through held references and
+  guarded map lookups, never by tree lookup, so transcript components can
+  live unmounted while `chatContainer` stays mounted for chrome (error,
+  status, and notice messages share it and must not be hidden). The stock
+  renderer then owns only the active screen while the terminal owns the
+  history above it. Protocol frames share the single output stream with
+  chrome drawing bytes; the codec already accepts such mixed streams. A
+  render-level zero-line gate on the transcript component classes is the
+  smaller-delta variant — every enumeration keeps working — at the cost of
+  wasted per-token rebuild work.
 - **S2 (fallback): a filtering TUI wrapper.** Implement the `TUI` interface
   by delegation to `TuiMainScreen`, removing transcript components at the
   container boundary. Larger surface, but no InteractiveMode surgery.
@@ -141,13 +147,39 @@ scenarios actually run. The failure classes documented by the Kimi revert —
 duplicated transcript spans, vanished rows, growing blank space, cursor
 misbookkeeping — must be checked for absence explicitly, not assumed absent.
 
-## Open questions for implementation
+## Resolved and remaining questions
 
-- Does suppressing transcript components break InteractiveMode bookkeeping
-  (component lookup by tool-call ID, thinking toggles, OSC 133 markers)?
-- Does the working/status indicator read session events (fine) or transcript
-  components (needs a shim)?
-- Do editor history navigation and completion depend on transcript
-  components?
-- What is the minimal patch surface: an event-handler gate or a
-  container-level filter? Measured, not guessed.
+Resolved by source verification at `2b0a123` (2026-09-26; line numbers refer
+to that commit's `packages/coding-agent/src/`):
+
+- **Suppression does not crash bookkeeping.** Assistant updates flow through
+  the held `streamingComponent` reference and tool updates through the
+  guarded `pendingTools` map (`interactive-mode.ts:3395,3503`);
+  `removeChild` on a non-child is a no-op.
+- **What silently degrades:** settings and toggles that enumerate
+  `chatContainer` children (thinking visibility, tool expansion, output
+  padding, image options) stop reaching transcript content; OSC 133 prompt
+  markers disappear because the components emit them; the fullscreen-exit
+  transcript print would emit a chrome-only residue and must be gated
+  (`interactive-mode.ts:839-846`).
+- **Status indicator and footer** read session state directly; **editor
+  history and completion** are internal to the editor component. Neither
+  depends on transcript components.
+- **The protocol side needs no InteractiveMode event changes**: a second
+  `session.subscribe` listener is explicitly supported
+  (`core/agent-session.ts:1144-1159`). `main.ts:938` constructs
+  InteractiveMode and is the natural flag injection point.
+- **Minimal patch points** (gate `addChild`; keep creating components):
+  `interactive-mode.ts:3389` (assistant), `3416`/`3492` (live tool), `3734`
+  `addMessageToChat` (covers user, history, resume, compaction), `3712`
+  `addCustomEntryToChat`, `3894` (tool in history re-render), the
+  bash-component additions, and the exit print above.
+
+Still open for the prototype itself:
+
+- Boundary coordination at runtime: Block growth must not stale Pi's idea of
+  its chrome position (the acceptance scenarios test exactly this).
+- Input interception: OSC 9002 replies must be lifted before Pi's input
+  parser without reordering keyboard-protocol replies.
+- Unmounted transcript components miss invalidate-driven rebuilds (theme
+  changes); the trial accepts staleness or re-creates on theme change.

@@ -28,7 +28,7 @@ For an introduction and grouped reading entry points, start with the
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
 | [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan; completed checkpoints and remaining trial work |
 | [Pi rendering architecture](design/pi-rendering-architecture.md) | Upstream architecture research and integration assessment | Source trace at 0.86.1; 0.87 developments recorded 2026-09-25; trial evidence linked separately |
-| [Pi stock-UI protocol trial](design/pi-stock-ui-trial.md) | Design note | Working draft; stock-UI transcript ownership trial |
+| [Pi stock-UI protocol trial](design/pi-stock-ui-trial.md) | Design note | Working draft; component-suppression patch points verified 2026-09-26 |
 | [Pi session integration](../prototypes/integration/pi-session/README.md) | Application integration experiment | Local fixtures and finite OpenAI subscription trial through ConPTY/xterm; completion, search, cancellation, and recorded transport failure |
 | [Pi reading UX comparison](../prototypes/integration/pi-session/ux/README.md) | Paired application/renderer experiment | Three fixed scenarios; regular Pi vs experimental protocol frontend, captured before PTY |
 | [Pi entered-prompt multi-round trial](../prototypes/integration/pi-session/multi-round/README.md) | Interactive application experiment | Finite supporting-host trial: local native/lifecycle checks and a separate four-prompt subscription checkpoint |

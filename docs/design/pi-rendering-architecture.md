@@ -173,7 +173,8 @@ comparison uses a simplified protocol frontend alongside Pi's regular UI.
 
 ## Upstream developments, 2026-09-25
 
-Checked against Pi 0.87.1 at `b348765`. The renderer-selection and coupling
+Checked against Pi 0.87.1 at `b348765` (2026-09-25) and re-verified at
+`2b0a123` (2026-09-26). The renderer-selection and coupling
 assessments above still hold; the facts below postdate the 0.86.1 trace.
 
 - The alternate-screen layout system from `tui-plan.md` has landed:
@@ -187,8 +188,9 @@ assessments above still hold; the facts below postdate the 0.86.1 trace.
   no external renderer registration seam exists. The `TUI` interface in
   `packages/tui/src/tui.ts` is the contract a third renderer would
   implement; how an external implementation would be supplied remains
-  unverified and belongs to a future prototype. The trial design is drafted
-  in [Pi stock-UI protocol trial](pi-stock-ui-trial.md).
+  unverified and belongs to a future prototype. The trial design, including
+  the verified component-suppression patch points, is in
+  [Pi stock-UI protocol trial](pi-stock-ui-trial.md).
 - Cross-project evidence for the three rendering strategies, including the
   main-screen constraint recorded in Pi issue #7304 and the fullscreen
   performance record in #9549, is maintained in
