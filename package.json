@@ -23,6 +23,8 @@
     "prototype:pi-live": "vite --config prototypes/integration/pi-session/vite.config.ts --mode live",
     "prototype:pi-host": "vite --config prototypes/integration/pi-session/vite.config.ts",
     "build:pi-host": "vite build --config prototypes/integration/pi-session/vite.config.ts --outDir ../../../.tmp/pi-host-dist --emptyOutDir",
+    "prototype:pi-stock-ui": "vite --config prototypes/integration/pi-stock-ui/vite.config.ts",
+    "build:pi-stock-ui": "vite build --config prototypes/integration/pi-stock-ui/vite.config.ts --outDir ../../../.tmp/pi-stock-ui-dist --emptyOutDir",
     "prototype:pi-session": "node prototypes/integration/pi-session/replay.ts",
     "test:pi-session": "node --test prototypes/integration/pi-session/*.test.ts",
     "prototype:pty-stalled": "vite --config prototypes/integration/pty-pressure/vite.config.ts --mode stalled",
@@ -56,8 +58,8 @@
     "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
     "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
     "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",
-    "test": "node --test scripts/*.test.ts examples/multi-round/*.test.mjs examples/streaming-text/*.test.ts examples/streaming-text/*.test.mjs sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/ingress-pressure/*.test.ts prototypes/integration/pi-session/*.test.ts prototypes/integration/pty-demo/*.test.ts prototypes/integration/pty-pressure/report.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p prototypes/integration/pi-session/tsconfig.json"
+    "test": "node --test scripts/*.test.ts examples/multi-round/*.test.mjs examples/streaming-text/*.test.ts examples/streaming-text/*.test.mjs sdk/test/*.test.ts terminal/test/*.test.ts prototypes/block-model/model.test.ts prototypes/integration/ingress-pressure/*.test.ts prototypes/integration/pi-session/*.test.ts prototypes/integration/pi-stock-ui/*.test.ts prototypes/integration/pty-demo/*.test.ts prototypes/integration/pty-pressure/report.test.ts prototypes/integration/xterm-protocol-endpoint/*.test.ts protocol/test/*.test.ts prototypes/xterm-headless/*.test.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p prototypes/integration/pi-session/tsconfig.json && tsc --noEmit -p prototypes/integration/pi-stock-ui/tsconfig.json"
   },
   "devDependencies": {
     "@tui-protocol/protocol": "workspace:*",

@@ -3,6 +3,7 @@ packages:
   - sdk
   - terminal
   - prototypes/integration/pi-session
+  - prototypes/integration/pi-stock-ui
 
 allowBuilds:
   # Published runtime files are ready to use; these hooks do not build them.
@@ -18,3 +19,9 @@ minimumReleaseAgeExclude:
   - '@earendil-works/pi-coding-agent@0.86.1'
   - '@earendil-works/pi-telemetry@0.86.1'
   - '@earendil-works/pi-tui@0.86.1'
+  - '@earendil-works/chord@0.87.1'
+  - '@earendil-works/pi-agent-core@0.87.1'
+  - '@earendil-works/pi-ai@0.87.1'
+  - '@earendil-works/pi-coding-agent@0.87.1'
+  - '@earendil-works/pi-telemetry@0.87.1'
+  - '@earendil-works/pi-tui@0.87.1'
