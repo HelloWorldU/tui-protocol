@@ -2,6 +2,11 @@
 
 Status: working design note, draft 2026-09-25
 
+Trial skeleton: implemented 2026-09-28 in
+[`prototypes/integration/pi-stock-ui/`](../../prototypes/integration/pi-stock-ui/README.md)
+using the render-level zero-line variant; evidence and the browser boundary
+finding are recorded in its README.
+
 ## Question
 
 Can Pi's stock interactive UI keep its editor, footer, and status while the
@@ -175,11 +180,19 @@ to that commit's `packages/coding-agent/src/`):
   `addCustomEntryToChat`, `3894` (tool in history re-render), the
   bash-component additions, and the exit print above.
 
-Still open for the prototype itself:
+Resolved by the 2026-09-28 skeleton (render-level variant; evidence in the
+prototype README):
 
-- Boundary coordination at runtime: Block growth must not stale Pi's idea of
-  its chrome position (the acceptance scenarios test exactly this).
-- Input interception: OSC 9002 replies must be lifted before Pi's input
-  parser without reordering keyboard-protocol replies.
-- Unmounted transcript components miss invalidate-driven rebuilds (theme
-  changes); the trial accepts staleness or re-creates on theme change.
+- Input interception works: OSC 9002 replies are lifted before Pi's input
+  parser with keyboard bytes untouched and in order (Node checks plus
+  browser keystrokes).
+- Theme invalidation still reaches components because the render-level
+  variant keeps them in the tree (rebuild work is wasted, not lost).
+
+Confirmed as the next work item:
+
+- **Region ownership.** In the 2026-09-28 browser run, Pi's chrome erase
+  landed inside adapter-owned Block rows; the host invalidated the Context
+  as designed and the trial fail-stopped. The host needs an app-owned region
+  where native erases do not invalidate, with Block growth relocating the
+  region. Acceptance scenarios 1–3 stay unmet until it exists.
