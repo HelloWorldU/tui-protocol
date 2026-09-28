@@ -195,4 +195,6 @@ Confirmed as the next work item:
   landed inside adapter-owned Block rows; the host invalidated the Context
   as designed and the trial fail-stopped. The host needs an app-owned region
   where native erases do not invalidate, with Block growth relocating the
-  region. Acceptance scenarios 1–3 stay unmet until it exists.
+  region; the design is drafted in
+  [terminal-host region ownership](host-region-ownership.md). Acceptance
+  scenarios 1–3 stay unmet until it exists.

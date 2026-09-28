@@ -106,8 +106,10 @@ The missing host feature is an app-owned region: a defined screen region
 (here, the chrome at the bottom) where native erases do not invalidate
 Contexts, with Block growth relocating the region and resize reflowing it.
 That is significant terminal-side work and was not attempted in this
-skeleton; the acceptance scenarios 1–3 in the design draft remain unmet until
-it exists.
+skeleton; the design is drafted in
+[terminal-host region ownership](../../../docs/design/host-region-ownership.md),
+and the acceptance scenarios 1–3 in the design draft remain unmet until it
+exists.
 
 ## Run
 
