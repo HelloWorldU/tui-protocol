@@ -44,6 +44,12 @@ index. Its internal Extend and ReplaceSuffix projections are exercised by the
 separate
 [xterm protocol endpoint integration](../integration/xterm-protocol-endpoint/README.md)
 and currently materialize the resulting complete Block range.
+It also accepts an optional `BlockHistoryRegion`: when the integration layer
+supplies a passively tracked app-region estimate, Append materializes above the
+region top instead of at the cursor, compensates the native cursor by the
+inserted row count, and lets growth consume blank viewport rows below the
+cursor before scrolling. The endpoint integration owns the tracker and the
+evidence; the option defaults to the cursor-placement behavior.
 `private-core-osc-addon.ts` connects the older temporary OSC transport through
 a deferred Operation queue.
 

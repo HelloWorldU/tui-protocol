@@ -79,6 +79,33 @@ interface PrivateHeadlessTerminal {
 }
 
 /**
+ * The minimal view of an app-owned screen region that region-aware placement
+ * needs. The integration layer supplies the concrete passive tracker; the
+ * history only reads the region top and reports how materialization moves it.
+ */
+export interface BlockHistoryRegion {
+  /**
+   * First absolute buffer row owned by the application's ordinary output, or
+   * undefined when the extent is unknown. Every managed Block range must end
+   * at or above this row; placement checks enforce that and drop the
+   * estimate when it is contradicted.
+   */
+  topRow(): number | undefined;
+  /** Moves the extent by rows inserted (+) or removed (-) above it. */
+  shift(delta: number): void;
+  /** Drops the extent estimate; placement falls back to the cursor. */
+  reset(): void;
+}
+
+export interface PrivateCoreBlockHistoryOptions {
+  /**
+   * Opt-in experimental region-aware mode. Without it, every Block
+   * materializes at the cursor exactly as before.
+   */
+  readonly region?: BlockHistoryRegion;
+}
+
+/**
  * A deliberately private-API experiment. It proves that a historical Block
  * can be replaced inside xterm.js; it is not a reusable integration surface.
  */
@@ -87,6 +114,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #bufferService: PrivateBufferService;
   readonly #model: TerminalPrototype;
   readonly #plannedModel: TerminalPrototype;
+  readonly #region: BlockHistoryRegion | undefined;
   readonly #entries: BlockEntry[] = [];
   readonly #entryIndexes = new Map<BlockId, number>();
   readonly #plannedAppendTrims = new Map<BlockId, CapacityTrimPlan>();
@@ -95,8 +123,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
   #readingAnchor: PrivateMarker | undefined;
   #acceptedRenderCount = 0;
 
-  constructor(terminal: Terminal) {
+  constructor(terminal: Terminal, options?: PrivateCoreBlockHistoryOptions) {
     this.#terminal = terminal;
+    this.#region = options?.region;
     this.#bufferService = (
       terminal as unknown as PrivateHeadlessTerminal
     )._core._bufferService;
@@ -315,6 +344,12 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const lines = await this.#materialize(block.content);
     this.#model.apply({ type: "append", block });
 
+    const regionTop = this.#regionPlacementTop();
+    if (regionTop !== undefined) {
+      this.#insertAboveRegion(block, lines, regionTop);
+      return;
+    }
+
     const buffer = this.#bufferService.buffer;
     await write(
       this.#terminal,
@@ -334,6 +369,135 @@ export class PrivateCoreBlockHistory implements IDisposable {
     this.#entries.push({ id: block.id, startMarker, endMarker });
   }
 
+  /**
+   * The row where a Block may materialize above the app region, or undefined
+   * to place at the cursor. A region estimate contradicted by the Block
+   * ranges already placed is dropped, so a wrong estimate falls back to
+   * cursor placement where the mixed-ingress watchdog still sees any real
+   * conflict instead of the insertion hiding it.
+   */
+  #regionPlacementTop(): number | undefined {
+    const region = this.#region;
+    if (region === undefined) {
+      return undefined;
+    }
+    const top = region.topRow();
+    if (top === undefined) {
+      return undefined;
+    }
+    const lines = this.#bufferService.buffer.lines;
+    if (top < 0 || top > lines.length) {
+      region.reset();
+      return undefined;
+    }
+    for (const entry of this.#entries) {
+      const range = this.range(entry.id);
+      if (range !== undefined && range.start + range.lineCount > top) {
+        region.reset();
+        return undefined;
+      }
+    }
+    return top;
+  }
+
+  /**
+   * Materializes an accepted Block immediately above the app region: the
+   * region's rows shift down as a whole, the viewport follows only as far as
+   * the pushed cursor requires, and the cursor is compensated by the
+   * inserted row count so the application's next relative cursor movement
+   * still lands on its own rows. Validated only by the region-ownership
+   * tests in the xterm protocol endpoint prototype.
+   */
+  #insertAboveRegion(
+    block: Block,
+    lines: PrivateBufferLine[],
+    regionTop: number,
+  ): void {
+    const buffer = this.#bufferService.buffer;
+    const delta = lines.length;
+    const trimLineCount = Math.max(
+      0,
+      buffer.lines.length + delta - buffer.lines.maxLength,
+    );
+    const trimPlan =
+      trimLineCount === 0
+        ? undefined
+        : this.#capacityTrimPlan(
+            trimLineCount,
+            block.id,
+            Number.POSITIVE_INFINITY,
+          );
+    if (trimLineCount > 0 && trimPlan === undefined) {
+      throw new Error(
+        "This spike cannot safely trim the required scrollback rows.",
+      );
+    }
+
+    // A Block ending exactly at the region top would absorb the inserted
+    // rows through xterm's insert-index marker rule; its end marker is
+    // recreated at the true boundary below. Ranges are disjoint, so at most
+    // one entry can end at the insertion row.
+    const boundaryEntry = this.#entries.find(
+      (entry) => !entry.endMarker.isDisposed && entry.endMarker.line === regionTop,
+    );
+
+    const oldYbase = buffer.ybase;
+    const oldYdisp = buffer.ydisp;
+    const wasFollowingTail = oldYdisp === oldYbase;
+    const cursorLine = oldYbase + buffer.y;
+    const slack = trailingBlankViewportRows(
+      buffer,
+      cursorLine,
+      this.#terminal.rows,
+    );
+
+    buffer.lines.splice(regionTop, 0, ...lines);
+
+    // Net growth first consumes blank viewport rows below the cursor; only
+    // the excess scrolls the viewport so the pushed region stays on screen.
+    buffer.ybase = oldYbase + Math.max(0, delta - trimLineCount - slack);
+    buffer.y = Math.max(0, Math.min(
+      this.#terminal.rows - 1,
+      cursorLine + delta - trimLineCount - buffer.ybase,
+    ));
+    // xterm requires a complete active screen even when retained content is short.
+    while (buffer.lines.length < buffer.ybase + this.#terminal.rows) {
+      buffer.lines.splice(buffer.lines.length, 0, buffer.getBlankLine());
+    }
+
+    if (wasFollowingTail) {
+      buffer.ydisp = buffer.ybase;
+    } else if (oldYdisp >= regionTop) {
+      buffer.ydisp = Math.min(
+        buffer.ybase,
+        Math.max(0, oldYdisp + delta - trimLineCount),
+      );
+    } else {
+      // Rows above the region did not move; only leading capacity trimming
+      // shifts a reading position that survives above the insertion.
+      buffer.ydisp = Math.max(0, oldYdisp - trimLineCount);
+    }
+
+    if (trimPlan !== undefined) {
+      this.#dropLeadingEntries(trimPlan.entryCount);
+    }
+    if (boundaryEntry !== undefined && this.#entryIndexes.has(boundaryEntry.id)) {
+      boundaryEntry.endMarker.dispose();
+      boundaryEntry.endMarker = buffer.addMarker(regionTop - trimLineCount);
+    }
+    const start = regionTop - trimLineCount;
+    if (start < 0) {
+      throw new Error("The appended Block was trimmed before it could be indexed.");
+    }
+    const startMarker = buffer.addMarker(start);
+    const endMarker = buffer.addMarker(start + delta);
+    this.#entryIndexes.set(block.id, this.#entries.length);
+    this.#entries.push({ id: block.id, startMarker, endMarker });
+
+    this.#region?.shift(delta - trimLineCount);
+    this.#bufferService._onScroll.fire(buffer.ydisp);
+  }
+
   #appendWouldExceedCapacity(block: Block): boolean {
     const layout = conservativeTextLineCount(
       block.content, this.#terminal.cols, this.#terminal.options.tabStopWidth,
@@ -345,6 +509,49 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const buffer = this.#bufferService.buffer;
     const lines = buffer.lines;
     const cursorLine = buffer.ybase + buffer.y;
+
+    if (this.#region?.topRow() !== undefined) {
+      // Region mode inserts above the region top rather than at the cursor,
+      // so the projection starts from the physical row count, not the cursor
+      // line. No trim is scheduled: an over-capacity region Append rejects
+      // conservatively with resource_exhausted.
+      if (this.#acceptedRenderCount === 0) {
+        return (
+          Math.max(this.#terminal.rows, lines.length + layout.count) >
+          lines.maxLength
+        );
+      }
+      let plannedRegionLineCount = layout.count;
+      for (const candidate of this.#plannedModel.blocks()) {
+        if (this.#plannedTrimmedBlockIds.has(candidate.id)) {
+          continue;
+        }
+        const candidateLayout = conservativeTextLineCount(
+          candidate.content,
+          this.#terminal.cols,
+          this.#terminal.options.tabStopWidth,
+        );
+        if (candidateLayout === undefined) {
+          return true;
+        }
+        plannedRegionLineCount += candidateLayout.count;
+      }
+      let renderedRegionLineCount = 0;
+      for (const entry of this.#entries) {
+        const range = this.range(entry.id);
+        if (range === undefined) {
+          return true;
+        }
+        renderedRegionLineCount += range.lineCount;
+      }
+      return (
+        Math.max(
+          this.#terminal.rows,
+          lines.length + plannedRegionLineCount - renderedRegionLineCount,
+        ) > lines.maxLength
+      );
+    }
+
     const boundaryLineCount =
       (lines.get(cursorLine)?.translateToString(true).length ?? 0) > 0 ? 1 : 0;
     if (this.#acceptedRenderCount > 0) {
@@ -447,6 +654,13 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const oldYbase = buffer.ybase;
     const oldYdisp = buffer.ydisp;
     const wasFollowingTail = oldYdisp === oldYbase;
+    const regionTop = this.#region?.topRow();
+    const editAboveRegion = regionTop !== undefined && oldEnd <= regionTop;
+    if (regionTop !== undefined && !editAboveRegion) {
+      // The estimate contradicts a managed Block range; drop it rather than
+      // compensate the cursor against rows the application may not own.
+      this.#region?.reset();
+    }
     const targetAnchorOffset =
       !wasFollowingTail && oldYdisp >= range.start && oldYdisp < oldEnd
         ? oldYdisp - range.start
@@ -478,7 +692,25 @@ export class PrivateCoreBlockHistory implements IDisposable {
     this.#model.apply({ type: "update", id, content });
 
     buffer.lines.splice(range.start, range.lineCount, ...replacement);
-    buffer.ybase = Math.max(0, oldYbase + delta - trimLineCount);
+    if (editAboveRegion && delta > trimLineCount) {
+      // Region mode: growth above the app region first consumes the blank
+      // viewport rows below the cursor; only the excess scrolls the
+      // viewport, so the region keeps its screen rows while it can.
+      buffer.ybase =
+        oldYbase +
+        Math.max(
+          0,
+          delta -
+            trimLineCount -
+            trailingBlankViewportRows(
+              buffer,
+              oldYbase + buffer.y,
+              this.#terminal.rows,
+            ),
+        );
+    } else {
+      buffer.ybase = Math.max(0, oldYbase + delta - trimLineCount);
+    }
     // When shrinking consumes all scrollback, the native cursor must move
     // upward with the following content rather than retain its old screen row.
     buffer.y = Math.max(0, Math.min(
@@ -520,6 +752,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
     }
     if (trimPlan !== undefined) {
       this.#dropLeadingEntries(trimPlan.entryCount);
+    }
+    if (editAboveRegion) {
+      this.#region?.shift(delta - trimLineCount);
     }
 
     this.#bufferService._onScroll.fire(buffer.ydisp);
@@ -698,6 +933,29 @@ function appendBoundary(buffer: PrivateBuffer): string {
     return "\r\n";
   }
   return buffer.x === 0 ? "" : "\r";
+}
+
+/**
+ * Counts blank rows between the cursor row and the viewport bottom. Growth
+ * above the app region consumes these rows before any viewport row scrolls
+ * into scrollback. Scanning is required because the region may not reach the
+ * last screen row (blank tail) and may extend below the cursor (a footer).
+ */
+function trailingBlankViewportRows(
+  buffer: PrivateBuffer,
+  cursorLine: number,
+  rows: number,
+): number {
+  let blank = 0;
+  const viewportBottom = Math.min(buffer.ybase + rows, buffer.lines.length);
+  for (let index = viewportBottom - 1; index > cursorLine; index -= 1) {
+    const text = buffer.lines.get(index)?.translateToString(true);
+    if (text !== undefined && text.length > 0) {
+      break;
+    }
+    blank += 1;
+  }
+  return blank;
 }
 
 function endsWithLogicalNewline(content: string): boolean {

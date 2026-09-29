@@ -134,6 +134,54 @@ These results provide experimental evidence for the reading-anchor and
 tail-following requirements in [Terminal-Native
 Behavior](../../../docs/protocol/terminal-native-behavior.md).
 
+## Region Ownership (Experimental)
+
+An opt-in region-aware history mode implements the first Node-level slice of
+[terminal-host region ownership](../../../docs/design/host-region-ownership.md),
+the host feature whose absence fail-stopped the
+[Pi stock-UI trial](../pi-stock-ui/README.md) on 2026-09-28. It is wired only
+when a composition supplies an `AppRegionTracker`: the private history then
+materializes Blocks above the tracked app region, and the mixed ingress feeds
+the tracker cursor observations. Default compositions are unchanged.
+
+The [region-ownership tests](region-ownership.test.ts) replay the trial
+failure at Node level with a simulated chrome writer (a contiguous frame at
+startup, then cursor-up + `CSI K` differential redraws):
+
+- Without region mode, the replayed spinner redraw lands inside Block rows
+  and invalidates the Context, exactly as observed in the browser run.
+- With region mode, the same byte stream stays inside the chrome rows: the
+  Context stays open, the chrome bytes are correct, and a later Extend
+  succeeds. Blocks materialize above the region and the native cursor is
+  compensated by the inserted row count, so the application's relative
+  cursor math lands where its own frame model intends.
+- Block growth above the region pushes the chrome down intact (blank
+  viewport rows below the cursor are consumed before the viewport scrolls);
+  a shrinking Block relocates the region upward; the app's cursor math lands
+  in both cases.
+- An erase confined to the app region never invalidates. An erase that
+  reaches into Block rows still invalidates; the watchdog's Block-row
+  intersection rule is unchanged, as are `CSI 2J`/`CSI 3J`/`ESC c`.
+- Appending and growing Blocks while the user is scrolled up keeps the same
+  row at the viewport top (the reading-anchor behavior composes with the
+  region relocation).
+- A tested resize re-wraps Blocks and reflows the chrome, keeps the reading
+  position, drops the region estimate, and lets the app's post-resize frame
+  re-establish it; a following Append lands immediately above the chrome
+  again.
+
+The passive tracking rule and its reset conditions are documented in
+[app-region.ts](app-region.ts). Extent mistakes fail safe: placement verifies
+that no managed Block range reaches below the estimated top and otherwise
+drops the estimate, falling back to cursor placement where the watchdog
+still sees any real conflict. Region-mode capacity preflight is conservative
+(no trim scheduling for Appends). The mode is validated only by these Node
+tests; the pi-stock-ui browser checks remain the oracle for whether tracking
+suffices with the real application. In particular, Pi's clearing full
+redraw (`CSI 2J` + `CSI 3J`) on width change still invalidates under the
+unchanged watchdog semantics; how the trial composition should handle that
+sequence is an open question for the browser round.
+
 ## Capacity Boundary
 
 Capacity-limited tests deliberately grow a Block through Update, Extend, and

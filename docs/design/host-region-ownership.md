@@ -2,6 +2,11 @@
 
 Status: working design note, draft 2026-09-28
 
+First step: implemented 2026-09-29 as an opt-in region-aware history mode in
+the experimental xterm host (`prototypes/xterm-headless`,
+`prototypes/integration/xterm-protocol-endpoint`), with eight Node checks
+including the 2026-09-28 failure replay. Browser verification remains.
+
 ## Question
 
 Can the experimental terminal host confine an application's ANSI drawing to
@@ -96,11 +101,16 @@ The host learns the app region's extent without application cooperation:
   passive tracking sufficient, or does the trial host need an explicit hint
   at startup? Measure with the trial before considering any declaration
   mechanism.
-- Block materialization while the user is scrolled up: prior trials covered
-  insertion with a reading anchor but no app region; the interaction is
-  unverified.
+- Block materialization while the user is scrolled up: verified for append
+  and extend in the 2026-09-29 Node checks; other operations unverified.
 - Should the watchdog distinguish `CSI 0K`/`1K`/`2K` for region containment?
   First attempt treats them uniformly; verify against the checks.
+- **Pi's resize emits `CSI 2J` + `CSI 3J`**, which still invalidates every
+  Context under the unchanged watchdog semantics, so the browser resize
+  scenario will fail-stop even in region mode. Options: filter the clear in
+  the trial layer, re-materialize Blocks after the clear, or refine the
+  `CSI 2J` handling. This needs a maintainer decision before the browser
+  round.
 
 Related: [Pi stock-UI trial design](pi-stock-ui-trial.md),
 [terminal-native behavior](../protocol/terminal-native-behavior.md),

@@ -12,6 +12,8 @@ import type {
   EndpointDiagnostic,
   EndpointResult,
 } from "@tui-protocol/terminal";
+import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
+import { AppRegionTracker } from "./app-region.ts";
 import { XtermProtocolEndpoint } from "./endpoint.ts";
 import { XtermMixedStreamIngress } from "./mixed-ingress.ts";
 
@@ -69,6 +71,51 @@ export function createMixedFixture(
     dispose: () => {
       ingress.dispose();
       endpoint.dispose();
+      terminal.dispose();
+    },
+  };
+}
+
+export interface RegionFixture extends MixedFixture {
+  readonly region: AppRegionTracker;
+}
+
+/**
+ * The mixed fixture with the experimental region-aware history mode wired
+ * end to end: passive tracker, region-aware private history, and ingress
+ * observation. Ordinary bytes still reach xterm.js exactly once.
+ */
+export function createRegionFixture(
+  options: TerminalOptions = {},
+): RegionFixture {
+  const terminal = createTerminal({
+    cols: options.cols ?? 20,
+    rows: options.rows ?? 5,
+    scrollback: options.scrollback ?? 100,
+  });
+  const region = new AppRegionTracker(terminal);
+  const endpoint = new XtermProtocolEndpoint(terminal, {
+    completeBaselineSupported: true,
+    history: new PrivateCoreBlockHistory(terminal, { region }),
+  });
+  const responseFrames: Uint8Array[] = [];
+  const diagnostics: EndpointDiagnostic[] = [];
+  const ingress = new XtermMixedStreamIngress(terminal, endpoint, {
+    region,
+    onResponseFrame: (frame) => responseFrames.push(frame),
+    onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
+  });
+  return {
+    terminal,
+    region,
+    endpoint,
+    ingress,
+    responseFrames,
+    diagnostics,
+    dispose: () => {
+      ingress.dispose();
+      endpoint.dispose();
+      region.dispose();
       terminal.dispose();
     },
   };
