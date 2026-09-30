@@ -18,15 +18,18 @@ import type { BlockHistoryRegion } from "../../xterm-headless/private-core-histo
  * newlines only move the cursor down and are covered by the write-boundary
  * samples.
  *
- * The estimate resets on resize (reflow moves rows by amounts this tracker
- * cannot observe), on `CSI 2J` / `CSI 3J` / `ESC c`, and whenever Block
- * placement contradicts it; the application's next frame re-establishes it.
- * While the extent is unknown, Blocks materialize at the cursor as before
- * and the mixed-ingress watchdog remains the conflict detector, so tracking
- * mistakes fail safe instead of corrupting silently. Content-shifting
- * sequences (`CSI S`/`T`/`L`/`M`), reverse index, and application scroll
- * regions are not observed; the placement contradiction check is the
- * backstop for those.
+ * Erase handling: `CSI 2J` blanks viewport rows without moving them, so the
+ * extent needs no change (the redraw's samples re-cover the same rows);
+ * `CSI 3J` drops scrollback rows, so the extent is translated down by the
+ * dropped count and clamped at row 0 (`noteScrollbackClear`). The estimate
+ * resets on resize (reflow moves rows by amounts this tracker cannot
+ * observe), on `ESC c` (a genuine full reset), and whenever Block placement
+ * contradicts it; the application's next frame re-establishes it. While the
+ * extent is unknown, Blocks materialize at the cursor as before and the
+ * mixed-ingress watchdog remains the conflict detector, so tracking mistakes
+ * fail safe instead of corrupting silently. Content-shifting sequences
+ * (`CSI S`/`T`/`L`/`M`), reverse index, and application scroll regions are
+ * not observed; the placement contradiction check is the backstop for those.
  *
  * This mode is experimental and validated only by the region-ownership tests
  * in this directory.
@@ -63,6 +66,21 @@ export class AppRegionTracker implements BlockHistoryRegion, IDisposable {
     if (this.#top < 0 || this.#bottom < this.#top) {
       this.reset();
     }
+  }
+
+  /**
+   * Translates the extent down by the rows a `CSI 3J` drops from the top of
+   * the buffer, clamping at row 0: surviving viewport rows move up by exactly
+   * that count, and a frame the erase genuinely destroyed degrades to the
+   * most conservative placement (blocks above everything) until the redraw's
+   * samples extend the extent again.
+   */
+  noteScrollbackClear(droppedRows: number): void {
+    if (this.#top === undefined || this.#bottom === undefined) {
+      return;
+    }
+    this.#top = Math.max(0, this.#top - droppedRows);
+    this.#bottom = Math.max(0, this.#bottom - droppedRows);
   }
 
   reset(): void {

@@ -2,7 +2,11 @@ import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import type { IMarker, Terminal } from "@xterm/xterm";
 
 import type { Operation } from "../../block-model/model.ts";
-import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
+import {
+  PrivateCoreBlockHistory,
+  type BlockHistoryClearRecovery,
+  type PrivateCoreBlockHistoryOptions,
+} from "../../xterm-headless/private-core-history.ts";
 import {
   projectPlainText,
   retainedPlainTextLength,
@@ -60,10 +64,11 @@ export class BrowserSelectionHistory {
   readonly #disposeCopy: () => void;
   readonly #selectionListener: { dispose(): void };
 
-  constructor(terminal: Terminal) {
+  constructor(terminal: Terminal, options?: PrivateCoreBlockHistoryOptions) {
     this.#terminal = terminal;
     this.#history = new PrivateCoreBlockHistory(
       terminal as unknown as HeadlessTerminal,
+      options,
     );
     this.#disposeCopy = installPlainTextCopy(terminal, this.#history);
     this.#selectionListener = terminal.onSelectionChange(() => {
@@ -252,6 +257,26 @@ export class BrowserSelectionHistory {
 
   range(id: string): Readonly<{ start: number; lineCount: number }> | undefined {
     return this.#history.range(id);
+  }
+
+  /**
+   * Region-mode clear recovery for the mixed ingress. A user selection
+   * cannot be mapped across a full-screen clear and Block re-materialization
+   * (its rows were destroyed or moved wholesale), so it is dropped, and the
+   * private splice needs an explicit repaint like the render path's.
+   */
+  clearRecovery(): BlockHistoryClearRecovery {
+    return {
+      noteAppEraseRows: (start, end) =>
+        this.#history.noteAppEraseRows(start, end),
+      hasPendingRematerialization: () =>
+        this.#history.hasPendingRematerialization(),
+      rematerializeDamagedBlocks: async () => {
+        this.#terminal.clearSelection();
+        await this.#history.rematerializeDamagedBlocks();
+        this.#terminal.refresh(0, this.#terminal.rows - 1);
+      },
+    };
   }
 
   retire(id: string): void {

@@ -48,8 +48,12 @@ It also accepts an optional `BlockHistoryRegion`: when the integration layer
 supplies a passively tracked app-region estimate, Append materializes above the
 region top instead of at the cursor, compensates the native cursor by the
 inserted row count, and lets growth consume blank viewport rows below the
-cursor before scrolling. The endpoint integration owns the tracker and the
-evidence; the option defaults to the cursor-placement behavior.
+cursor before scrolling. Through the companion `BlockHistoryClearRecovery`
+port it additionally re-materializes retained Blocks the application's
+clearing redraw (`CSI 2J`/`CSI 3J`) destroyed, in document order above the
+re-learned region. The endpoint integration owns the tracker, the recovery
+wiring, and the evidence; both options default to the cursor-placement
+behavior.
 `private-core-osc-addon.ts` connects the older temporary OSC transport through
 a deferred Operation queue.
 

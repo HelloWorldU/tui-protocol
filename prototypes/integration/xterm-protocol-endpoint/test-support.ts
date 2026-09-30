@@ -94,14 +94,16 @@ export function createRegionFixture(
     scrollback: options.scrollback ?? 100,
   });
   const region = new AppRegionTracker(terminal);
+  const history = new PrivateCoreBlockHistory(terminal, { region });
   const endpoint = new XtermProtocolEndpoint(terminal, {
     completeBaselineSupported: true,
-    history: new PrivateCoreBlockHistory(terminal, { region }),
+    history,
   });
   const responseFrames: Uint8Array[] = [];
   const diagnostics: EndpointDiagnostic[] = [];
   const ingress = new XtermMixedStreamIngress(terminal, endpoint, {
     region,
+    clearRecovery: history,
     onResponseFrame: (frame) => responseFrames.push(frame),
     onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
   });

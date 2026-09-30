@@ -10,6 +10,7 @@ import type {
 } from "@tui-protocol/terminal";
 import { PendingInputBudget } from "@tui-protocol/terminal";
 import type { AppRegionTracker } from "./app-region.ts";
+import type { BlockHistoryClearRecovery } from "../../xterm-headless/private-core-history.ts";
 import type { XtermProtocolEndpoint } from "./endpoint.ts";
 
 export interface XtermMixedStreamIngressOptions {
@@ -20,6 +21,14 @@ export interface XtermMixedStreamIngressOptions {
    * cursor sequences, and resets the estimate on display erases and reset.
    */
   readonly region?: AppRegionTracker;
+  /**
+   * Opt-in experimental recovery from the application's clearing full
+   * redraw. When present together with `region`, normal-buffer `CSI 2J` and
+   * `CSI 3J` no longer invalidate Contexts; the erased rows are reported to
+   * the history, which re-materializes the damaged Blocks above the
+   * re-learned app region. `ESC c` still invalidates.
+   */
+  readonly clearRecovery?: BlockHistoryClearRecovery;
   readonly onResponseFrame: (frame: Uint8Array) => void;
   readonly onDiagnostic: (diagnostic: EndpointDiagnostic) => void;
 }
@@ -35,7 +44,9 @@ export class XtermMixedStreamIngress implements IDisposable {
   readonly #onResponseFrame: (frame: Uint8Array) => void;
   readonly #onDiagnostic: (diagnostic: EndpointDiagnostic) => void;
   readonly #region: AppRegionTracker | undefined;
+  readonly #clearRecovery: BlockHistoryClearRecovery | undefined;
   readonly #registrations: IDisposable[];
+  #suppressEndSampleAt: { readonly row: number; readonly x: number } | undefined;
   #processing: Promise<void> = Promise.resolve();
   #ended = false;
   readonly #budget: PendingInputBudget | undefined;
@@ -51,6 +62,7 @@ export class XtermMixedStreamIngress implements IDisposable {
     this.#onResponseFrame = options.onResponseFrame;
     this.#onDiagnostic = options.onDiagnostic;
     this.#region = options.region;
+    this.#clearRecovery = options.clearRecovery;
     this.#registrations = [
       terminal.parser.registerCsiHandler({ final: "K" }, (params) => {
         const mode = firstParameter(params);
@@ -67,14 +79,31 @@ export class XtermMixedStreamIngress implements IDisposable {
           mode === 2 &&
           !terminal.options.scrollOnEraseInDisplay
         ) {
-          this.#invalidateActiveRows(buffer.baseY, terminal.rows);
-          this.#region?.reset();
+          if (this.#recoversClears()) {
+            this.#clearRecovery?.noteAppEraseRows(
+              buffer.baseY,
+              buffer.baseY + terminal.rows,
+            );
+            // The frame's rows are gone and its redraw position is not yet
+            // observable; the redraw's samples re-establish the extent.
+            this.#region?.reset();
+            this.#suppressEndSampleAt = {
+              row: currentRow(terminal),
+              x: terminal.buffer.active.cursorX,
+            };
+          } else {
+            this.#invalidateActiveRows(buffer.baseY, terminal.rows);
+            this.#region?.reset();
+          }
         } else if (buffer.type === "normal" && mode === 3) {
-          this.#invalidateActiveRows(
-            0,
-            Math.max(0, buffer.length - terminal.rows),
-          );
-          this.#region?.reset();
+          const dropped = Math.max(0, buffer.length - terminal.rows);
+          if (this.#recoversClears()) {
+            this.#clearRecovery?.noteAppEraseRows(0, dropped);
+            this.#region?.noteScrollbackClear(dropped);
+          } else {
+            this.#invalidateActiveRows(0, dropped);
+            this.#region?.reset();
+          }
         }
         return false;
       }),
@@ -96,6 +125,7 @@ export class XtermMixedStreamIngress implements IDisposable {
       const observeRelative = (sign: 1 | -1) =>
         (params: readonly (number | number[])[]): boolean => {
           if (terminal.buffer.active.type === "normal") {
+            this.#suppressEndSampleAt = undefined;
             this.#region?.noteCursorRow(relativeRowTarget(terminal, params, sign));
           }
           return false;
@@ -104,6 +134,7 @@ export class XtermMixedStreamIngress implements IDisposable {
         params: readonly (number | number[])[],
       ): boolean => {
         if (terminal.buffer.active.type === "normal") {
+          this.#suppressEndSampleAt = undefined;
           this.#region?.noteCursorRow(absoluteRowTarget(terminal, params));
         }
         return false;
@@ -174,12 +205,38 @@ export class XtermMixedStreamIngress implements IDisposable {
       if (event.type === "ordinary") {
         this.#noteRegionCursorRow();
         await write(this.#terminal, event.data);
-        this.#noteRegionCursorRow();
+        this.#noteRegionEndCursorRow();
+        if (
+          this.#clearRecovery?.hasPendingRematerialization() &&
+          this.#region?.topRow() !== undefined
+        ) {
+          await this.#clearRecovery.rematerializeDamagedBlocks();
+        }
         continue;
+      }
+      if (
+        event.type === "message" &&
+        event.message.kind.startsWith("block.") &&
+        this.#clearRecovery?.hasPendingRematerialization()
+      ) {
+        // A Block Operation must see fresh ranges. If the application's
+        // redraw has not made the region observable since its clear, there
+        // is no honest insertion row: abort loudly instead of risking
+        // drawing over the application's next frame.
+        if (this.#region?.topRow() === undefined) {
+          throw new Error(
+            "A Block Operation arrived before the app region was re-established after a screen clear.",
+          );
+        }
+        await this.#clearRecovery.rematerializeDamagedBlocks();
       }
       this.#dispatch(this.#endpoint.acceptDecoded(event));
       await this.#endpoint.drain();
     }
+  }
+
+  #recoversClears(): boolean {
+    return this.#region !== undefined && this.#clearRecovery !== undefined;
   }
 
   #dispatch(result: EndpointResult): void {
@@ -206,6 +263,26 @@ export class XtermMixedStreamIngress implements IDisposable {
     if (this.#terminal.buffer.active.type === "normal") {
       this.#region?.noteCursorRow(currentRow(this.#terminal));
     }
+  }
+
+  /**
+   * After a recovered `CSI 2J`, the cursor still rests in blanked rows: an
+   * end-of-write sample is legitimate only once the application's output has
+   * moved the cursor away from where the erase left it. Begin-of-write
+   * samples are always legitimate (a redraw starts drawing there).
+   */
+  #noteRegionEndCursorRow(): void {
+    const suppress = this.#suppressEndSampleAt;
+    if (this.#terminal.buffer.active.type !== "normal") {
+      return;
+    }
+    const row = currentRow(this.#terminal);
+    const x = this.#terminal.buffer.active.cursorX;
+    if (suppress !== undefined && suppress.row === row && suppress.x === x) {
+      return;
+    }
+    this.#suppressEndSampleAt = undefined;
+    this.#region?.noteCursorRow(row);
   }
 }
 

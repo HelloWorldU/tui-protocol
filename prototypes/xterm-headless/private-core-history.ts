@@ -106,6 +106,28 @@ export interface PrivateCoreBlockHistoryOptions {
 }
 
 /**
+ * Region-mode recovery from the application's clearing full redraw
+ * (`CSI 2J` / `CSI 3J`, emitted together by Pi's resize re-render). The mixed
+ * ingress reports the erased row ranges instead of invalidating Contexts;
+ * the history then re-materializes the damaged retained Blocks above the
+ * re-learned app region. `ESC c` is not covered: it remains a genuine reset
+ * and still invalidates.
+ */
+export interface BlockHistoryClearRecovery {
+  /** Records the normal-buffer rows an application erase destroys. */
+  noteAppEraseRows(start: number, end: number): void;
+  /** True when damaged Blocks wait for the region to be re-established. */
+  hasPendingRematerialization(): boolean;
+  /**
+   * Re-materializes every damaged retained Block in document order above the
+   * current region estimate and recomputes the managed ranges. Throws when
+   * the region extent is not yet observable again; the endpoint aborts
+   * rather than risk drawing over the application's next frame.
+   */
+  rematerializeDamagedBlocks(): Promise<void>;
+}
+
+/**
  * A deliberately private-API experiment. It proves that a historical Block
  * can be replaced inside xterm.js; it is not a reusable integration surface.
  */
@@ -119,6 +141,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #entryIndexes = new Map<BlockId, number>();
   readonly #plannedAppendTrims = new Map<BlockId, CapacityTrimPlan>();
   readonly #plannedTrimmedBlockIds = new Set<BlockId>();
+  readonly #damagedBlockIds = new Set<BlockId>();
   readonly #registrations: IDisposable[] = [];
   #readingAnchor: PrivateMarker | undefined;
   #acceptedRenderCount = 0;
@@ -219,7 +242,152 @@ export class PrivateCoreBlockHistory implements IDisposable {
     entry.startMarker.dispose();
     entry.endMarker.dispose();
     this.#plannedTrimmedBlockIds.add(id);
+    this.#damagedBlockIds.delete(id);
     this.#rebuildEntryIndexes();
+  }
+
+  noteAppEraseRows(start: number, end: number): void {
+    if (this.#region === undefined || end <= start) {
+      return;
+    }
+    for (const entry of this.#entries) {
+      const range = this.range(entry.id);
+      if (
+        range !== undefined &&
+        range.start < end &&
+        start < range.start + range.lineCount
+      ) {
+        this.#damagedBlockIds.add(entry.id);
+      }
+    }
+  }
+
+  hasPendingRematerialization(): boolean {
+    return this.#damagedBlockIds.size > 0;
+  }
+
+  /**
+   * Re-materializes damaged retained Blocks above the current region
+   * estimate, in document order, reusing the region-aware insertion (cursor
+   * compensation, capacity trimming, and boundary-marker handling all
+   * apply). Blocks the Session still retains keep their identity and later
+   * Operations see fresh ranges; capacity-evicted and retired Blocks stay
+   * gone. Validated only by the region-ownership tests in the xterm
+   * protocol endpoint prototype.
+   */
+  async rematerializeDamagedBlocks(): Promise<void> {
+    if (this.#damagedBlockIds.size === 0) {
+      return;
+    }
+    const region = this.#region;
+    if (region === undefined) {
+      this.#damagedBlockIds.clear();
+      return;
+    }
+    const damaged = new Set(this.#damagedBlockIds);
+    this.#damagedBlockIds.clear();
+    // An entry whose markers the erase disposed before it could be reported
+    // is damaged as well, unless the Block was capacity-evicted on purpose.
+    // `CSI 2J` also disposes markers on the rows it blanks, which can cost a
+    // Block entirely above the erased span only its end marker; that loss is
+    // repaired in place instead of duplicating its intact rows.
+    for (const entry of this.#entries) {
+      if (
+        !this.#plannedTrimmedBlockIds.has(entry.id) &&
+        this.range(entry.id) === undefined &&
+        !(await this.#tryRepairBoundaryMarker(entry))
+      ) {
+        damaged.add(entry.id);
+      }
+    }
+    const retainedEntries = this.#entries.filter(
+      (entry) => !damaged.has(entry.id),
+    );
+    for (const entry of this.#entries) {
+      if (damaged.has(entry.id)) {
+        entry.startMarker.dispose();
+        entry.endMarker.dispose();
+      }
+    }
+    this.#entries.length = 0;
+    this.#entries.push(...retainedEntries);
+    this.#rebuildEntryIndexes();
+
+    const modelOrder = this.#model.blocks().map((block) => block.id);
+    for (const block of this.#model.blocks()) {
+      if (!damaged.has(block.id) || this.#plannedTrimmedBlockIds.has(block.id)) {
+        continue;
+      }
+      const lines = await this.#materialize(block.content);
+      const top = this.#rematerializationTop(modelOrder.indexOf(block.id), modelOrder);
+      if (top === undefined) {
+        throw new Error(
+          "This spike cannot re-materialize Blocks before the app region is observable again.",
+        );
+      }
+      this.#insertAboveRegion(block, lines, top);
+    }
+  }
+
+  /**
+   * `CSI 2J` disposes markers on the rows it blanks, including the end
+   * marker of a Block whose content rows sit entirely above the erased span
+   * (its end marker rests on the first erased row). When the surviving
+   * buffer rows still match the Block's materialization exactly, recreating
+   * the lost end marker is sound and avoids duplicating intact rows; any
+   * other marker loss means content is gone and the Block is damage to
+   * re-materialize.
+   */
+  async #tryRepairBoundaryMarker(entry: BlockEntry): Promise<boolean> {
+    if (entry.startMarker.isDisposed || !entry.endMarker.isDisposed) {
+      return false;
+    }
+    const block = this.#model
+      .blocks()
+      .find((candidate) => candidate.id === entry.id);
+    if (block === undefined) {
+      return false;
+    }
+    const lines = await this.#materialize(block.content);
+    const buffer = this.#bufferService.buffer;
+    const start = entry.startMarker.line;
+    if (start + lines.length > buffer.lines.length) {
+      return false;
+    }
+    for (let index = 0; index < lines.length; index += 1) {
+      const actual = buffer.lines.get(start + index)?.translateToString(true);
+      if (actual !== lines[index].translateToString(true)) {
+        return false;
+      }
+    }
+    entry.endMarker = buffer.addMarker(start + lines.length);
+    return true;
+  }
+
+  /**
+   * The row at which one damaged Block re-materializes: immediately above
+   * the oldest retained Block that is newer in document order, falling back
+   * to the region estimate when no newer Block survives. Document order is
+   * preserved whether the erase damaged older Blocks (scrollback clear),
+   * newer Blocks (viewport clear), or all of them; already re-materialized
+   * Blocks anchor later ones through their fresh markers.
+   */
+  #rematerializationTop(
+    modelIndex: number,
+    modelOrder: readonly BlockId[],
+  ): number | undefined {
+    let top = this.#region?.topRow();
+    for (const entry of this.#entries) {
+      if (modelOrder.indexOf(entry.id) <= modelIndex) {
+        continue;
+      }
+      const range = this.range(entry.id);
+      if (range !== undefined) {
+        top = top === undefined ? range.start : Math.min(top, range.start);
+        break;
+      }
+    }
+    return top;
   }
 
   wouldExceedCapacity(operation: Operation): boolean {
@@ -336,6 +504,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
     this.#entryIndexes.clear();
     this.#plannedAppendTrims.clear();
     this.#plannedTrimmedBlockIds.clear();
+    this.#damagedBlockIds.clear();
   }
 
   async #append(block: Block): Promise<void> {
@@ -841,6 +1010,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
       entry.startMarker.dispose();
       entry.endMarker.dispose();
       this.#plannedTrimmedBlockIds.add(entry.id);
+      this.#damagedBlockIds.delete(entry.id);
     }
     this.#rebuildEntryIndexes();
   }

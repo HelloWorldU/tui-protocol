@@ -32,15 +32,22 @@ export default defineConfig({
           socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n"); socket.destroy(); return;
         }
         const stock = url.searchParams.get("stock") === "1";
-        sockets.handleUpgrade(request, socket, head, client => sockets.emit("connection", client, stock));
+        const paceParam = url.searchParams.get("pace");
+        const pace = paceParam !== null && /^\d+$/.test(paceParam) ? Number(paceParam) : undefined;
+        sockets.handleUpgrade(request, socket, head, client => sockets.emit("connection", client, stock, pace));
       });
-      sockets.on("connection", (client: WebSocket, stock: boolean) => {
+      sockets.on("connection", (client: WebSocket, stock: boolean, pace: number | undefined) => {
         active = client;
         let child: pty.IPty;
         try {
           child = pty.spawn(process.execPath, [fileURLToPath(new URL("./main.ts", import.meta.url))], {
             name: "xterm-256color", cols: 60, rows: 24, cwd: process.cwd(),
-            env: stock ? { ...process.env, PI_STOCK_UI_OFF: "1" } : process.env, useConptyDll: true,
+            env: {
+              ...process.env,
+              ...(stock ? { PI_STOCK_UI_OFF: "1" } : {}),
+              ...(pace !== undefined && pace > 0 && pace <= 10_000 ? { PI_TRIAL_PACE: String(pace) } : {}),
+            },
+            useConptyDll: true,
           });
         } catch (error) { active = undefined; client.close(1011, "PTY spawn failed"); console.error(error); return; }
         bindPtyConnection(client, child, undefined, () => { if (active === client) active = undefined; });

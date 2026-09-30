@@ -105,11 +105,14 @@ only; this is the first trial with two live writers on one screen.
 The missing host feature is an app-owned region: a defined screen region
 (here, the chrome at the bottom) where native erases do not invalidate
 Contexts, with Block growth relocating the region and resize reflowing it.
-That is significant terminal-side work and was not attempted in this
-skeleton; the design is drafted in
-[terminal-host region ownership](../../../docs/design/host-region-ownership.md),
-and the acceptance scenarios 1–3 in the design draft remain unmet until it
-exists.
+The first slice of that feature now exists: the experimental
+[region-aware history mode](../xterm-protocol-endpoint/README.md#region-ownership-experimental)
+is validated by Node-level tests (including a replay of the failure above and
+re-materialization after the resize clear), and this trial's `browser.ts`
+wires it on the protocol path only. The browser checks have not been re-run
+yet; they remain the oracle for whether the passive region tracking suffices
+with the real application. The design is drafted in
+[terminal-host region ownership](../../../docs/design/host-region-ownership.md).
 
 ## Run
 
@@ -136,7 +139,8 @@ pnpm build:pi-stock-ui
 - Session replacement (`/new`, resume, fork) and compaction are out of scope
   and fail the trial instead of being hidden.
 - `checks.html` currently fails at scenario 1 for the documented reason; the
-  file is retained so the scenarios run unchanged once region ownership exists.
+  file is retained so the scenarios run unchanged once region ownership is
+  verified in the browser.
 
 Related: [design draft](../../../docs/design/pi-stock-ui-trial.md),
 [Pi rendering architecture](../../../docs/design/pi-rendering-architecture.md),

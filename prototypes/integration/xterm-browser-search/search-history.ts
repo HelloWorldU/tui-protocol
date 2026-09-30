@@ -2,6 +2,10 @@ import { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 
 import type { Operation } from "../../block-model/model.ts";
+import type {
+  BlockHistoryClearRecovery,
+  PrivateCoreBlockHistoryOptions,
+} from "../../xterm-headless/private-core-history.ts";
 import { BrowserSelectionHistory } from "../xterm-browser-selection/selection-history.ts";
 import { installSearchCellOffsetFixture } from "./search-cell-offset.ts";
 
@@ -17,9 +21,9 @@ export class BrowserSearchHistory {
   #currentTerm: string | undefined;
   #currentMatch: string | undefined;
 
-  constructor(terminal: Terminal) {
+  constructor(terminal: Terminal, options?: PrivateCoreBlockHistoryOptions) {
     this.#terminal = terminal;
-    this.#history = new BrowserSelectionHistory(terminal);
+    this.#history = new BrowserSelectionHistory(terminal, options);
     terminal.loadAddon(this.#search);
     installSearchCellOffsetFixture(this.#search, terminal);
   }
@@ -58,6 +62,25 @@ export class BrowserSearchHistory {
 
   range(id: string): Readonly<{ start: number; lineCount: number }> | undefined {
     return this.#history.range(id);
+  }
+
+  /**
+   * Region-mode clear recovery for the mixed ingress, preserving the active
+   * search across re-materialization like the render path does.
+   */
+  clearRecovery(): BlockHistoryClearRecovery {
+    const recovery = this.#history.clearRecovery();
+    return {
+      noteAppEraseRows: (start, end) =>
+        recovery.noteAppEraseRows(start, end),
+      hasPendingRematerialization: () =>
+        recovery.hasPendingRematerialization(),
+      rematerializeDamagedBlocks: async () => {
+        const currentTerm = this.#selectedSearchTerm();
+        await recovery.rematerializeDamagedBlocks();
+        this.#restoreSearch(currentTerm);
+      },
+    };
   }
 
   retire(id: string): void {

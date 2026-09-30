@@ -161,7 +161,8 @@ startup, then cursor-up + `CSI K` differential redraws):
   in both cases.
 - An erase confined to the app region never invalidates. An erase that
   reaches into Block rows still invalidates; the watchdog's Block-row
-  intersection rule is unchanged, as are `CSI 2J`/`CSI 3J`/`ESC c`.
+  intersection rule is unchanged, as are the alternate-screen isolation and
+  `scrollOnEraseInDisplay` boundaries.
 - Appending and growing Blocks while the user is scrolled up keeps the same
   row at the viewport top (the reading-anchor behavior composes with the
   region relocation).
@@ -170,17 +171,45 @@ startup, then cursor-up + `CSI K` differential redraws):
   re-establish it; a following Append lands immediately above the chrome
   again.
 
+### Re-materialization after the application's resize clear
+
+Pi's full redraw on width change erases the screen (`CSI 2J` + `CSI H` +
+`CSI 3J`) before rewriting its frame; under the plain watchdog that sequence
+invalidates every Context. When the composition wires both `region` and the
+history's `BlockHistoryClearRecovery` port, the ingress instead reports the
+erased rows to the history and does not invalidate. The history then
+re-materializes every damaged retained Block in document order above the
+re-learned app region (re-wrapped at the current width, cursor compensation
+and capacity trimming as in ordinary placement) and recomputes the managed
+ranges, so later Extend/ReplaceSuffix anchors and genuine-conflict
+invalidation keep working. `CSI 2J` alone resets the extent estimate (the
+redraw re-samples it); `CSI 3J` translates it by the dropped scrollback
+rows. `ESC c` remains a genuine full reset and still invalidates.
+
+The same tests show: a single-chunk or three-write split resize clear keeps
+the Context open and produces the same re-materialized layout; a later
+in-region redraw lands; an erase reaching the re-materialized Block rows
+still invalidates; a full reset still invalidates; and a Block Operation
+arriving between the clear and the redraw (region not yet observable again)
+aborts the endpoint loudly instead of drawing over the application's next
+frame. A Block whose end marker alone was disposed by `CSI 2J` (its content
+rows above the erased span) is repaired in place after an exact text match,
+never duplicated. `CSI 2J` without a following redraw, and an application
+full redraw over managed rows without `CSI 3J` (printable overwrite, already
+unwatched), remain documented fail-safe limitations: the former defers
+re-materialization until the redraw's samples, the latter is undetectable by
+the erase watchdog.
+
 The passive tracking rule and its reset conditions are documented in
 [app-region.ts](app-region.ts). Extent mistakes fail safe: placement verifies
 that no managed Block range reaches below the estimated top and otherwise
 drops the estimate, falling back to cursor placement where the watchdog
 still sees any real conflict. Region-mode capacity preflight is conservative
 (no trim scheduling for Appends). The mode is validated only by these Node
-tests; the pi-stock-ui browser checks remain the oracle for whether tracking
-suffices with the real application. In particular, Pi's clearing full
-redraw (`CSI 2J` + `CSI 3J`) on width change still invalidates under the
-unchanged watchdog semantics; how the trial composition should handle that
-sequence is an open question for the browser round.
+tests; the pi-stock-ui browser composition now wires the tracker and clear
+recovery (`browser.ts`, protocol path only), and its unchanged browser
+checks are the oracle for whether tracking suffices with the real
+application.
 
 ## Capacity Boundary
 

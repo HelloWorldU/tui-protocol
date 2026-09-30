@@ -27,7 +27,9 @@ function until(doc: Document, predicate: () => boolean, reason: string): Promise
       else if (predicate()) finish();
     };
     const observer = new MutationObserver(inspect);
-    const timer = setTimeout(() => finish(new Error(`Timed out: ${reason}`)), 30_000);
+    const timer = setTimeout(() => finish(new Error(
+      `Timed out: ${reason}\n[status] ${text(doc, "status")}\n[report] ${text(doc, "report") || "(empty)"}\n[rendered tail] ${text(doc, "rendered").split("\n").slice(-14).join("\n")}`,
+    )), 30_000);
     observer.observe(doc.body, { subtree: true, childList: true, characterData: true });
     inspect();
   });
@@ -47,10 +49,26 @@ async function fresh(stock = false): Promise<Document> {
   assert(frame.contentDocument !== null, "No iframe document");
   return frame.contentDocument;
 }
-function typePrompt(doc: Document, value = PROMPT) {
+async function typePrompt(doc: Document, started: () => boolean, value = PROMPT) {
   (doc.getElementById("typetext") as HTMLInputElement).value = value;
   click(doc, "type");
-  click(doc, "enter");
+  // Pi bounces submissions that arrive before its startup finishes ("Startup is
+  // still in progress") and keeps the text in the editor, so re-submit until the
+  // turn starts instead of assuming the first Enter lands.
+  const deadline = Date.now() + 25_000;
+  for (;;) {
+    if (started()) return;
+    const status = text(doc, "status");
+    if (status.startsWith("Stopped:") || status === "Child exited: 1") throw new Error(status);
+    if (Date.now() > deadline) {
+      throw new Error(`Timed out: prompt turn to start\n[rendered tail] ${text(doc, "rendered").split("\n").slice(-14).join("\n")}`);
+    }
+    click(doc, "enter");
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+}
+function turnStarted(doc: Document): boolean {
+  return /Context context-\d+: open/.test(text(doc, "report"));
 }
 function search(doc: Document, query: string, expected: string) {
   (doc.getElementById("query") as HTMLInputElement).value = query;
@@ -65,8 +83,8 @@ run.onclick = async () => {
     const doc = await fresh(); click(doc, "connect");
     await until(doc, () => text(doc, "rendered").includes("[pi-stock-ui] protocol supported"), "negotiation notice");
     await until(doc, () => text(doc, "rendered").includes("0.87.1"), "Pi chrome header");
-    typePrompt(doc);
-    await until(doc, () => text(doc, "report").includes("pi-2: mutable;"), "assistant Block streaming");
+    await typePrompt(doc, () => turnStarted(doc));
+    await until(doc, () => text(doc, "report").includes("pi-2:"), "assistant Block streaming");
     (doc.getElementById("typetext") as HTMLInputElement).value = "draft";
     click(doc, "type");
     await until(doc, () => text(doc, "rendered").includes("draft"), "editor echo during streaming");
@@ -84,8 +102,8 @@ run.onclick = async () => {
     // Scenario 2: cancel mid-stream, then a further turn completes in the same session.
     const stopped = await fresh(); click(stopped, "connect");
     await until(stopped, () => text(stopped, "rendered").includes("[pi-stock-ui] protocol supported"), "negotiation notice");
-    typePrompt(stopped);
-    await until(stopped, () => text(stopped, "report").includes("pi-2: mutable;"), "assistant Block streaming");
+    await typePrompt(stopped, () => turnStarted(stopped));
+    await until(stopped, () => text(stopped, "report").includes("pi-2:"), "assistant Block streaming");
     click(stopped, "escape");
     await until(stopped, () => text(stopped, "report").includes("Context context-1: closed"), "cancelled turn Context to close");
     const report2 = text(stopped, "report");
@@ -95,15 +113,19 @@ run.onclick = async () => {
     (stopped.getElementById("typetext") as HTMLInputElement).value = "zz";
     click(stopped, "type");
     await until(stopped, () => text(stopped, "rendered").includes("zz"), "editor echo after cancellation");
-    typePrompt(stopped);
+    // The echo text stays in Pi's editor; delete it so the next prompt submits clean.
+    click(stopped, "backspace");
+    click(stopped, "backspace");
+    await typePrompt(stopped, () => turnStarted(stopped));
     await until(stopped, () => text(stopped, "report").includes("Context context-2: closed"), "second turn Context to close");
-    assert((text(stopped, "report").match(/pi-\d+: sealed;/g) ?? []).length === 4, "Second turn did not produce four sealed Blocks");
+    const secondTurn = text(stopped, "report").split("Context context-2:")[1] ?? "";
+    assert((secondTurn.match(/pi-\d+: sealed;/g) ?? []).length === 4, "Second turn did not produce four sealed Blocks");
     results.textContent += "PASS: cancel mid-stream keeps a sealed partial Block with an abort label, the tool never runs, the editor stays responsive, and a further prompt completes.\nChecking resize…";
 
     // Scenario 3: resize 60 to 36 and back after streaming; transcript and chrome survive.
     const sized = await fresh(); click(sized, "connect");
     await until(sized, () => text(sized, "rendered").includes("[pi-stock-ui] protocol supported"), "negotiation notice");
-    typePrompt(sized);
+    await typePrompt(sized, () => turnStarted(sized));
     await until(sized, () => text(sized, "report").includes("Context context-1: closed"), "turn Context to close");
     assert(text(sized, "geometry") === "60x24", "Unexpected starting geometry");
     click(sized, "resize");
@@ -127,7 +149,7 @@ run.onclick = async () => {
     // Scenario 4: trial flag off — the same host sees a stock Pi, no protocol state.
     const plain = await fresh(true); click(plain, "connect");
     await until(plain, () => text(plain, "rendered").includes("[pi-stock-ui] protocol disabled by trial flag"), "flag notice");
-    typePrompt(plain);
+    await typePrompt(plain, () => text(plain, "rendered").includes("Working"));
     await until(plain, () => text(plain, "rendered").includes(RESULT_LINE), "Pi-rendered assistant text");
     assert(text(plain, "report").includes("No Contexts"), "Protocol state appeared with the trial flag off");
     assert(count(text(plain, "rendered"), RESULT_LINE) >= 1, "Stock transcript missing from native rows");

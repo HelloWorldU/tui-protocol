@@ -486,3 +486,280 @@ test("appending and growing Blocks while the user reads scrollback keeps the sam
   assert.deepEqual(fixture.diagnostics, []);
   fixture.dispose();
 });
+
+// The application's resize clear (Pi's fullRender emits CSI 2J + CSI H +
+// CSI 3J before redrawing its frame) destroys every managed row. In region
+// mode the ingress reports the erased rows instead of invalidating, and the
+// history re-materializes the retained Blocks above the re-learned app
+// region. ESC c remains a genuine reset and still invalidates.
+
+test("a resize clear and full redraw keeps the Context open and re-materializes the Blocks above the re-learned app region", async () => {
+  const fixture = createRegionFixture({ cols: 20, rows: 6 });
+  const contextId = await openMixedContext(fixture);
+  await fixture.ingress.push(text("editor\r\nfooter\r\nstatus: ready"));
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "user", "U: question", "sealed"), 3),
+      encodeInput(append(contextId, "2", "assistant", "A", "mutable"), 4),
+    ])
+  );
+  await fixture.ingress.push(
+    encodeInput(extend(contextId, "3", "assistant", "2", "\nworking"), 5),
+  );
+
+  fixture.terminal.resize(10, 6);
+  assert.equal(fixture.region.topRow(), undefined);
+
+  await fixture.ingress.push(
+    text("[2J[H[3Jeditor\r\nfooter\r\nstatus: ready"),
+  );
+
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "U: questio",
+    "n",
+    "A",
+    "working",
+    "editor",
+    "footer",
+    "status: re",
+    "ady",
+    "",
+    "",
+  ]);
+  assert.deepEqual(requiredRange(fixture.endpoint, contextId, "user"), {
+    start: 0,
+    lineCount: 2,
+  });
+  assert.deepEqual(requiredRange(fixture.endpoint, contextId, "assistant"), {
+    start: 2,
+    lineCount: 2,
+  });
+  assert.equal(fixture.region.topRow(), 4);
+  assert.equal(fixture.region.bottomRow(), 7);
+
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(extend(contextId, "4", "assistant", "3", "!"), 6),
+      text("[2A\r[2Kfooter!"),
+    ])
+  );
+
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+  assert.equal(
+    fixture.endpoint.context(contextId)?.blocks[1]?.content.data,
+    "A\nworking!",
+  );
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "U: questio",
+    "n",
+    "A",
+    "working!",
+    "editor",
+    "footer!",
+    "status: re",
+    "ady",
+    "",
+    "",
+  ]);
+  assert.deepEqual(fixture.responseFrames, []);
+  assert.deepEqual(fixture.diagnostics, []);
+  fixture.dispose();
+});
+
+test("a resize clear split across three writes re-materializes the same layout", async () => {
+  const fixture = createRegionFixture({ cols: 20, rows: 6 });
+  const contextId = await openMixedContext(fixture);
+  await fixture.ingress.push(text("editor\r\nfooter\r\nstatus: ready"));
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "user", "U: question", "sealed"), 3),
+      encodeInput(append(contextId, "2", "assistant", "A", "mutable"), 4),
+    ])
+  );
+  await fixture.ingress.push(
+    encodeInput(extend(contextId, "3", "assistant", "2", "\nworking"), 5),
+  );
+
+  fixture.terminal.resize(10, 6);
+
+  await fixture.ingress.push(text("[2J"));
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+  assert.equal(fixture.region.topRow(), undefined);
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "U: questio",
+    "n",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+  ]);
+
+  await fixture.ingress.push(text("[H[3J"));
+  await fixture.ingress.push(text("editor\r\nfooter\r\nstatus: ready"));
+
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "U: questio",
+    "n",
+    "A",
+    "working",
+    "editor",
+    "footer",
+    "status: re",
+    "ady",
+    "",
+    "",
+    "",
+    "",
+  ]);
+  assert.deepEqual(requiredRange(fixture.endpoint, contextId, "user"), {
+    start: 0,
+    lineCount: 2,
+  });
+  assert.deepEqual(requiredRange(fixture.endpoint, contextId, "assistant"), {
+    start: 2,
+    lineCount: 2,
+  });
+  assert.equal(fixture.region.topRow(), 4);
+
+  await fixture.ingress.push(
+    encodeInput(extend(contextId, "4", "assistant", "3", "!"), 6),
+  );
+
+  assert.equal(
+    fixture.endpoint.context(contextId)?.blocks[1]?.content.data,
+    "A\nworking!",
+  );
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+  assert.deepEqual(fixture.responseFrames, []);
+  assert.deepEqual(fixture.diagnostics, []);
+  fixture.dispose();
+});
+
+test("an erase that reaches re-materialized Block rows after a resize clear still invalidates the Context", async () => {
+  const fixture = createRegionFixture({ cols: 20, rows: 6 });
+  const contextId = await openMixedContext(fixture);
+  await fixture.ingress.push(text("editor\r\nfooter\r\nstatus: ready"));
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "user", "U: question", "sealed"), 3),
+      encodeInput(append(contextId, "2", "assistant", "A", "mutable"), 4),
+    ])
+  );
+  await fixture.ingress.push(
+    encodeInput(extend(contextId, "3", "assistant", "2", "\nworking"), 5),
+  );
+  fixture.terminal.resize(10, 6);
+  await fixture.ingress.push(
+    text("[2J[H[3Jeditor\r\nfooter\r\nstatus: ready"),
+  );
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(extend(contextId, "4", "assistant", "3", "!"), 6),
+      text("[2A\r[2Kfooter!"),
+    ])
+  );
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+
+  await fixture.ingress.push(
+    concatenate([
+      text("[3A\r[2K"),
+      encodeInput(extend(contextId, "5", "assistant", "4", "?"), 7),
+    ])
+  );
+
+  assert.equal(fixture.endpoint.context(contextId)?.state, "invalidated");
+  assert.deepEqual(bufferRows(fixture.terminal), [
+    "U: questio",
+    "n",
+    "",
+    "working!",
+    "editor",
+    "footer!",
+    "status: re",
+    "ady",
+    "",
+    "",
+  ]);
+  assert.deepEqual(takeResponses(fixture.responseFrames), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "5",
+      context_id: contextId,
+      body: { code: "context_not_open" },
+    },
+  ]);
+  assert.deepEqual(fixture.diagnostics, []);
+  fixture.dispose();
+});
+
+test("a full terminal reset still invalidates every Context in region mode", async () => {
+  const fixture = createRegionFixture({ cols: 20, rows: 6 });
+  const contextId = await openMixedContext(fixture);
+  await fixture.ingress.push(text("editor\r\nfooter\r\nstatus: ready"));
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "user", "U: question", "sealed"), 3),
+      encodeInput(append(contextId, "2", "assistant", "A", "mutable"), 4),
+    ])
+  );
+
+  await fixture.ingress.push(
+    concatenate([
+      text("c"),
+      encodeInput(extend(contextId, "3", "assistant", "2", "?"), 5),
+    ])
+  );
+
+  assert.equal(fixture.endpoint.context(contextId)?.state, "invalidated");
+  assert.equal(fixture.endpoint.range(contextId, "user"), undefined);
+  assert.equal(fixture.endpoint.range(contextId, "assistant"), undefined);
+  assert.ok(bufferRows(fixture.terminal).every((row) => row === ""));
+  assert.deepEqual(takeResponses(fixture.responseFrames), [
+    {
+      version: 1,
+      kind: "protocol.error",
+      operation_id: "3",
+      context_id: contextId,
+      body: { code: "context_not_open" },
+    },
+  ]);
+  assert.deepEqual(fixture.diagnostics, []);
+  fixture.dispose();
+});
+
+test("a Block Operation arriving between a clear and its redraw aborts the endpoint instead of corrupting the frame", async () => {
+  const fixture = createRegionFixture({ cols: 20, rows: 6 });
+  const contextId = await openMixedContext(fixture);
+  await fixture.ingress.push(text("editor\r\nfooter\r\nstatus: ready"));
+  await fixture.ingress.push(
+    concatenate([
+      encodeInput(append(contextId, "1", "user", "U: question", "sealed"), 3),
+      encodeInput(append(contextId, "2", "assistant", "A", "mutable"), 4),
+    ])
+  );
+  fixture.terminal.resize(10, 6);
+
+  await assert.rejects(
+    fixture.ingress.push(
+      concatenate([
+        text("[2J"),
+        encodeInput(extend(contextId, "3", "assistant", "2", "?"), 5),
+      ])
+    ),
+    /before the app region was re-established/,
+  );
+  assert.equal(fixture.endpoint.context(contextId)?.state, "open");
+
+  await assert.rejects(
+    fixture.ingress.push(text("editor\r\nfooter\r\nstatus: ready")),
+    /before the app region was re-established/,
+  );
+  fixture.dispose();
+});

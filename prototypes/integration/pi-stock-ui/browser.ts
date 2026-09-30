@@ -7,7 +7,7 @@ import "@xterm/xterm/css/xterm.css";
 import "../../../examples/terminal-host/style.css";
 import { trialSessionLimits, PendingInputBudget } from "@tui-protocol/terminal";
 import { BrowserSearchHistory } from "../xterm-browser-search/search-history.ts";
-import { XtermMixedStreamIngress, XtermProtocolEndpoint } from "../xterm-protocol-endpoint/index.ts";
+import { AppRegionTracker, XtermMixedStreamIngress, XtermProtocolEndpoint } from "../xterm-protocol-endpoint/index.ts";
 
 const status = document.querySelector<HTMLElement>("#status")!;
 const report = document.querySelector<HTMLElement>("#report")!;
@@ -18,7 +18,13 @@ const stock = new URLSearchParams(location.search).get("stock") === "1";
 export const terminal = new Terminal({ cols: 60, rows: 24, scrollback: 1000 });
 terminal.open(document.querySelector<HTMLElement>("#terminal")!);
 
-export const history = new BrowserSearchHistory(terminal);
+// Experimental region ownership on the protocol path only: chrome drawing and
+// Block-owned history share one screen. The stock fallback runs unchanged.
+const region = stock ? undefined : new AppRegionTracker(terminal as unknown as HeadlessTerminal);
+export const history = new BrowserSearchHistory(
+  terminal,
+  region === undefined ? undefined : { region },
+);
 const endpoint = new XtermProtocolEndpoint(terminal as unknown as HeadlessTerminal, {
   completeBaselineSupported: true, // Experimental fixture assertion, not feature detection.
   history,
@@ -34,6 +40,8 @@ let deadline: ReturnType<typeof setTimeout> | undefined;
 const diagnostics: string[] = [];
 const ingress = new XtermMixedStreamIngress(terminal as unknown as HeadlessTerminal, endpoint, {
   pendingInputLimits: { bytes: 2 * 1024 * 1024, pushes: 512 },
+  region,
+  clearRecovery: region === undefined ? undefined : history.clearRecovery(),
   // Protocol replies return to the application's stdin, never terminal.write().
   onResponseFrame(frame) {
     if (socket?.readyState === WebSocket.OPEN) socket.send(frame as Uint8Array<ArrayBuffer>);
@@ -150,5 +158,5 @@ window.addEventListener("beforeunload", () => {
   clearTimeout(deadline);
   socket?.close();
   // Do not dispose renderer state while an accepted write is still pending.
-  void pending.finally(() => { input.dispose(); ingress.dispose(); endpoint.dispose(); terminal.dispose(); });
+  void pending.finally(() => { input.dispose(); ingress.dispose(); endpoint.dispose(); region?.dispose(); terminal.dispose(); });
 });
