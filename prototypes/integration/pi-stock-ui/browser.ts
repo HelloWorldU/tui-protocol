@@ -13,7 +13,11 @@ const status = document.querySelector<HTMLElement>("#status")!;
 const report = document.querySelector<HTMLElement>("#report")!;
 const connect = document.querySelector<HTMLButtonElement>("#connect")!;
 const disconnect = document.querySelector<HTMLButtonElement>("#disconnect")!;
-const stock = new URLSearchParams(location.search).get("stock") === "1";
+const pageParams = new URLSearchParams(location.search);
+const stock = pageParams.get("stock") === "1";
+// Optional fixture pacing, forwarded to the PTY child (cancel checks need a long stream).
+const pace = pageParams.get("pace");
+const paceQuery = pace !== null && /^\d+$/.test(pace) ? `&pace=${pace}` : "";
 
 export const terminal = new Terminal({ cols: 60, rows: 24, scrollback: 1000 });
 terminal.open(document.querySelector<HTMLElement>("#terminal")!);
@@ -88,7 +92,7 @@ connect.onclick = () => {
   setButtons(true);
   status.textContent = "Connecting…";
   const token = document.querySelector<HTMLMetaElement>('meta[name="pty-token"]')!.content;
-  socket = new WebSocket(`ws://${location.host}/pty?token=${token}${stock ? "&stock=1" : ""}`);
+  socket = new WebSocket(`ws://${location.host}/pty?token=${token}${stock ? "&stock=1" : ""}${paceQuery}`);
   socket.binaryType = "arraybuffer";
   socket.onopen = () => {
     status.textContent = "Connected; receiving application output.";

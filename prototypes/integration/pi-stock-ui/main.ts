@@ -10,7 +10,11 @@ import { createTrialRuntime } from "./session-source.ts";
 // Streaming stays slow enough to type and cancel mid-turn from the host page.
 let failure: Error | undefined;
 try {
-  const fixture = await createFixtureModel(600);
+  // Scenario-specific fixture pacing via the PTY bridge; default keeps turns quick.
+  const pace = Number(process.env.PI_TRIAL_PACE);
+  const pacing = Number.isInteger(pace) && pace > 0 && pace <= 10_000 ? pace : 600;
+  process.stdout.write(`[pi-stock-ui] fixture pacing ${pacing}ms\r\n`);
+  const fixture = await createFixtureModel(pacing);
   const source = await createTrialRuntime(fixture, 600);
   // InteractiveMode shuts down through process.exit, so temp cleanup hooks onto exit.
   process.on("exit", () => {

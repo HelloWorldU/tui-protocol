@@ -23,7 +23,7 @@ function until(doc: Document, predicate: () => boolean, reason: string): Promise
     };
     const inspect = () => {
       const status = text(doc, "status");
-      if (status.startsWith("Stopped:") || status === "Child exited: 1") finish(new Error(status));
+      if (status.startsWith("Stopped:") || status === "Child exited: 1") finish(new Error(`${reason} — ${status}`));
       else if (predicate()) finish();
     };
     const observer = new MutationObserver(inspect);
@@ -34,8 +34,11 @@ function until(doc: Document, predicate: () => boolean, reason: string): Promise
     inspect();
   });
 }
-async function fresh(stock = false): Promise<Document> {
+async function fresh(query = ""): Promise<Document> {
   host.replaceChildren();
+  // The PTY bridge admits one socket at a time; give the previous iframe's
+  // socket a beat to release before the next scenario connects.
+  await new Promise(resolve => setTimeout(resolve, 500));
   const frame = document.createElement("iframe");
   frame.title = "Pi stock-UI trial under test";
   const loaded = new Promise<void>((resolve, reject) => {
@@ -43,7 +46,7 @@ async function fresh(stock = false): Promise<Document> {
     frame.onload = () => { clearTimeout(timer); resolve(); };
     frame.onerror = () => { clearTimeout(timer); reject(new Error("Trial page failed to load")); };
   });
-  frame.src = stock ? "/?stock=1" : "/";
+  frame.src = query === "" ? "/" : `/?${query}`;
   host.append(frame);
   await loaded;
   assert(frame.contentDocument !== null, "No iframe document");
@@ -100,7 +103,7 @@ run.onclick = async () => {
     results.textContent = "PASS: one turn completes with the transcript in four sealed Blocks; the editor accepted input during streaming; transcript text appears exactly once in native rows.\nChecking cancel…";
 
     // Scenario 2: cancel mid-stream, then a further turn completes in the same session.
-    const stopped = await fresh(); click(stopped, "connect");
+    const stopped = await fresh("pace=2400"); click(stopped, "connect");
     await until(stopped, () => text(stopped, "rendered").includes("[pi-stock-ui] protocol supported"), "negotiation notice");
     await typePrompt(stopped, () => turnStarted(stopped));
     await until(stopped, () => text(stopped, "report").includes("pi-2:"), "assistant Block streaming");
@@ -147,7 +150,7 @@ run.onclick = async () => {
     results.textContent += "PASS: a 60/36/60 column round trip keeps sealed Blocks, exactly one copy of each transcript line, a live editor, and non-blank chrome.\nChecking stock fallback…";
 
     // Scenario 4: trial flag off — the same host sees a stock Pi, no protocol state.
-    const plain = await fresh(true); click(plain, "connect");
+    const plain = await fresh("stock=1"); click(plain, "connect");
     await until(plain, () => text(plain, "rendered").includes("[pi-stock-ui] protocol disabled by trial flag"), "flag notice");
     await typePrompt(plain, () => text(plain, "rendered").includes("Working"));
     await until(plain, () => text(plain, "rendered").includes(RESULT_LINE), "Pi-rendered assistant text");

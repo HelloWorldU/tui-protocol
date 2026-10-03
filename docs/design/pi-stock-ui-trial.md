@@ -191,10 +191,10 @@ prototype README):
 
 Confirmed as the next work item:
 
-- **Region ownership.** In the 2026-09-28 browser run, Pi's chrome erase
-  landed inside adapter-owned Block rows; the host invalidated the Context
-  as designed and the trial fail-stopped. The host needs an app-owned region
-  where native erases do not invalidate, with Block growth relocating the
-  region; the design is drafted in
-  [terminal-host region ownership](host-region-ownership.md). Acceptance
-  scenarios 1–3 stay unmet until it exists.
+- **Region ownership — met 2026-10-03.** The
+  [region-ownership design](host-region-ownership.md) is implemented in the
+  experimental xterm host and the acceptance scenarios now hold: all four
+  browser checks pass (turn with mid-stream editor input, cancel plus a
+  further turn, 60/36/60 resize with re-materialization after Pi's clear,
+  stock fallback). The 2026-09-28 conflict record stays in the prototype
+  README for context.

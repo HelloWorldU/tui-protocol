@@ -2,10 +2,15 @@
 
 Status: working design note, draft 2026-09-28
 
-First step: implemented 2026-09-29 as an opt-in region-aware history mode in
-the experimental xterm host (`prototypes/xterm-headless`,
-`prototypes/integration/xterm-protocol-endpoint`), with eight Node checks
-including the 2026-09-28 failure replay. Browser verification remains.
+Status update, 2026-10-03: implemented and browser-verified. The
+experimental xterm host's opt-in region-aware history mode passes the four
+Pi stock-UI browser scenarios through real ConPTY (turn with mid-stream
+editor input, cancel plus a further turn, 60/36/60 resize, stock fallback),
+in addition to the Node-level checks including the 2026-09-28 failure
+replay. The resize-clear decision landed on re-materialization (option 2,
+ratified by the maintainer), answering the `CSI 2J`/`CSI 3J` question below:
+in region mode the clear no longer invalidates — Blocks are re-materialized
+above the re-learned app region.
 
 ## Question
 

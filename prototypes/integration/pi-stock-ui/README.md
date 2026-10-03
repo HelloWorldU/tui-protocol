@@ -11,15 +11,14 @@ This is the Path B trial from the
 `InteractiveMode`, `AgentSessionRuntime`, and transcript component classes from
 the published Pi 0.87.1 packages (pin `2b0a123`); no Pi files are modified.
 
-**Status, 2026-09-28: the Pi-side composition works; the host side cannot yet
-mix chrome drawing with Block-owned history.** In Node-level integration the
-stock UI runs with the transcript sealed into Blocks and the chrome stream
-carrying no transcript text, and the stock fallback completes a full turn
-through the real ConPTY/browser host. In the protocol browser run, Pi's chrome
-redraw erases land inside adapter-owned Block rows; the host invalidates the
-Context as designed, and the trial fail-stops. That failure is the draft's
-central boundary-coordination unknown observed running; host-side region
-ownership is the next work item.
+**Status, 2026-10-03: Path B works end to end.** With the experimental
+region-aware history mode wired on the protocol path, all four browser
+checks pass through the real ConPTY/xterm host: one turn with the editor
+accepting input during streaming, cancel mid-stream plus a further turn, a
+60/36/60 resize round trip, and the stock fallback. Node-level integration
+adds negotiation-negative, lifecycle, and input-routing edge cases. The
+2026-09-28 boundary failure that motivated host region ownership is kept
+below for the record.
 
 ## Layout
 
@@ -55,7 +54,7 @@ zero-line render switch (`ToolExecutionComponent.hideComponent`).
 
 ## Node evidence, 2026-09-28
 
-`pnpm typecheck`, 21 focused tests, all 304 repository Node tests, and the
+`pnpm typecheck`, 21 focused tests, all 317 repository Node tests, and the
 browser build pass. The focused tests cover:
 
 - the gate wraps exactly the eight render methods, once, defaults to stock,
@@ -78,41 +77,55 @@ browser build pass. The focused tests cover:
   typed before the UI starts replays in order;
 - a compaction event is outside this trial and fails instead of being hidden.
 
-## Browser evidence, 2026-09-28 (manual, Windows bundled ConPTY)
+## Browser evidence
 
-- **Stock fallback passes.** With the trial flag off (`?stock=1`), the real
-  ConPTY/browser path runs stock Pi 0.87.1: the fixture turn completes, Pi
-  renders its own transcript and chrome, and no protocol state appears.
-- **Protocol path fail-stops at the boundary.** Negotiation succeeds and the
-  patch report prints; the user prompt seals as Block `pi-1`; the assistant
-  Block `pi-2` opens mutable. Pi's chrome redraw (the Working indicator and
-  editor box) then erases rows that the adapter has placed inside Block
-  territory; the mixed ingress — which watches `CSI K` / `CSI J` / `ESC c` —
-  invalidates the Context as designed, the next Operation is rejected, and
-  the child fail-stops with exit 1. `checks.html` scenario 1 times out at
-  "assistant Block streaming" for this reason; scenarios 2–4 did not run.
+2026-10-03, automated `checks.html` through Windows bundled ConPTY and the
+experimental xterm host, with the region-aware history mode on the protocol
+path — **all four scenarios passed**:
 
-## The central finding: region ownership is the missing host feature
+1. One turn completes with the transcript in four sealed Blocks; the editor
+   accepted input during streaming; transcript text appears exactly once in
+   native rows.
+2. Cancel mid-stream keeps a sealed partial Block with an abort label; the
+   tool never runs; the editor stays responsive; a further prompt completes.
+3. A 60/36/60 column round trip keeps sealed Blocks, exactly one copy of
+   each transcript line, a live editor, and non-blank chrome. Pi's resize
+   emits a full screen+scrollback clear; the host re-materializes the Blocks
+   afterwards instead of invalidating the Context.
+4. With the trial flag off, Pi renders its own transcript through the same
+   host and no protocol state appears.
 
-The mixed ingress invalidates any Context whose Block rows intersect a native
-erase. That defense is correct — it refuses silent transcript corruption. The
-conflict is structural: Blocks and chrome share one coordinate space, Pi's
-renderer positions its chrome by absolute cursor math that cannot see the
-rows the adapter inserted for Blocks, and its erase lands inside them. All
-previous trials avoided this because the application emitted protocol frames
-only; this is the first trial with two live writers on one screen.
+The scenarios synchronize on stable states (an open Context, a sealed
+Block) rather than transient ones, and each scenario can set its own fixture
+pacing (`?pace=<ms>`; the cancel scenario uses 2400 ms so an automated
+Escape lands mid-stream).
 
-The missing host feature is an app-owned region: a defined screen region
-(here, the chrome at the bottom) where native erases do not invalidate
-Contexts, with Block growth relocating the region and resize reflowing it.
-The first slice of that feature now exists: the experimental
+### Earlier record, 2026-09-28 (manual, before region ownership)
+
+- **Stock fallback passes** through the real ConPTY/browser path.
+- **Protocol path fail-stops at the boundary**: after the user Block sealed
+  and the assistant Block opened, Pi's chrome redraw erased rows inside
+  adapter-owned Block territory; the mixed-ingress watchdog invalidated the
+  Context as designed and the child exited 1. This was the first observed
+  two-writer conflict and motivated region ownership.
+- Correction: the automated checks at that time timed out for a different
+  reason — they submitted before Pi's startup finished and never retried.
+  The conflict above was observed on the manual path, and the checks now
+  wait for the turn to actually start.
+
+## Region ownership: the resolved host feature
+
+The 2026-09-28 conflict was structural: Blocks and chrome share one
+coordinate space and Pi's absolute cursor math cannot see adapter-inserted
+rows. The fix is the experimental
 [region-aware history mode](../xterm-protocol-endpoint/README.md#region-ownership-experimental)
-is validated by Node-level tests (including a replay of the failure above and
-re-materialization after the resize clear), and this trial's `browser.ts`
-wires it on the protocol path only. The browser checks have not been re-run
-yet; they remain the oracle for whether the passive region tracking suffices
-with the real application. The design is drafted in
-[terminal-host region ownership](../../../docs/design/host-region-ownership.md).
+from the [region-ownership design](../../../docs/design/host-region-ownership.md):
+a passive app-region estimate confines the application's ANSI drawing to its
+own rows, cursor compensation after every Block materialization keeps the
+application's frame math valid, the watchdog stays armed for genuine
+conflicts, and application resize clears re-materialize the Blocks instead
+of invalidating Contexts. This trial's `browser.ts` wires the mode on the
+protocol path only; the stock fallback registers nothing.
 
 ## Run
 
@@ -120,9 +133,10 @@ From the repository root (Windows, Node 24+, pnpm 11.9.0):
 
 ```sh
 pnpm prototype:pi-stock-ui
-# http://127.0.0.1:4181/         protocol path (fail-stops as documented above)
-# http://127.0.0.1:4181/?stock=1 stock fallback (completes a fixture turn)
-# http://127.0.0.1:4181/checks.html
+# http://127.0.0.1:4181/              protocol path (completes a fixture turn)
+# http://127.0.0.1:4181/?stock=1      stock fallback
+# http://127.0.0.1:4181/?pace=2400    slower fixture stream (long cancel window)
+# http://127.0.0.1:4181/checks.html   the four automated scenarios
 pnpm typecheck
 pnpm test
 pnpm build:pi-stock-ui
@@ -131,16 +145,17 @@ pnpm build:pi-stock-ui
 ## Limits
 
 - Kitty keyboard negotiation is not performed (`kittyProtocolActive` stays
-  false); editor keys beyond typing, Enter, and Escape are unverified.
+  false); editor keys beyond typing, Enter, Escape, and Backspace are
+  unverified.
 - Local deterministic provider only; no live model, credentials, or network.
 - Windows bundled ConPTY only; 60x24 viewport in the browser fixture.
 - The render gate keeps transcript components updating offscreen (wasted
   per-token work), accepted for the smallest behavioral delta.
+- A resize clear re-materializes Blocks, but a reading anchor, an active
+  selection, or search-match positions across the clear are best-effort or
+  lost; the active search term survives via save/restore.
 - Session replacement (`/new`, resume, fork) and compaction are out of scope
   and fail the trial instead of being hidden.
-- `checks.html` currently fails at scenario 1 for the documented reason; the
-  file is retained so the scenarios run unchanged once region ownership is
-  verified in the browser.
 
 Related: [design draft](../../../docs/design/pi-stock-ui-trial.md),
 [Pi rendering architecture](../../../docs/design/pi-rendering-architecture.md),
