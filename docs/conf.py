@@ -23,6 +23,11 @@ nitpicky = True
 html_theme = "furo"
 html_title = "TUI Protocol"
 _base_url = os.environ.get("DOCS_BASE_URL", "").rstrip("/")
+if _base_url:
+    # The sitemap needs absolute canonical URLs; only deployed builds have them.
+    extensions.append("sphinx_sitemap")
+    # The site is not multilingual; do not prefix URLs with a language code.
+    sitemap_url_scheme = "{link}"
 html_baseurl = f"{_base_url}/" if _base_url else ""
 html_static_path = ["_static"]
 html_css_files = ["site.css"]
