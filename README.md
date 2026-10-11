@@ -22,12 +22,28 @@ protocol.
 - **2026-08-14 - End-to-end validation:** Validated protocol-driven mutation of
   xterm.js-owned history while preserving the tested reading-anchor and
   tail-following behavior across resize and reflow.
+- **2026-10-03 - Stock-application integration:** Verified Pi's stock
+  interactive UI coexisting with protocol-owned transcript history through
+  terminal-host region ownership, including cancellation, resize recovery,
+  and unsupported-terminal fallback.
 
 ## Documentation
 
 - [Documentation website](https://tui-protocol.org/)
 - [RFC 0001: Mutable Terminal History and Reading Anchors](docs/rfcs/0001-mutable-terminal-history-and-reading-anchors.md)
 - [Prior art and project evidence](docs/prior-art.md)
+- [Pi stock-UI trial](prototypes/integration/pi-stock-ui/README.md), the latest integration evidence
+
+## Current constraints
+
+Two constraints shape the project's near-term path:
+
+1. **Cold start.** Only the project's experimental terminal host speaks the
+   protocol. Applications ask which terminals support it and terminals ask
+   which applications use it; meaningful adoption needs a second,
+   independent terminal-side implementation.
+2. **Maintainer bandwidth.** This is a personal research project; scope and
+   pacing follow one maintainer's available time.
 
 ## Run an example
 

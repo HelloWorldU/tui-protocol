@@ -21,5 +21,8 @@ The protocol is a draft, and implementations are experimental.
 
 The [protocol library](../protocol/README.md), [TUI SDK](../sdk/README.md), and
 [terminal execution library](../terminal/README.md) implement the current draft.
-The [validation plan](design/next-stage-validation.md) and linked experiments
+The [Pi stock-UI trial](../prototypes/integration/pi-stock-ui/README.md) records
+the 2026-10-03 browser-verified integration of Pi's stock interactive UI with a
+protocol-owned transcript. The
+[validation plan](design/next-stage-validation.md) and linked experiments
 record what has been tested so far.
