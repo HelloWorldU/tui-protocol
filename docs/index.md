@@ -12,6 +12,8 @@ The protocol is a draft, and implementations are experimental.
 
 - **[Understand the model](rfcs/0001-mutable-terminal-history-and-reading-anchors.md)**
   The problem, goals, and the Block and Operation model.
+- **[Why this project exists](why-this-project.md)**
+  The five-minute evidence narrative: what three teams tried, and what runs today.
 - **[Run an example](../examples/multi-round/README.md)**
   See earlier content change while later output remains in history.
 - **[Explore the protocol drafts](README.md)**
