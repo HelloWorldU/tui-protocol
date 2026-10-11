@@ -1,6 +1,6 @@
 # From Controlled Experiments to Trial Use
 
-Working plan, updated 2026-09-22. This document tracks implementation evidence
+Working plan, updated 2026-09-22; Pi stock-UI status added 2026-10-11. This document tracks implementation evidence
 and engineering priorities. Agreed semantics are recorded in the
 [protocol drafts](../README.md).
 
@@ -98,9 +98,14 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 ## Remaining Work and Decision Points
 
 - **Pi integration scope:** the entered-prompt trial and one generated-project
-  coding workflow are complete. Real repository access needs a selected project,
-  explicit permissions, and execution isolation. Stock-UI reuse, a full fallback
-  frontend, and an upstream proposal remain follow-up choices.
+  coding workflow are complete, and stock-UI reuse is verified: the
+  [Pi stock-UI trial](../../prototypes/integration/pi-stock-ui/README.md) runs
+  Pi's stock interactive UI with a protocol-owned transcript through
+  terminal-host region ownership, with all four browser checks passing
+  (2026-10-03). Real repository access needs a selected project, explicit
+  permissions, and execution isolation. A full fallback frontend and an
+  upstream proposal remain follow-up choices; broader adoption is scoped in
+  the [adoption path](adoption-path.md).
 - **Capacity and retention:** partial-Block or unmanaged-row eviction, general
   snapshot reclamation, and long-session behavior remain open. Full-Block
   eviction follows the [existing semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity).
@@ -109,4 +114,6 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
   See the [host contract](../../terminal/README.md#host-adapter-boundary).
 - **Compatibility:** wider Unicode interaction, arbitrary terminal controls,
   Unix, SSH/tmux, and other terminals need targeted evidence from actual
-  integration requirements.
+  integration requirements. A second, independent terminal-side
+  implementation is the cold-start constraint recorded in the
+  [adoption path](adoption-path.md).

@@ -39,9 +39,10 @@ protocol.
 Two constraints shape the project's near-term path:
 
 1. **Cold start.** Only the project's experimental terminal host speaks the
-   protocol. Applications ask which terminals support it and terminals ask
-   which applications use it; meaningful adoption needs a second,
-   independent terminal-side implementation.
+   protocol. Broad adoption means multiple terminal emulators implementing
+   the receiver side, with the feature optional and gracefully degrading;
+   the path there is a second, independent terminal-side implementation
+   ([adoption path](docs/design/adoption-path.md)).
 2. **Maintainer bandwidth.** This is a personal research project; scope and
    pacing follow one maintainer's available time.
 
