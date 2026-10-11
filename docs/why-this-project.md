@@ -17,21 +17,19 @@ scrollback have no application-addressable identity. An application that
 must revise earlier output cannot name it, so it can only redraw — and
 every available redraw strategy disturbs the reader.
 
-## The paths already tried
+## The available paths
 
-**Differential redraw** rewrites only changed lines. It cannot reach
-anonymous rows already in scrollback, so it cannot express revision of
-historical content at all; when streamed output reflows above the viewport,
-correctness forces a full redraw.
-
-**Full redraw** clears and replays (`ESC[3J`). It reaches historical rows at
-the cost of the reader's position and selection. A Pi user documented the
-scroll-loss mechanism and the protocol-level constraint behind it in
-[pi issue #7304](https://github.com/earendil-works/pi/issues/7304). Kimi
+**Redraw in place.** Differential redraw rewrites only changed lines; it
+cannot reach anonymous rows already in scrollback, so it cannot express
+revision of historical content at all. When streamed output reflows above
+the viewport, correctness forces a full redraw: clear and replay
+(`ESC[3J`), which reaches historical rows at the cost of the reader's
+position and selection. A Pi user documented that mechanism and the
+protocol-level constraint behind it in
+[pi issue #7304](https://github.com/earendil-works/pi/issues/7304); Kimi
 Code's attempt to contain the damage — anchoring differential patches to
-buffer row indices while content shifted underneath — accumulated edge
-cases faster than they could be stabilized, and ended in a full revert with
-the symptom re-accepted
+buffer row indices while content shifted underneath — ended in a full
+revert with the symptom re-accepted
 ([PR #1367](prior-art.md#application-architecture-evidence)).
 
 **Application-owned viewport** keeps a private transcript and reimplements
