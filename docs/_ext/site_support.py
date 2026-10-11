@@ -10,6 +10,7 @@ from sphinx.errors import SphinxError
 GROUPS = {
     "Get started": [
         ("Project overview", "README"),
+        ("Why this project exists", "docs/why-this-project"),
         ("Run an example", "examples/multi-round/README"),
         ("Pi coding trial", "prototypes/integration/pi-session/coding/README"),
     ],
