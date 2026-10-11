@@ -74,12 +74,17 @@ cold-start loop and one maintainer's bandwidth
 
 ## Who might care, and what would help most
 
-- Terminal emulator developers and TUI framework authors who have hit the
-  same wall;
-- agent-application teams choosing a rendering strategy.
+- **People who use agent TUIs every day.** This project exists for their
+  reading experience: keeping your place, your selection, and your history
+  while output streams. If that is you, this evidence is yours to cite when
+  asking your terminal or agent of choice for a fix — user demand is what
+  moves vendors.
+- **Terminal emulator developers and TUI framework authors** who have hit
+  the same wall. The single most useful contribution is a second
+  terminal-side implementation, independent of this project's host code
+  ([adoption path](design/adoption-path.md)).
+- **Agent-application teams** choosing a rendering strategy. The three
+  documented attempts above are the map of what has already been tried.
 
-The single most useful contribution is a second terminal-side implementation,
-independent of this project's host code — it would prove the receiver side
-is not captive to one codebase ([adoption path](design/adoption-path.md)).
 All evidence and design documents are public, and the
 [protocol drafts](README.md) describe the semantics in full.
