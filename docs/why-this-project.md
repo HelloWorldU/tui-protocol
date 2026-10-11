@@ -3,54 +3,67 @@
 Status: project narrative, 2026-10-11. A five-minute read; every claim links
 to its evidence.
 
-## The problem, in one user's words
+## The gap: applications think in content, terminals think in rows
 
-In July 2026, a user of the Pi coding agent documented the constraint
-precisely ([pi issue #7304](https://github.com/earendil-works/pi/issues/7304)):
-the terminal protocol lets an application clear the entire scrollback or
-append to it — but it cannot selectively update a line that has already
-scrolled into history. When streamed content reflows above the viewport, the
-only correct option is to clear and replay, destroying the reader's position.
+AI agents generate, revise, and finalize content throughout an ongoing
+session. Applications manage that content as logical units with identity
+and lifecycle, while the terminal protocol expresses character output and
+screen operations. The gap is between the application's content model and
+what it can communicate to the terminal — not between two redraw
+strategies.
 
-Anyone who scrolls up to read an agent's output while it keeps streaming has
-met this: the next reflow wipes the place you were reading.
+The concrete consequence: rows already committed to terminal-owned
+scrollback have no application-addressable identity. An application that
+must revise earlier output cannot name it, so it can only redraw — and
+every available redraw strategy disturbs the reader.
 
-## What three teams tried
+## The paths already tried
 
-- **Patch in place.** Kimi Code's fork pinned an anchor to buffer row indices
-  while content shifted underneath; interacting edge cases accumulated faster
-  than they could be stabilized, and the fork reverted to the upstream
-  behavior, re-accepting the destructive-redraw symptom
-  ([PR #1367](prior-art.md#application-architecture-evidence)).
-- **Application-owned viewport.** OpenAI's Codex built a transcript-owned
-  viewport with excellent rewrap and copy fidelity, then retired it — 82,802
-  deleted lines — because making it feel native across the environment matrix
-  (terminal emulators, OS, input modalities, multiplexers, fonts, alt-screen)
-  was a combinatorial tail ([PR #9640](prior-art.md#application-architecture-evidence)).
-- **Application-owned fullscreen.** Pi chose this direction and intends it to
-  become the default; its cost profile is still active work — large
-  transcripts re-render every frame
-  ([issue #9549](prior-art.md#application-architecture-evidence)).
+**Differential redraw** rewrites only changed lines. It cannot reach
+anonymous rows already in scrollback, so it cannot express revision of
+historical content at all; when streamed output reflows above the viewport,
+correctness forces a full redraw.
 
-All three converge on one observation: the problem is real and expensive.
-The configuration none of them provides is terminal-owned history that stays
-correct when offscreen content changes, with the reading anchor preserved.
+**Full redraw** clears and replays (`ESC[3J`). It reaches historical rows at
+the cost of the reader's position and selection. A Pi user documented the
+scroll-loss mechanism and the protocol-level constraint behind it in
+[pi issue #7304](https://github.com/earendil-works/pi/issues/7304). Kimi
+Code's attempt to contain the damage — anchoring differential patches to
+buffer row indices while content shifted underneath — accumulated edge
+cases faster than they could be stabilized, and ended in a full revert with
+the symptom re-accepted
+([PR #1367](prior-art.md#application-architecture-evidence)).
+
+**Application-owned viewport** keeps a private transcript and reimplements
+scrolling, selection, search, and copy inside the application. It delivers
+good rewrap and copy fidelity, but feeling native across terminal
+emulators, operating systems, input modalities, multiplexers, and fonts is
+a combinatorial tail. OpenAI's Codex retired its TUI2 experiment after
+deleting 82,802 lines
+([PR #9640](prior-art.md#application-architecture-evidence)). Pi's
+alternate-screen renderer, intended to become the default, is still
+resolving full-transcript repaint costs
+([issue #9549](prior-art.md#application-architecture-evidence)).
+
+The configuration none of these provides: terminal-owned history that stays
+correct when offscreen content changes, with the reader's position
+preserved.
 
 ## The third path
 
-Give content identity. The application decides what the content is and when
-it changes; the terminal decides how it looks, where it sits, and keeps the
-user's reading position; a small protocol carries semantic changes between
-them — append, update, extend, replace a suffix, seal. The terminal never
-has to clear and replay; the application never has to reimplement scrolling,
-selection, search, or copy. The formal model is
-[RFC 0001](rfcs/0001-mutable-terminal-history-and-reading-anchors.md).
+Give content identity at the protocol layer. The application decides what
+the content is and when it changes; the terminal decides how it looks,
+where it sits, and keeps the user's reading position; a small protocol
+carries semantic changes between them — append, update, extend, replace a
+suffix, seal. The terminal never has to clear and replay; the application
+never has to reimplement scrolling, selection, search, or copy. The formal
+model is [RFC 0001](rfcs/0001-mutable-terminal-history-and-reading-anchors.md).
 
 ## What exists today
 
-Three [milestones](../README.md#milestones) through 2026-10-03. The strongest
-evidence: Pi 0.87.1's stock interactive UI — its unmodified editor, footer,
-and status — running while the transcript above is owned by protocol Blocks,
+Three [milestones](../README.md#milestones) through 2026-10-03. The latest:
+Pi 0.87.1's stock interactive UI — its unmodified editor, footer, and
+status — running while the transcript above is owned by protocol Blocks,
 verified by four automated browser scenarios through a real terminal path:
 a full turn with editor input during streaming, cancellation and a further
 turn, a resize round trip, and unsupported-terminal fallback
