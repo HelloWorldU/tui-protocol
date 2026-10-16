@@ -13,6 +13,8 @@ import {
 
 export interface XtermProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
+  /** Optional content types this composition completely implements. */
+  readonly optionalContentTypes?: readonly "text/styled"[];
   readonly history?: XtermBlockHistory;
   readonly resourceLimits?: SessionResourceLimits;
 }
@@ -29,6 +31,7 @@ export class XtermProtocolEndpoint implements IDisposable {
     this.#adapter = new XtermTerminalAdapter(terminal, options.history, error => this.abort(error));
     this.#endpoint = new TerminalProtocolEndpoint({
       completeBaselineSupported: options.completeBaselineSupported,
+      optionalContentTypes: options.optionalContentTypes,
       resourceLimits: options.resourceLimits,
       operationAdapter: this.#adapter,
     });

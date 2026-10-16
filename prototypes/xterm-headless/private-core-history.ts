@@ -1,10 +1,14 @@
 import headless from "@xterm/headless";
 import type { IDisposable, Terminal } from "@xterm/headless";
+import { spanPrefix } from "@tui-protocol/terminal";
 import { fixtureCellWidth, projectPlainText } from "./plain-text.ts";
+import { projectStyledSpans, spansToSgr } from "./styled-render.ts";
 
 import {
   TerminalPrototype,
+  logicalText,
   type Block,
+  type BlockContent,
   type BlockId,
   type Operation,
 } from "../block-model/model.ts";
@@ -413,16 +417,19 @@ export class PrivateCoreBlockHistory implements IDisposable {
     if (this.#plannedTrimmedBlockIds.has(operation.id)) {
       return true;
     }
-    let replacementContent: string;
+    let replacementContent: BlockContent;
     switch (operation.type) {
       case "update":
         replacementContent = operation.content;
         break;
       case "extend":
-        replacementContent = `${block.content}${operation.fragment}`;
+        replacementContent = extendedBlockContent(
+          block.content,
+          operation.fragment,
+        );
         break;
       case "replaceSuffix":
-        replacementContent = replaceSuffixText(
+        replacementContent = replacedBlockContent(
           block.content,
           operation.retain,
           operation.replacement,
@@ -430,7 +437,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
         break;
     }
     const replacementLayout = conservativeTextLineCount(
-      replacementContent,
+      logicalText(replacementContent),
       this.#terminal.cols,
       this.#terminal.options.tabStopWidth,
     );
@@ -459,9 +466,11 @@ export class PrivateCoreBlockHistory implements IDisposable {
       let plannedLineCount = 0;
       for (const candidate of retainedBlocks) {
         const layout = conservativeTextLineCount(
-          candidate.id === operation.id
-            ? replacementContent
-            : candidate.content,
+          logicalText(
+            candidate.id === operation.id
+              ? replacementContent
+              : candidate.content,
+          ),
           this.#terminal.cols,
           this.#terminal.options.tabStopWidth,
         );
@@ -669,7 +678,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
 
   #appendWouldExceedCapacity(block: Block): boolean {
     const layout = conservativeTextLineCount(
-      block.content, this.#terminal.cols, this.#terminal.options.tabStopWidth,
+      logicalText(block.content),
+      this.#terminal.cols,
+      this.#terminal.options.tabStopWidth,
     );
     if (layout === undefined) {
       return true;
@@ -696,7 +707,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
           continue;
         }
         const candidateLayout = conservativeTextLineCount(
-          candidate.content,
+          logicalText(candidate.content),
           this.#terminal.cols,
           this.#terminal.options.tabStopWidth,
         );
@@ -730,7 +741,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
           continue;
         }
         const candidateLayout = conservativeTextLineCount(
-          candidate.content,
+          logicalText(candidate.content),
           this.#terminal.cols,
           this.#terminal.options.tabStopWidth,
         );
@@ -802,7 +813,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
 
   async #update(
     id: BlockId,
-    content: string,
+    content: BlockContent,
     targetAnchorMapping: TargetAnchorMapping = "replacementStart",
   ): Promise<void> {
     const replacement = await this.#materialize(content);
@@ -929,20 +940,24 @@ export class PrivateCoreBlockHistory implements IDisposable {
     this.#bufferService._onScroll.fire(buffer.ydisp);
   }
 
-  async #extend(id: BlockId, fragment: string): Promise<void> {
+  async #extend(id: BlockId, fragment: BlockContent): Promise<void> {
     const block = this.#model
       .blocks()
       .find((candidate) => candidate.id === id);
     if (block === undefined) {
       throw new Error(`Block ${JSON.stringify(id)} has no rendered content.`);
     }
-    await this.#update(id, `${block.content}${fragment}`, "preserve");
+    await this.#update(
+      id,
+      extendedBlockContent(block.content, fragment),
+      "preserve",
+    );
   }
 
   async #replaceSuffix(
     id: BlockId,
     retain: number,
-    replacement: string,
+    replacement: BlockContent,
   ): Promise<void> {
     const block = this.#model
       .blocks()
@@ -950,17 +965,16 @@ export class PrivateCoreBlockHistory implements IDisposable {
     if (block === undefined) {
       throw new Error(`Block ${JSON.stringify(id)} has no rendered content.`);
     }
-    const retainedPrefix = Array.from(block.content)
-      .slice(0, retain)
-      .join("");
+    const retainedPrefix = contentPrefix(block.content, retain);
     const retainedLines = await this.#materialize(retainedPrefix);
     const retainedBoundaryRow = Math.max(
       0,
-      retainedLines.length - (endsWithLogicalNewline(retainedPrefix) ? 0 : 1),
+      retainedLines.length -
+        (endsWithLogicalNewline(logicalText(retainedPrefix)) ? 0 : 1),
     );
     await this.#update(
       id,
-      `${retainedPrefix}${replacement}`,
+      replacedBlockContent(block.content, retain, replacement),
       { retainedBoundaryRow },
     );
   }
@@ -1036,7 +1050,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
     };
   }
 
-  async #materialize(content: string): Promise<PrivateBufferLine[]> {
+  async #materialize(content: BlockContent): Promise<PrivateBufferLine[]> {
     const scratch = new HeadlessTerminal({
       cols: this.#terminal.cols,
       rows: 1,
@@ -1089,10 +1103,56 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 }
 
-function toTerminalText(content: string, tabWidth?: number): string {
-  const normalized = projectPlainText(content, tabWidth).text;
-  const projected = normalized.replaceAll("\n", "\r\n");
-  return normalized.endsWith("\n") ? projected : `${projected}\r\n`;
+function toTerminalText(content: BlockContent, tabWidth?: number): string {
+  if (typeof content === "string") {
+    const normalized = projectPlainText(content, tabWidth).text;
+    const projected = normalized.replaceAll("\n", "\r\n");
+    return normalized.endsWith("\n") ? projected : `${projected}\r\n`;
+  }
+  const spans = projectStyledSpans(content, tabWidth);
+  const projected = spansToSgr(spans).replaceAll("\n", "\r\n");
+  const lastSpanText = spans[spans.length - 1]?.text;
+  return lastSpanText?.endsWith("\n") === true ? projected : `${projected}\r\n`;
+}
+
+/**
+ * Styling only annotates the characters xterm.js stores; capacity and layout
+ * accounting always use the logical text, so SGR bytes never enter a count.
+ */
+function extendedBlockContent(
+  content: BlockContent,
+  fragment: BlockContent,
+): BlockContent {
+  if (typeof content === "string" && typeof fragment === "string") {
+    return `${content}${fragment}`;
+  }
+  if (Array.isArray(content) && Array.isArray(fragment)) {
+    return [...content, ...fragment];
+  }
+  throw new Error("Extend fragment shape does not match the Block content.");
+}
+
+function contentPrefix(content: BlockContent, retain: number): BlockContent {
+  return typeof content === "string"
+    ? Array.from(content).slice(0, retain).join("")
+    : spanPrefix(content, retain);
+}
+
+function replacedBlockContent(
+  content: BlockContent,
+  retain: number,
+  replacement: BlockContent,
+): BlockContent {
+  const prefix = contentPrefix(content, retain);
+  if (typeof prefix === "string" && typeof replacement === "string") {
+    return `${prefix}${replacement}`;
+  }
+  if (Array.isArray(prefix) && Array.isArray(replacement)) {
+    return [...prefix, ...replacement];
+  }
+  throw new Error(
+    "ReplaceSuffix replacement shape does not match the Block content.",
+  );
 }
 
 function appendBoundary(buffer: PrivateBuffer): string {
@@ -1134,14 +1194,6 @@ function endsWithLogicalNewline(content: string): boolean {
 
 function write(terminal: Terminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
-}
-
-function replaceSuffixText(
-  content: string,
-  retain: number,
-  replacement: string,
-): string {
-  return `${Array.from(content).slice(0, retain).join("")}${replacement}`;
 }
 
 /**

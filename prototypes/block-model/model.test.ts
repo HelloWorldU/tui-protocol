@@ -151,6 +151,115 @@ test("a trailing newline ends its Block without inserting an empty row before th
   assert.equal(terminal.blocks()[0]?.content, "alpha\n");
 });
 
+test("styled span content concatenates on Extend and lays out its logical text", () => {
+  const terminal = new TerminalPrototype({ width: 6, height: 3 });
+
+  terminal.apply({
+    type: "append",
+    block: {
+      id: "styled",
+      lifecycle: "mutable",
+      content: [
+        { text: "plain " },
+        { text: "red\nbold", style: { foreground: { palette: 1 } } },
+      ],
+    },
+  });
+  terminal.apply({
+    type: "extend",
+    id: "styled",
+    fragment: [
+      { text: " and ", style: { bold: true } },
+      { text: "faint", style: { faint: true } },
+    ],
+  });
+
+  assert.deepEqual(terminal.blocks()[0]?.content, [
+    { text: "plain " },
+    { text: "red\nbold", style: { foreground: { palette: 1 } } },
+    { text: " and ", style: { bold: true } },
+    { text: "faint", style: { faint: true } },
+  ]);
+
+  assert.deepEqual(
+    terminal.allRows().map(({ startOffset, endOffset, text }) => ({
+      startOffset,
+      endOffset,
+      text,
+    })),
+    [
+      { startOffset: 0, endOffset: 6, text: "plain " },
+      { startOffset: 6, endOffset: 9, text: "red" },
+      { startOffset: 10, endOffset: 16, text: "bold a" },
+      { startOffset: 16, endOffset: 22, text: "nd fai" },
+      { startOffset: 22, endOffset: 24, text: "nt" },
+    ],
+  );
+
+  assert.throws(
+    () =>
+      terminal.apply({ type: "extend", id: "styled", fragment: "plain tail" }),
+    /Extend fragment shape does not match/,
+  );
+});
+
+test("ReplaceSuffix retains a truncated span's style at a mid-span logical-scalar boundary", () => {
+  const terminal = new TerminalPrototype({ width: 20, height: 3 });
+
+  terminal.apply({
+    type: "append",
+    block: {
+      id: "styled",
+      lifecycle: "mutable",
+      content: [
+        { text: "ab" },
+        { text: "中文cd", style: { foreground: { rgb: [1, 2, 3] } } },
+        { text: "ef", style: { underline: true } },
+      ],
+    },
+  });
+  terminal.scrollTo({ blockId: "styled", offset: 7 });
+
+  terminal.apply({
+    type: "replaceSuffix",
+    id: "styled",
+    retain: 4,
+    replacement: [{ text: "XY", style: { inverse: true } }],
+  });
+
+  assert.deepEqual(terminal.blocks()[0]?.content, [
+    { text: "ab" },
+    { text: "中文", style: { foreground: { rgb: [1, 2, 3] } } },
+    { text: "XY", style: { inverse: true } },
+  ]);
+  assert.deepEqual(terminal.anchor(), { blockId: "styled", offset: 4 });
+  assert.deepEqual(
+    terminal.allRows().map(({ text }) => text),
+    ["ab中文XY"],
+  );
+
+  assertProtocolError(
+    () =>
+      terminal.apply({
+        type: "replaceSuffix",
+        id: "styled",
+        retain: 6,
+        replacement: [],
+      }),
+    "INVALID_CONTENT_BOUNDARY",
+  );
+  assert.throws(
+    () =>
+      terminal.apply({
+        type: "replaceSuffix",
+        id: "styled",
+        retain: 2,
+        replacement: "plain",
+      }),
+    /ReplaceSuffix replacement shape does not match/,
+  );
+});
+
 function append(
   id: string,
   content: string,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough, Writable } from "node:stream";
 import test from "node:test";
 import { ProtocolStreamDecoder } from "@tui-protocol/protocol";
-import { TerminalProtocolEndpoint, type AppliedBlockOperation } from "@tui-protocol/terminal";
+import { TerminalProtocolEndpoint, contentText, type AppliedBlockOperation } from "@tui-protocol/terminal";
 import { runApplication } from "./application.ts";
 import { createFixtureModel } from "./fixtures/provider.ts";
 import { createTrialSession } from "./session-source.ts";
@@ -67,7 +67,7 @@ test("ordinary q input cancels Pi without being confused with protocol replies a
   const context = f.endpoint.contexts()[0];
   assert.equal(context.state, "closed");
   assert.equal(context.blocks.length, 2);
-  assert(context.blocks[1].content.data.includes("[aborted]"));
+  assert(contentText(context.blocks[1].content).includes("[aborted]"));
   assert.equal(f.disposed(), 1);
   assert.equal(f.input.isRaw, false);
 });

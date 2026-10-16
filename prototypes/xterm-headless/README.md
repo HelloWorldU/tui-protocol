@@ -44,6 +44,13 @@ index. Its internal Extend and ReplaceSuffix projections are exercised by the
 separate
 [xterm protocol endpoint integration](../integration/xterm-protocol-endpoint/README.md)
 and currently materialize the resulting complete Block range.
+Block content may be plain text or a `text/styled` span list
+([RFC 0002](../../docs/rfcs/0002-styled-text-content.md)):
+[styled-render.ts](styled-render.ts) applies the shared projection across span
+boundaries (a Tab stop carries its column; a CRLF pair split across spans stays
+one break; a control label or Tab space keeps its span's style) and translates
+each span's style to SGR sequences, so xterm.js owns the cell attributes while
+layout and capacity accounting use only the logical text.
 It also accepts an optional `BlockHistoryRegion`: when the integration layer
 supplies a passively tracked app-region estimate, Append materializes above the
 region top instead of at the cursor, compensates the native cursor by the
@@ -93,8 +100,8 @@ The private experiment provides a concrete test case for this proposed core API.
 
 - The spike models one implicit Protocol Context and does not implement its
   control exchanges or Context IDs on Operations.
-- Plain text only. The shared [projection](plain-text.ts) normalizes newlines,
-  expands Tabs at host-selected logical-line stops, and renders other
+- Content projection: the shared [projection](plain-text.ts) normalizes
+  newlines, expands Tabs at host-selected logical-line stops, and renders other
   C0/DEL/C1 controls as visible `<U+XXXX>` labels without executing them.
   [Projection tests](plain-text.test.ts) enumerate those controls and check
   selected ASCII offset round trips and Chinese/Tab coordinates against actual

@@ -429,6 +429,131 @@ test("ReplaceSuffix rejects negative, fractional, and unsafe retain values with 
   }
 });
 
+test("styled text snapshots and span fragments round-trip through serialization", () => {
+  const append: Message = {
+    version: 1,
+    kind: "block.append",
+    operation_id: "200",
+    context_id: "ctx-styled",
+    body: {
+      block_id: "answer",
+      lifecycle: "mutable",
+      content: {
+        type: "text/styled",
+        data: [
+          { text: "plain " },
+          {
+            text: "palette bold",
+            style: { foreground: { palette: 208 }, bold: true },
+          },
+          {
+            text: "rgb",
+            style: {
+              foreground: { rgb: [18, 52, 86] },
+              background: "default",
+              faint: true,
+              italic: true,
+              underline: true,
+              strikethrough: true,
+              inverse: true,
+            },
+          },
+        ],
+      },
+    },
+  };
+  const update: Message = {
+    version: 1,
+    kind: "block.update",
+    operation_id: "201",
+    context_id: "ctx-styled",
+    body: {
+      block_id: "answer",
+      content: { type: "text/styled", data: [] },
+    },
+  };
+  const extend: Message = {
+    version: 1,
+    kind: "block.extend",
+    operation_id: "202",
+    context_id: "ctx-styled",
+    body: {
+      block_id: "answer",
+      base_operation_id: "200",
+      fragment: [{ text: " more", style: { underline: true } }],
+    },
+  };
+  const replaceSuffix: Message = {
+    version: 1,
+    kind: "block.replace_suffix",
+    operation_id: "203",
+    context_id: "ctx-styled",
+    body: {
+      block_id: "answer",
+      base_operation_id: "202",
+      retain: 5,
+      replacement: [{ text: "new" }],
+    },
+  };
+  const replaceDelete: Message = {
+    version: 1,
+    kind: "block.replace_suffix",
+    operation_id: "204",
+    context_id: "ctx-styled",
+    body: {
+      block_id: "answer",
+      base_operation_id: "203",
+      retain: 5,
+      replacement: [],
+    },
+  };
+
+  for (const message of [append, update, extend, replaceSuffix, replaceDelete]) {
+    assert.deepEqual(deserializeMessage(serializeMessage(message)), message);
+  }
+});
+
+test("styled content with structural violations is rejected with its valid Operation identity", () => {
+  const cases = [
+    '{"type":"text/html","data":"x"}',
+    '{"type":"text/styled","data":"x"}',
+    '{"type":"text/styled","data":[{}]}',
+    '{"type":"text/styled","data":[{"text":"x","extra":1}]}',
+    '{"type":"text/styled","data":[{"text":1}]}',
+    '{"type":"text/styled","data":[{"text":"x","style":"bold"}]}',
+  ];
+  for (const content of cases) {
+    const error = captureMessageError(
+      `{"version":1,"kind":"block.append","operation_id":"styled-invalid","context_id":"ctx","body":{"block_id":"answer","lifecycle":"mutable","content":${content}}}`,
+    );
+
+    assert.equal(error.code, "invalid_schema");
+    assert.deepEqual(error.identity, {
+      category: "operation",
+      kind: "block.append",
+      operation_id: "styled-invalid",
+      context_id: "ctx",
+    });
+  }
+});
+
+test("span-shaped Extend fragments and ReplaceSuffix replacements reject invalid shapes", () => {
+  const emptyFragment = captureMessageError(
+    '{"version":1,"kind":"block.extend","operation_id":"op","context_id":"ctx","body":{"block_id":"b","base_operation_id":"1","fragment":[]}}',
+  );
+  assert.equal(emptyFragment.code, "invalid_schema");
+
+  const badFragment = captureMessageError(
+    '{"version":1,"kind":"block.extend","operation_id":"op","context_id":"ctx","body":{"block_id":"b","base_operation_id":"1","fragment":5}}',
+  );
+  assert.equal(badFragment.code, "invalid_schema");
+
+  const badReplacement = captureMessageError(
+    '{"version":1,"kind":"block.replace_suffix","operation_id":"op","context_id":"ctx","body":{"block_id":"b","base_operation_id":"1","retain":1,"replacement":{}}}',
+  );
+  assert.equal(badReplacement.code, "invalid_schema");
+});
+
 test("the same invalid control request gets the same fingerprint when its JSON fields are reordered", () => {
   const first = captureMessageError(
     '{"version":1,"kind":"context.open","request_id":"same-request","body":{"extra":true}}',

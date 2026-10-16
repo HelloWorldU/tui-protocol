@@ -1,12 +1,15 @@
 import {
   ProtocolStreamDecoder, encodeMessageFrames,
-  type DecoderEvent, type Message,
+  type ContentSnapshot, type DecoderEvent, type Message, type StyledTextSpan,
 } from "@tui-protocol/protocol";
 
 type Request = Extract<Message, { kind: "capability.query" | "context.open" | "context.close" }>;
 type Response = Extract<Message, { kind: "capability.response" | "context.open.response" | "context.close.response" }>;
 type Operation = Extract<Message, { kind: `block.${string}` }>;
 type OperationBody = { [K in Operation["kind"]]: Pick<Extract<Operation, { kind: K }>, "kind" | "body"> }[Operation["kind"]];
+
+/** A content Operation's text: a plain string (text/plain) or styled spans (text/styled). */
+export type TextContent = string | readonly StyledTextSpan[];
 
 export interface TuiClientOptions {
   /** Accept this entire byte batch synchronously, preserving order with other writes. */
@@ -18,10 +21,10 @@ export interface TuiClientOptions {
 export interface TuiContext {
   readonly id: string;
   /** Returns the sent Operation ID, not an acknowledgement from the terminal. */
-  append(blockId: string, text: string, lifecycle: "mutable" | "sealed"): string;
-  update(blockId: string, text: string): string;
-  extend(blockId: string, baseOperationId: string, fragment: string): string;
-  replaceSuffix(blockId: string, baseOperationId: string, retain: number, replacement: string): string;
+  append(blockId: string, text: TextContent, lifecycle: "mutable" | "sealed"): string;
+  update(blockId: string, text: TextContent): string;
+  extend(blockId: string, baseOperationId: string, fragment: TextContent): string;
+  replaceSuffix(blockId: string, baseOperationId: string, retain: number, replacement: TextContent): string;
   seal(blockId: string): string;
   close(): Promise<void>;
 }
@@ -58,6 +61,7 @@ export class TuiClient {
   #disposed = false;
   #supported = false;
   #negotiating = false;
+  #optionalContentTypes: readonly string[] = [];
 
   constructor(options: TuiClientOptions) {
     this.#write = options.write;
@@ -67,16 +71,30 @@ export class TuiClient {
     }
   }
 
+  /** Optional content types confirmed by the latest positive capability response; empty without one. */
+  get optionalContentTypes(): readonly string[] {
+    return this.#optionalContentTypes;
+  }
+
+  /** True when the latest positive capability response confirmed text/styled. */
+  get supportsStyledContent(): boolean {
+    return this.#optionalContentTypes.includes("text/styled");
+  }
+
   async negotiate(): Promise<boolean> {
     this.#assertLive();
     if (this.#negotiating) throw new Error("Negotiation is already pending.");
     this.#negotiating = true;
     this.#supported = false;
+    this.#optionalContentTypes = [];
     try {
       const response = await this.#request("capability.query");
       if (response.body.outcome === "error") throw new ControlResponseError(response);
       this.#assertLive();
       this.#supported = response.body.outcome === "supported";
+      if (response.body.outcome === "supported") {
+        this.#optionalContentTypes = Object.freeze([...response.body.optional_content_types]);
+      }
       return this.#supported;
     } catch (error) {
       if (error instanceof ControlTimeoutError) return false;
@@ -124,6 +142,7 @@ export class TuiClient {
   dispose(reason = new Error("Client stream is closed.")): void {
     this.#disposed = true;
     this.#supported = false;
+    this.#optionalContentTypes = [];
     for (const pending of this.#pending.values()) {
       clearTimeout(pending.timer);
       pending.reject(reason);
@@ -172,19 +191,38 @@ export class TuiClient {
       this.#send({ ...operation, version: 1, context_id: id, operation_id: operationId } as Operation);
       return operationId;
     };
+    const styledSpans = (spans: readonly StyledTextSpan[]): readonly StyledTextSpan[] => {
+      if (!this.supportsStyledContent) {
+        throw new Error("Styled spans require text/styled, which the capability response did not confirm; " +
+          "strip styling and send a plain string instead.");
+      }
+      return spans;
+    };
+    const content = (text: TextContent): ContentSnapshot =>
+      typeof text === "string"
+        ? { type: "text/plain", data: text }
+        : { type: "text/styled", data: styledSpans(text) };
     return Object.freeze({
       id,
-      append: (blockId: string, text: string, lifecycle: "mutable" | "sealed") => send({
-        kind: "block.append", body: { block_id: blockId, lifecycle, content: { type: "text/plain", data: text } },
+      append: (blockId: string, text: TextContent, lifecycle: "mutable" | "sealed") => send({
+        kind: "block.append", body: { block_id: blockId, lifecycle, content: content(text) },
       }),
-      update: (blockId: string, text: string) => send({
-        kind: "block.update", body: { block_id: blockId, content: { type: "text/plain", data: text } },
+      update: (blockId: string, text: TextContent) => send({
+        kind: "block.update", body: { block_id: blockId, content: content(text) },
       }),
-      extend: (blockId: string, baseOperationId: string, fragment: string) => send({
-        kind: "block.extend", body: { block_id: blockId, base_operation_id: baseOperationId, fragment },
+      extend: (blockId: string, baseOperationId: string, fragment: TextContent) => send({
+        kind: "block.extend",
+        body: {
+          block_id: blockId, base_operation_id: baseOperationId,
+          fragment: typeof fragment === "string" ? fragment : styledSpans(fragment),
+        },
       }),
-      replaceSuffix: (blockId: string, baseOperationId: string, retain: number, replacement: string) => send({
-        kind: "block.replace_suffix", body: { block_id: blockId, base_operation_id: baseOperationId, retain, replacement },
+      replaceSuffix: (blockId: string, baseOperationId: string, retain: number, replacement: TextContent) => send({
+        kind: "block.replace_suffix",
+        body: {
+          block_id: blockId, base_operation_id: baseOperationId, retain,
+          replacement: typeof replacement === "string" ? replacement : styledSpans(replacement),
+        },
       }),
       seal: (blockId: string) => send({ kind: "block.seal", body: { block_id: blockId } }),
       close: async () => {

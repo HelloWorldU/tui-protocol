@@ -35,6 +35,17 @@ scrollback clear, and full-reset cases listed below.
   path before Block Operations are sent.
 - Tested OSC `9002` Append, Update, Extend, and ReplaceSuffix Message bytes
   materialize `text/plain` Blocks in real xterm.js Buffer lines.
+- With the endpoint's `optionalContentTypes: ["text/styled"]` assertion,
+  tested `text/styled` Append, Extend, and ReplaceSuffix Messages materialize
+  span styles as real xterm.js cell attributes: palette and RGB foreground and
+  background colors, bold, faint, italic, underline, strikethrough, and
+  inverse land on the expected cells; an unstyled span's cells stay at the
+  terminal default; a ReplaceSuffix boundary inside a span keeps the retained
+  prefix's style; control labels and Tab spaces keep their span's style; and
+  a resize reflows styled content with each character's attributes following
+  it. Session snapshots retain the span list. Without the advertised type the
+  same Append fails as `unsupported_content_type` without rendering. See
+  [styled-text tests](styled-text.test.ts).
 - In a tested parser-addon path, ordinary startup output remains visible while
   a Capability query split across two xterm.js writes is consumed without
   displaying its carrier bytes. Capability and Context responses reach the

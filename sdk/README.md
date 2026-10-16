@@ -9,8 +9,11 @@ may change.
 
 - `src/index.ts` is the public source entry point.
 - `src/client.ts` implements the single-stream client and Context handles.
+- `src/ansi.ts` converts ANSI-styled strings into `text/styled` spans.
 - `test/client.test.ts` checks client behavior and interoperability with the
   [terminal protocol module](../terminal/README.md).
+- `test/styled-content.test.ts` checks styled content encoding and
+  negotiation gating; `test/ansi.test.ts` checks the ANSI conversion.
 
 The SDK imports the [shared protocol implementation](../protocol/README.md)
 and implements the semantics in the [protocol drafts](../docs/README.md).
@@ -90,7 +93,7 @@ ordinary-text fallback, see the [streaming text example](../examples/streaming-t
 
 | API | Observable result |
 | --- | --- |
-| `negotiate()` | Resolves `true` only for a matched positive response; `false` for an explicit negative or the local response deadline. Correlated control errors and transport failure reject. |
+| `negotiate()` | Resolves `true` only for a matched positive response; `false` for an explicit negative or the local response deadline. Correlated control errors and transport failure reject. A positive response's confirmed optional content types become readable through `optionalContentTypes`. |
 | `openContext()` | Requires positive confirmation; resolves a handle only after a matched opened response. |
 | `append`, `update`, `extend`, `replaceSuffix`, `seal` | Validate, encode, and synchronously hand a byte batch to the transport; return its generated Operation ID. |
 | `context.close()` | Stops further sends on that handle while pending; resolves after a matching close response for that Context. |
@@ -118,6 +121,50 @@ positively confirmed again. Create a fresh client after reconnection. Transport
 closure and remote-resource cleanup remain the application's responsibility
 when retiring the client.
 
+## Styled text content
+
+`client.optionalContentTypes` exposes the optional content types from the
+latest positive capability response (empty before one, and reset by a fresh
+negotiation); `client.supportsStyledContent` is its `text/styled` shortcut.
+
+The text argument of `append`, `update`, `extend`, and `replaceSuffix` accepts
+either a string or a readonly `StyledTextSpan[]`. A string keeps encoding
+`text/plain` exactly as before. A span list encodes `text/styled`: a content
+snapshot for `append` and `update`, a span-list fragment for `extend` and
+`replaceSuffix`. Sending spans only validates and hands bytes to the
+transport; as with every Operation, the returned ID means sent, not accepted
+or rendered by the terminal.
+
+Passing spans when the latest positive response did not confirm `text/styled`
+throws before any bytes are written; stripping styling and sending plain
+strings is the application's fallback decision, and the SDK never downgrades
+spans on its own. An empty span list is valid content for `append`, `update`,
+and `replaceSuffix`; `extend` rejects it locally, matching the protocol's
+non-empty fragment rule.
+
+## ANSI conversion
+
+`spansFromAnsi(text)` converts an ANSI-styled string into a span list suitable
+for the content Operations. It interprets only SGR sequences (`CSI ... m`):
+reset (0, including an empty parameter list); bold, faint, italic, underline,
+strikethrough, and inverse (1, 2, 3, 4, 9, 7) with their individual clears
+(22, 23, 24, 29, 27); the 16-color foreground (30–37, 90–97) and background
+(40–47, 100–107) codes as palette indices 0–15, preserving terminal theme
+semantics; 256-palette colors (`38;5;n`, `48;5;n`); true colors
+(`38;2;r;g;b`, `48;2;r;g;b`); and default-color restores (39, 49), which drop
+the attribute rather than emitting the explicit `"default"` color.
+
+The output merges adjacent runs with equal styles into one span, emits runs
+without attributes as spans without a style field, and never produces empty
+spans, so empty or styling-only input yields an empty span list.
+
+Limitations of this first version: every non-SGR escape sequence (other CSI
+commands, OSC strings, other ESC sequences) is silently discarded; other
+control characters are kept as ordinary text; parameters are split on `;`
+only, so colon sub-parameters such as underline variants are not
+distinguished; unknown SGR attributes and out-of-range color parameters are
+ignored.
+
 ## Terminal-side integration
 
 The [terminal protocol module](../terminal/README.md) handles incoming bytes,
@@ -136,9 +183,11 @@ Run `pnpm typecheck` and `pnpm test` from the root. The SDK tests cover the list
 positive/negative negotiation cases, response correlation, all five Operations
 against the existing endpoint with byte-split responses, explicit base IDs,
 local validation, close errors/timeouts, input diagnostics, and disposal/write
-failure. The real PTY consumer is verified separately through its guided browser
-check.
+failure, plus the styled content encoding, negotiation gating, and the ANSI
+conversion behavior above. The real PTY consumer is verified separately
+through its guided browser check.
 
-The client exposes baseline `text/plain`. Optional content types, same-ID
-control-request recovery, and general transport/backpressure handling remain
-future work, along with a supported-runtime matrix and stable package exports.
+The client exposes baseline `text/plain` and negotiated `text/styled`. Further
+optional content types, same-ID control-request recovery, and general
+transport/backpressure handling remain future work, along with a
+supported-runtime matrix and stable package exports.

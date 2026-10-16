@@ -1,6 +1,7 @@
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { TuiClient, TuiContext } from "@tui-protocol/sdk";
 import { PiEventAdapter, type TrialEvent } from "./event-adapter.ts";
+import { createAssistantSpanRenderer, type AssistantSpanRenderer } from "./styled-renderer.ts";
 
 /**
  * 0.87.1 live-event mapping. Session-level events without transcript content are
@@ -35,6 +36,8 @@ export function transcriptEvent(event: AgentSessionEvent): TrialEvent | undefine
 export class ProtocolTranscriptBridge {
   readonly #client: TuiClient;
   readonly #onFailure: (error: Error) => void;
+  readonly #width?: () => number;
+  #renderer?: AssistantSpanRenderer;
   #queue: Promise<void> = Promise.resolve();
   #unsubscribe?: () => void;
   #adapter?: PiEventAdapter;
@@ -43,9 +46,10 @@ export class ProtocolTranscriptBridge {
   #turns = 0;
   #closedContexts = 0;
 
-  constructor(options: { client: TuiClient; onFailure: (error: Error) => void }) {
+  constructor(options: { client: TuiClient; onFailure: (error: Error) => void; width?: () => number }) {
     this.#client = options.client;
     this.#onFailure = options.onFailure;
+    this.#width = options.width;
   }
 
   attach(session: Pick<AgentSession, "subscribe">): void {
@@ -87,7 +91,7 @@ export class ProtocolTranscriptBridge {
       this.#turns++;
       this.#enqueue(async () => {
         const context = await this.#client.openContext();
-        const adapter = new PiEventAdapter(context);
+        const adapter = new PiEventAdapter(context, undefined, this.#styledRenderer());
         adapter.accept(selected);
         this.#context = context;
         this.#adapter = adapter;
@@ -110,6 +114,13 @@ export class ProtocolTranscriptBridge {
         this.#closedContexts++;
       });
     }
+  }
+
+  /** Assistant Blocks carry Pi's real styling only when the terminal confirmed text/styled. */
+  #styledRenderer(): AssistantSpanRenderer | undefined {
+    if (!this.#client.supportsStyledContent || this.#width === undefined) return undefined;
+    this.#renderer ??= createAssistantSpanRenderer({ width: this.#width });
+    return this.#renderer;
   }
 
   #enqueue(task: () => void | Promise<void>): void {

@@ -32,6 +32,7 @@ protocol.
 - [Documentation website](https://tui-protocol.org/)
 - [Why this project exists](docs/why-this-project.md), a five-minute evidence narrative
 - [RFC 0001: Mutable Terminal History and Reading Anchors](docs/rfcs/0001-mutable-terminal-history-and-reading-anchors.md)
+- [RFC 0002: Styled Text Content](docs/rfcs/0002-styled-text-content.md)
 - [Prior art and project evidence](docs/prior-art.md)
 - [Pi stock-UI trial](prototypes/integration/pi-stock-ui/README.md), the latest integration evidence
 

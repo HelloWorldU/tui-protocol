@@ -1,7 +1,7 @@
 import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import type { IMarker, Terminal } from "@xterm/xterm";
 
-import type { Operation } from "../../block-model/model.ts";
+import { logicalText, type Operation } from "../../block-model/model.ts";
 import {
   PrivateCoreBlockHistory,
   type BlockHistoryClearRecovery,
@@ -328,7 +328,7 @@ export class BrowserSelectionHistory {
         continue;
       }
       const projection = projectPlainText(
-        block.content, this.#terminal.options.tabStopWidth,
+        logicalText(block.content), this.#terminal.options.tabStopWidth,
       );
       if (!projection.mappable) return undefined;
       const startOffset = textOffset(
@@ -404,8 +404,8 @@ export class BrowserSelectionHistory {
       .find((candidate) => candidate.id === blockId);
     if (
       block === undefined ||
-      !projectPlainText(block.content, this.#terminal.options.tabStopWidth).mappable ||
-      retain > Array.from(block.content).length
+      !projectPlainText(logicalText(block.content), this.#terminal.options.tabStopWidth).mappable ||
+      retain > Array.from(logicalText(block.content)).length
     ) {
       return false;
     }
@@ -413,7 +413,7 @@ export class BrowserSelectionHistory {
     const selectionEnd =
       selection.endRow * this.#terminal.cols + selection.endColumn;
     const projection = projectPlainText(
-      block.content, this.#terminal.options.tabStopWidth,
+      logicalText(block.content), this.#terminal.options.tabStopWidth,
     );
     const boundary = textPosition(
       projection.text, this.#retainedProjectionLength(blockId, retain),
@@ -503,7 +503,7 @@ export class BrowserSelectionHistory {
       .find((candidate) => candidate.id === blockId);
     if (block === undefined) return undefined;
     const projection = projectPlainText(
-      block.content, this.#terminal.options.tabStopWidth,
+      logicalText(block.content), this.#terminal.options.tabStopWidth,
     );
     if (!projection.mappable) return undefined;
     const offset = textOffset(
@@ -613,7 +613,7 @@ export class BrowserSelectionHistory {
     );
     if (block === undefined) return undefined;
     const projection = projectPlainText(
-      block.content, this.#terminal.options.tabStopWidth,
+      logicalText(block.content), this.#terminal.options.tabStopWidth,
     );
     if (!projection.mappable || endpoint.offset > projection.text.length) return undefined;
     const position = textPosition(
@@ -731,7 +731,7 @@ export class BrowserSelectionHistory {
     const block = this.#history.blocks().find(block => block.id === id);
     if (block === undefined) return 0;
     return retainedPlainTextLength(
-      block.content, retain, this.#terminal.options.tabStopWidth,
+      logicalText(block.content), retain, this.#terminal.options.tabStopWidth,
     );
   }
 }

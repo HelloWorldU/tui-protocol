@@ -29,6 +29,10 @@ Text = zero or more Unicode scalar values
 DiagnosticText = zero or more Unicode scalar values
 ScalarCount = integer from 0 through 9007199254740991
 
+Span { text: Text, style?: Style }
+SpanList = zero or more Spans
+NonEmptySpanList = one or more Spans
+
 ControlFailure {
   code: ControlErrorCode
   message?: DiagnosticText
@@ -37,7 +41,9 @@ ControlFailure {
 
 `ContentType` identifies one negotiated content representation. For the
 baseline `text/plain` representation, `data` is a logical text value. Each
-optional content type defines its own complete `ContentData` schema.
+optional content type defines its own complete `ContentData` schema. The
+first optional type, `text/styled`, uses a `SpanList`; its spans, styles, and
+JSON encoding are defined by [Styled Text Content](styled-text.md).
 
 `ControlErrorCode` is the subset of the stable protocol-defined [Error
 Codes](error-codes.md) marked as valid for a control response.
@@ -171,40 +177,44 @@ block.update body {
 }
 ```
 
-Extend adds a non-empty `text/plain` fragment to the current logical tail and
-names the exact content state on which it depends:
+Extend adds a non-empty fragment to the current logical tail and names the
+exact content state on which it depends:
 
 ```text
 block.extend body {
   block_id: BlockId
   base_operation_id: OperationId
-  fragment: NonEmptyText
+  fragment: NonEmptyText | NonEmptySpanList
 }
 ```
 
-The target Block must already use `text/plain`; Extend does not carry or change
-its Content Type. An empty fragment violates this body schema. A valid base
-field whose value does not equal the Block's current content-state Operation
-ID is a semantic `content_state_mismatch`, not a structural failure.
+The fragment shape follows the target Block's current content type: text for
+`text/plain`, a span list for `text/styled` ([Styled Text Content](styled-text.md)).
+Extend does not carry or change the Content Type, and a fragment whose shape
+does not match the Block's current content type is a semantic
+`invalid_content` failure. An empty fragment violates this body schema. A
+valid base field whose value does not equal the Block's current content-state
+Operation ID is a semantic `content_state_mismatch`, not a structural failure.
 
-ReplaceSuffix removes a non-empty suffix and replaces it with text that may be
-empty:
+ReplaceSuffix removes a non-empty suffix and replaces it with content that may
+be empty:
 
 ```text
 block.replace_suffix body {
   block_id: BlockId
   base_operation_id: OperationId
   retain: ScalarCount
-  replacement: Text
+  replacement: Text | SpanList
 }
 ```
 
 `retain` counts Unicode scalar values from the beginning of the current
-`text/plain` content. The target Block must already use `text/plain`;
-ReplaceSuffix does not carry or change its Content Type. The body is
-structurally valid when `retain` is a `ScalarCount`; semantic evaluation
-additionally requires it to be less than the current scalar-value length.
-Otherwise, the Operation reports `invalid_content_boundary`.
+logical text. The replacement shape follows the target Block's current content
+type: text for `text/plain`, a span list for `text/styled` ([Styled Text
+Content](styled-text.md)). The body is structurally valid when `retain` is a
+`ScalarCount`; semantic evaluation additionally requires it to be less than
+the current scalar-value length. Otherwise, the Operation reports
+`invalid_content_boundary`.
 
 Seal changes only the lifecycle of its target:
 
@@ -252,3 +262,5 @@ non-reuse of a reliably identified failed Operation's ID.
 Baseline `text/plain` uses the `Text` schema above. Its display and native-text
 processing are defined in [Plain Text Content](plain-text.md); the schema does
 not normalize its data or reject the controls represented by visible labels.
+The first optional content type, `text/styled`, is mapped in [Styled Text
+Content](styled-text.md).

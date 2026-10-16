@@ -41,6 +41,8 @@ export interface TerminalOperationAdapter {
 
 export interface TerminalProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
+  /** Optional content types this terminal completely implements and advertises. */
+  readonly optionalContentTypes?: readonly "text/styled"[];
   readonly resourceLimits?: SessionResourceLimits;
   readonly operationAdapter?: TerminalOperationAdapter;
 }

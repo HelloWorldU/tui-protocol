@@ -1,5 +1,5 @@
 import type { Terminal } from "@xterm/xterm";
-import type { Block } from "../../block-model/model.ts";
+import { logicalText, type Block } from "../../block-model/model.ts";
 import { projectPlainText, textPosition } from "../../xterm-headless/plain-text.ts";
 import { normalizeWideSelection } from "./wide-selection.ts";
 
@@ -29,7 +29,7 @@ export function installPlainTextCopy(
         const range = history.range(block.id);
         if (range === undefined) continue;
         const projection = projectPlainText(
-          block.content, terminal.options.tabStopWidth,
+          logicalText(block.content), terminal.options.tabStopWidth,
         );
         if (!projection.mappable) continue;
         for (const tab of projection.tabs) {

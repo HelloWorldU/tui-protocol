@@ -20,6 +20,15 @@ adds negotiation-negative, lifecycle, and input-routing edge cases. The
 2026-09-28 boundary failure that motivated host region ownership is kept
 below for the record.
 
+**Status, 2026-10-16: assistant Blocks carry Pi's real styling when the
+terminal confirms `text/styled`.** A follow-up experiment on the same
+composition: the event adapter renders each assistant message through Pi's
+own `AssistantMessageComponent` and sends the visible result as span lists,
+so markdown emphasis, thinking, and error styling reach the terminal as
+`text/styled` content instead of being flattened to the trial's plain text.
+User and tool Blocks stay `text/plain`; Block content types mix freely
+inside one Context. See [Styled transcript content](#styled-transcript-content).
+
 ## Layout
 
 | File | Responsibility |
@@ -28,12 +37,14 @@ below for the record.
 | `application.ts` | Composition root: negotiation before UI start; stock fallback or gate+bridge activation. |
 | `render-gate.ts` | Trial flag and the `prototype.render` wraps (the patch report). |
 | `terminal.ts` | Trial-owned pi-tui `Terminal`: chrome passthrough, OSC 9002 input splitting, escape timeout. |
-| `bridge.ts` | Second `session.subscribe` listener; per-turn Context lifecycle with serialized work. |
-| `event-adapter.ts` | Pi event → Block Operation mapping (matches the pi-session trial, plus multi-user runs). |
+| `bridge.ts` | Second `session.subscribe` listener; per-turn Context lifecycle with serialized work; picks the styled path from `client.supportsStyledContent`. |
+| `event-adapter.ts` | Pi event → Block Operation mapping (matches the pi-session trial, plus multi-user runs); span-level diffing for styled Blocks. |
+| `styled-renderer.ts` | Renders assistant messages through Pi's real `AssistantMessageComponent` and normalizes the SGR lines into `text/styled` spans. |
 | `session-source.ts` | Isolated real Pi 0.87.1 runtime through the public composition; one read-only tool; in-memory session/settings. |
-| `fixtures/` | Deterministic local provider and the fixed sample text. |
-| `fake-host.ts` | In-process terminal host for Node tests (chrome recorder + real endpoint + reply path). |
-| `stock-ui.test.ts`, `render-gate.test.ts`, `terminal.test.ts`, `bridge.test.ts` | Focused Node checks. |
+| `fixtures/` | Deterministic local provider and the fixed sample text; optional fragment overrides for styled checks. |
+| `fake-host.ts` | In-process terminal host for Node tests (chrome recorder + real endpoint + reply path), with an xterm-backed endpoint variant. |
+| `stock-ui.test.ts`, `render-gate.test.ts`, `terminal.test.ts`, `bridge.test.ts` | Focused Node checks; the stock-ui suite is also the plain-text fallback path. |
+| `styled-content.test.ts`, `styled-test-env.ts` | Styled-mode Node checks; the env module forces chalk color emission for deterministic style assertions. |
 | `vite.config.ts`, `browser.ts`, `index.html`, `checks.html`, `checks.ts` | PTY bridge and the experimental xterm host page on port 4181. |
 
 ## Patch report
@@ -100,6 +111,11 @@ Block) rather than transient ones, and each scenario can set its own fixture
 pacing (`?pace=<ms>`; the cancel scenario uses 2400 ms so an automated
 Escape lands mid-stream).
 
+These runs predate the styled-content wiring. `browser.ts` now advertises
+`text/styled`, and the checks read the Blocks' logical-text projection (and
+accept either mode's abort label), so the scenarios apply to both content
+modes; the styled rendering itself has not been re-verified in the browser.
+
 ### Earlier record, 2026-09-28 (manual, before region ownership)
 
 - **Stock fallback passes** through the real ConPTY/browser path.
@@ -127,6 +143,75 @@ conflicts, and application resize clears re-materialize the Blocks instead
 of invalidating Contexts. This trial's `browser.ts` wires the mode on the
 protocol path only; the stock fallback registers nothing.
 
+## Styled transcript content
+
+When the terminal confirms `text/styled` during negotiation
+(`client.supportsStyledContent`), the bridge hands the event adapter an
+assistant span renderer and assistant Blocks go out as span lists; user and
+tool Blocks stay `text/plain`. Without the confirmation the trial is
+byte-for-byte the plain mapping, which is what the stock-ui Node suite
+exercises.
+
+The renderer is Pi's own, not a copy: `styled-renderer.ts` keeps one
+`AssistantMessageComponent` (exported from the published
+`@earendil-works/pi-coding-agent` package root, same source as the render
+gate's report), feeds it each message snapshot via `updateContent`, and
+calls `render(width)` offscreen. The render gate suppresses Pi's transcript
+UI through a prototype wrap that would also catch this instance, so the
+renderer lifts the gate for its own synchronous render call; the gate file
+itself is unchanged. The component is constructed with `outputPad` 0 so no
+chrome gutter becomes logical text; each rendered line then goes through the
+SDK's `spansFromAnsi` (SGR → spans, OSC 133 zone markers and other non-SGR
+sequences discarded), trailing width padding is trimmed per line, the outer
+spacer lines are dropped, and lines join through `"\n"` spans behind an
+unstyled `Assistant:\n` label span. Pi's theme emits emphasis through chalk,
+whose color level follows the process TTY: on the real PTY child the SGR
+attributes are present; in Node tests `styled-test-env.ts` forces
+`FORCE_COLOR=3` and truecolor capabilities before chalk loads, or bold and
+italic would silently vanish from the rendered lines.
+
+Updates diff at span granularity: when the previous spans form an exact
+content prefix of the next render (a boundary span may grow with unchanged
+style) the tail goes out as one Extend — the common streaming case. A
+re-render that restyles earlier text (for example a completing `**bold**`
+marker) shortens the span-exact common prefix and the update degrades to a
+ReplaceSuffix whose retain counts the shared prefix's logical scalars, using
+`spanPrefix`/`spanDrop` from the terminal module. The render width comes
+from a `() => number` provider wired from `TrialTerminal.columns` through
+the bridge into the adapter, so width is read at each render.
+
+Node evidence, 2026-10-16: `styled-content.test.ts` adds 8 checks — pure
+streaming growth emits Extend only and its logical text equals the
+plain-mode transcript; thinking content keeps Pi's italic thinkingText
+style; an error end carries Pi's own error label in the error color;
+markdown `**bold**`, `` `code` ``, and `*italic*` become the corresponding
+spans; a restyling re-render degrades to ReplaceSuffix at the span-exact
+prefix; user and tool Blocks stay `text/plain` inside a styled Context. Two
+checks run the full trial against the fake host with the xterm endpoint and
+a real `@xterm/headless` buffer: the fixture turn keeps the plain text
+projection row for row with `text/styled` assistant Blocks, and a
+markdown-marked fixture variant lands bold cells, italic cells, and the dark
+theme's code color at the expected buffer positions while its logical text
+still equals the marker-free plain transcript.
+
+Known divergences from the plain mapping, all consequences of adopting Pi's
+rendered projection as the logical text:
+
+- Thinking content renders with Pi's italic thinkingText style and no
+  `[Thinking]` label; the plain mapping's label exists only in plain mode.
+- Abort, error, and truncation ends show Pi's own labels (`Cancelled by
+  user`, `Error: …`) in the error color instead of the plain
+  `[aborted] …` suffix.
+- Markdown constructs appear in their displayed form: `**bold**` arrives as
+  a bold `bold` span, so the logical text of markdown-heavy messages differs
+  from the plain mapping's raw text. For the prose-only fixture the two
+  projections are identical.
+- Line wrapping is baked at the render width: the logical text carries the
+  newlines of the width-60/80 render, and a later narrower width re-flows
+  those already-split lines. This is the tension between renderer-owned
+  layout and terminal-owned reflow that the experiment exists to expose;
+  the browser resize scenario is where to watch it.
+
 ## Run
 
 From the repository root (Windows, Node 24+, pnpm 11.9.0):
@@ -150,7 +235,19 @@ pnpm build:pi-stock-ui
 - Local deterministic provider only; no live model, credentials, or network.
 - Windows bundled ConPTY only; 60x24 viewport in the browser fixture.
 - The render gate keeps transcript components updating offscreen (wasted
-  per-token work), accepted for the smallest behavioral delta.
+  per-token work), accepted for the smallest behavioral delta. The styled
+  path adds one offscreen render per message event on top.
+- User and tool Blocks stay `text/plain` even when the terminal confirms
+  `text/styled`; only assistant messages carry styling.
+- The styled Block's logical text is the rendered projection: thinking has
+  no `[Thinking]` label, abort/error ends use Pi's own labels, and markdown
+  constructs appear in displayed form. See the divergences list in
+  [Styled transcript content](#styled-transcript-content).
+- Rendered wrapping is baked into the logical text at the current width;
+  narrower reflow afterwards splits those lines again.
+- Styled browser verification is pending: the wiring compiles and the
+  checks are mode-agnostic, but no browser run has confirmed the styled
+  rendering.
 - A resize clear re-materializes Blocks, but a reading anchor, an active
   selection, or search-match positions across the clear are best-effort or
   lost; the active search term survives via save/restore.
@@ -158,6 +255,7 @@ pnpm build:pi-stock-ui
   and fail the trial instead of being hidden.
 
 Related: [design draft](../../../docs/design/pi-stock-ui-trial.md),
+[styled text content draft](../../../docs/protocol/styled-text.md),
 [Pi rendering architecture](../../../docs/design/pi-rendering-architecture.md),
 [pi-session trial](../pi-session/README.md),
 [terminal host example](../../../examples/terminal-host/README.md),

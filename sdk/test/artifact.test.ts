@@ -17,8 +17,8 @@ test("built JavaScript negotiates and sends an Operation outside the checkout wi
   const entries = readdirSync(artifact, { recursive: true, withFileTypes: true });
   assert(entries.every(entry => !entry.isSymbolicLink()));
   const files = entries.filter(entry => entry.isFile()).map(entry => entry.name);
-  assert.equal(files.filter(name => name.endsWith(".js")).length, 7);
-  assert.equal(files.filter(name => name.endsWith(".d.ts")).length, 7);
+  assert.equal(files.filter(name => name.endsWith(".js")).length, 8);
+  assert.equal(files.filter(name => name.endsWith(".d.ts")).length, 8);
   assert(files.every(name => name.endsWith(".js") || name.endsWith(".d.ts") || name === "package.json" || name === "LICENSE"));
   const manifest = JSON.parse(readFileSync(join(artifact, "package.json"), "utf8"));
   assert.equal(manifest.private, true);

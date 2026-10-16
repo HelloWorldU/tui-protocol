@@ -5,7 +5,7 @@ import { Terminal } from "@xterm/xterm";
 import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import "@xterm/xterm/css/xterm.css";
 import "../../../examples/terminal-host/style.css";
-import { trialSessionLimits, PendingInputBudget } from "@tui-protocol/terminal";
+import { trialSessionLimits, PendingInputBudget, contentText } from "@tui-protocol/terminal";
 import { BrowserSearchHistory } from "../xterm-browser-search/search-history.ts";
 import { AppRegionTracker, XtermMixedStreamIngress, XtermProtocolEndpoint } from "../xterm-protocol-endpoint/index.ts";
 
@@ -31,6 +31,7 @@ export const history = new BrowserSearchHistory(
 );
 const endpoint = new XtermProtocolEndpoint(terminal as unknown as HeadlessTerminal, {
   completeBaselineSupported: true, // Experimental fixture assertion, not feature detection.
+  optionalContentTypes: ["text/styled"], // Assistant Blocks carry Pi's rendered styling.
   history,
   resourceLimits: trialSessionLimits,
 });
@@ -76,7 +77,8 @@ function showState(): void {
   }
   report.textContent = endpoint.contexts().map(context =>
     `Context ${context.id}: ${context.state}\n` + context.blocks.map(block =>
-      `  ${block.id}: ${block.lifecycle}; ${JSON.stringify(block.content.data)}`).join("\n"),
+      // The logical-text projection: identical whether the Block is plain or styled.
+      `  ${block.id}: ${block.lifecycle}; ${JSON.stringify(contentText(block.content))}`).join("\n"),
   ).concat(diagnostics).join("\n") || "No Contexts or local diagnostics.";
 }
 

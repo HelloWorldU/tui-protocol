@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { TuiClient } from "@tui-protocol/sdk";
-import { TerminalProtocolEndpoint } from "@tui-protocol/terminal";
+import { TerminalProtocolEndpoint, contentText } from "@tui-protocol/terminal";
 import { PiEventAdapter } from "./event-adapter.ts";
 import { createFixtureModel } from "./fixtures/provider.ts";
 import { createTrialSession } from "./session-source.ts";
@@ -44,7 +44,7 @@ test("the installed Pi session streams two responses, executes the read-only too
     assert.equal(snapshot.blocks.length, 4);
     assert(snapshot.blocks.every(block => block.lifecycle === "sealed"));
     assert.equal(snapshot.blocks[2].content.data, "Tool: read_trial_sample\nTrial sample: mutable history keeps old output readable.");
-    assert(snapshot.blocks[3].content.data.includes("Result: mutable history"));
+    assert(contentText(snapshot.blocks[3].content).includes("Result: mutable history"));
   } finally { await f.cleanup(); }
 });
 
@@ -61,7 +61,7 @@ test("cancelling a real Pi stream retains partial text, stops before tools, and 
     assert.equal(f.toolCalls(), 0);
     const snapshot = f.endpoint.context(f.context.id)!;
     assert.equal(snapshot.blocks.length, 2);
-    assert(snapshot.blocks[1].content.data.includes("Reading\n[aborted]"));
+    assert(contentText(snapshot.blocks[1].content).includes("Reading\n[aborted]"));
     assert.equal(snapshot.state, "closed");
   } finally { await f.cleanup(); }
 });
@@ -75,8 +75,8 @@ test("a model error after the tool result rejects completion and leaves prior co
     const snapshot = f.endpoint.context(f.context.id)!;
     assert.equal(snapshot.state, "open");
     assert.equal(snapshot.blocks.length, 4);
-    assert(snapshot.blocks[2].content.data.includes("Trial sample: mutable history"));
-    assert(snapshot.blocks[3].content.data.includes("[error]"));
+    assert(contentText(snapshot.blocks[2].content).includes("Trial sample: mutable history"));
+    assert(contentText(snapshot.blocks[3].content).includes("[error]"));
     f.endpoint.finish();
     assert.equal(f.endpoint.context(f.context.id)!.state, "closed");
   } finally { await f.cleanup(); }

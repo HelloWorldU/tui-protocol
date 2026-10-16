@@ -2,7 +2,11 @@ import headless from "@xterm/headless";
 import type { Terminal as HeadlessTerminalType } from "@xterm/headless";
 import type { Terminal } from "@xterm/xterm";
 
-import type { BlockId, Operation } from "../../block-model/model.ts";
+import {
+  logicalText,
+  type BlockId,
+  type Operation,
+} from "../../block-model/model.ts";
 import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
 
 const { Terminal: HeadlessTerminal } = headless;
@@ -175,10 +179,11 @@ export class BrowserMetadataHistory {
     if (block === undefined) {
       throw new Error(`Block ${JSON.stringify(id)} is not retained.`);
     }
-    if (!/^[\x20-\x7e]*$/.test(block.content)) {
+    const content = logicalText(block.content);
+    if (!/^[\x20-\x7e]*$/.test(content)) {
       throw new Error("Metadata projection is limited to printable ASCII.");
     }
-    return block;
+    return { content };
   }
 }
 

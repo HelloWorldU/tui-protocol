@@ -39,6 +39,34 @@ export interface PlainTextSnapshot {
   readonly data: string;
 }
 
+export type StyledTextColor =
+  | "default"
+  | { readonly palette: number }
+  | { readonly rgb: readonly [number, number, number] };
+
+export interface StyledTextStyle {
+  readonly foreground?: StyledTextColor;
+  readonly background?: StyledTextColor;
+  readonly bold?: boolean;
+  readonly faint?: boolean;
+  readonly italic?: boolean;
+  readonly underline?: boolean;
+  readonly strikethrough?: boolean;
+  readonly inverse?: boolean;
+}
+
+export interface StyledTextSpan {
+  readonly text: string;
+  readonly style?: StyledTextStyle;
+}
+
+export interface StyledTextSnapshot {
+  readonly type: "text/styled";
+  readonly data: readonly StyledTextSpan[];
+}
+
+export type ContentSnapshot = PlainTextSnapshot | StyledTextSnapshot;
+
 export type Message =
   | CapabilityQuery
   | CapabilityResponse
@@ -127,7 +155,7 @@ export interface BlockAppend extends BlockOperationEnvelope {
   readonly body: {
     readonly block_id: string;
     readonly lifecycle: "mutable" | "sealed";
-    readonly content: PlainTextSnapshot;
+    readonly content: ContentSnapshot;
   };
 }
 
@@ -135,7 +163,7 @@ export interface BlockUpdate extends BlockOperationEnvelope {
   readonly kind: "block.update";
   readonly body: {
     readonly block_id: string;
-    readonly content: PlainTextSnapshot;
+    readonly content: ContentSnapshot;
   };
 }
 
@@ -144,7 +172,7 @@ export interface BlockExtend extends BlockOperationEnvelope {
   readonly body: {
     readonly block_id: string;
     readonly base_operation_id: string;
-    readonly fragment: string;
+    readonly fragment: string | readonly StyledTextSpan[];
   };
 }
 
@@ -154,7 +182,7 @@ export interface BlockReplaceSuffix extends BlockOperationEnvelope {
     readonly block_id: string;
     readonly base_operation_id: string;
     readonly retain: number;
-    readonly replacement: string;
+    readonly replacement: string | readonly StyledTextSpan[];
   };
 }
 
@@ -352,13 +380,13 @@ function validateMessageInner(value: unknown): Message {
       if (body.lifecycle !== "mutable" && body.lifecycle !== "sealed") {
         invalid("Message.body.lifecycle must be mutable or sealed.");
       }
-      validatePlainTextSnapshot(body.content, "Message.body.content");
+      validateContentSnapshot(body.content, "Message.body.content");
       break;
     case "block.update":
       validateOperationEnvelope(envelope);
       requireExactKeys(body, ["block_id", "content"]);
       requireId(body.block_id, "Message.body.block_id");
-      validatePlainTextSnapshot(body.content, "Message.body.content");
+      validateContentSnapshot(body.content, "Message.body.content");
       break;
     case "block.extend":
       validateOperationEnvelope(envelope);
@@ -368,7 +396,11 @@ function validateMessageInner(value: unknown): Message {
         body.base_operation_id,
         "Message.body.base_operation_id",
       );
-      requireNonEmptyString(body.fragment, "Message.body.fragment");
+      if (typeof body.fragment === "string") {
+        requireNonEmptyString(body.fragment, "Message.body.fragment");
+      } else {
+        validateSpanArray(body.fragment, "Message.body.fragment", false);
+      }
       break;
     case "block.replace_suffix":
       validateOperationEnvelope(envelope);
@@ -384,7 +416,11 @@ function validateMessageInner(value: unknown): Message {
         "Message.body.base_operation_id",
       );
       requireSafeNonNegativeInteger(body.retain, "Message.body.retain");
-      requireScalarString(body.replacement, "Message.body.replacement");
+      if (typeof body.replacement === "string") {
+        requireScalarString(body.replacement, "Message.body.replacement");
+      } else {
+        validateSpanArray(body.replacement, "Message.body.replacement", true);
+      }
       break;
     case "block.seal":
       validateOperationEnvelope(envelope);
@@ -495,13 +531,43 @@ function validateOperationEnvelope(envelope: Record<string, unknown>): void {
   requireId(envelope.context_id, "Message.context_id");
 }
 
-function validatePlainTextSnapshot(value: unknown, context: string): void {
+function validateContentSnapshot(value: unknown, context: string): void {
   const snapshot = requireRecord(value, context);
   requireExactKeys(snapshot, ["type", "data"]);
-  if (snapshot.type !== "text/plain") {
-    invalid(`${context}.type must be text/plain in the baseline codec.`);
+  const type = requireScalarString(snapshot.type, `${context}.type`);
+  if (type === "text/plain") {
+    requireScalarString(snapshot.data, `${context}.data`);
+    return;
   }
-  requireScalarString(snapshot.data, `${context}.data`);
+  if (type === "text/styled") {
+    // The codec checks span structure only; content-validity rules such as
+    // non-empty span text and known style attributes are content semantics,
+    // enforced by the terminal as invalid_content.
+    validateSpanArray(snapshot.data, `${context}.data`, true);
+    return;
+  }
+  invalid(`${context}.type must be text/plain or text/styled in this codec.`);
+}
+
+function validateSpanArray(
+  value: unknown,
+  context: string,
+  allowEmpty: boolean,
+): void {
+  if (!Array.isArray(value)) {
+    invalid(`${context} must be an array of spans.`);
+  }
+  if (!allowEmpty && value.length === 0) {
+    invalid(`${context} must not be empty.`);
+  }
+  for (const [index, item] of value.entries()) {
+    const span = requireRecord(item, `${context}[${index}]`);
+    requireExactKeys(span, ["text"], ["style"]);
+    requireScalarString(span.text, `${context}[${index}].text`);
+    if (span.style !== undefined) {
+      requireRecord(span.style, `${context}[${index}].style`);
+    }
+  }
 }
 
 function validateFailure(

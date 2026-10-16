@@ -1,10 +1,27 @@
+import type { StyledTextSpan } from "@tui-protocol/protocol";
+import { spanPrefix } from "@tui-protocol/terminal";
+
 export type BlockId = string;
 
 export type BlockLifecycle = "mutable" | "sealed";
 
+/** Block content: plain text, or a text/styled span list (RFC 0002). */
+export type BlockContent = string | readonly StyledTextSpan[];
+
+/** The logical text layout, anchors, and offsets operate on; styling never enters it. */
+export function logicalText(content: BlockContent): string {
+  return typeof content === "string"
+    ? content
+    : content.map((span) => span.text).join("");
+}
+
+export function logicalScalarLength(content: BlockContent): number {
+  return Array.from(logicalText(content)).length;
+}
+
 export interface Block {
   readonly id: BlockId;
-  readonly content: string;
+  readonly content: BlockContent;
   readonly lifecycle: BlockLifecycle;
 }
 
@@ -16,20 +33,20 @@ export interface AppendOperation {
 export interface UpdateOperation {
   readonly type: "update";
   readonly id: BlockId;
-  readonly content: string;
+  readonly content: BlockContent;
 }
 
 export interface ExtendOperation {
   readonly type: "extend";
   readonly id: BlockId;
-  readonly fragment: string;
+  readonly fragment: BlockContent;
 }
 
 export interface ReplaceSuffixOperation {
   readonly type: "replaceSuffix";
   readonly id: BlockId;
   readonly retain: number;
-  readonly replacement: string;
+  readonly replacement: BlockContent;
 }
 
 export interface SealOperation {
@@ -187,7 +204,7 @@ export class TerminalPrototype {
     this.#blocks.push(stored);
   }
 
-  #update(id: BlockId, content: string): void {
+  #update(id: BlockId, content: BlockContent): void {
     const index = this.#requireBlockIndex(id);
     const block = this.#blocks[index];
     if (block.lifecycle === "sealed") {
@@ -200,7 +217,7 @@ export class TerminalPrototype {
     this.#blocks[index] = { ...block, content };
   }
 
-  #extend(id: BlockId, fragment: string): void {
+  #extend(id: BlockId, fragment: BlockContent): void {
     const index = this.#requireBlockIndex(id);
     const block = this.#blocks[index];
     if (block.lifecycle === "sealed") {
@@ -210,10 +227,17 @@ export class TerminalPrototype {
       );
     }
 
-    this.#blocks[index] = { ...block, content: `${block.content}${fragment}` };
+    this.#blocks[index] = {
+      ...block,
+      content: extendedContent(block.content, fragment),
+    };
   }
 
-  #replaceSuffix(id: BlockId, retain: number, replacement: string): void {
+  #replaceSuffix(
+    id: BlockId,
+    retain: number,
+    replacement: BlockContent,
+  ): void {
     const index = this.#requireBlockIndex(id);
     const block = this.#blocks[index];
     if (block.lifecycle === "sealed") {
@@ -223,11 +247,10 @@ export class TerminalPrototype {
       );
     }
 
-    const scalars = Array.from(block.content);
     if (
       !Number.isSafeInteger(retain) ||
       retain < 0 ||
-      retain >= scalars.length
+      retain >= logicalScalarLength(block.content)
     ) {
       throw new ProtocolError(
         "INVALID_CONTENT_BOUNDARY",
@@ -237,7 +260,7 @@ export class TerminalPrototype {
 
     this.#blocks[index] = {
       ...block,
-      content: `${scalars.slice(0, retain).join("")}${replacement}`,
+      content: replacedSuffixContent(block.content, retain, replacement),
     };
     if (this.#anchor?.blockId === id && this.#anchor.offset >= retain) {
       this.#anchor = { blockId: id, offset: retain };
@@ -259,7 +282,7 @@ export class TerminalPrototype {
 
   #validateAnchor(anchor: ViewportAnchor): void {
     const block = this.#requireBlock(anchor.blockId);
-    const contentLength = [...block.content].length;
+    const contentLength = logicalScalarLength(block.content);
     if (
       !Number.isInteger(anchor.offset) ||
       anchor.offset < 0 ||
@@ -304,8 +327,9 @@ export function layoutBlocks(
 
 function layoutBlock(block: Block, width: number): readonly RenderedRow[] {
   const rows: RenderedRow[] = [];
-  const logicalLines = block.content.split("\n");
-  if (block.content.endsWith("\n")) {
+  const text = logicalText(block.content);
+  const logicalLines = text.split("\n");
+  if (text.endsWith("\n")) {
     logicalLines.pop();
   }
   let lineOffset = 0;
@@ -386,6 +410,40 @@ function validateDimensions(dimensions: TerminalDimensions): void {
       "Terminal width and height must be positive integers.",
     );
   }
+}
+
+/** Extend concatenates; an Extend fragment must match the Block's content shape. */
+function extendedContent(
+  content: BlockContent,
+  fragment: BlockContent,
+): BlockContent {
+  if (typeof content === "string" && typeof fragment === "string") {
+    return `${content}${fragment}`;
+  }
+  if (Array.isArray(content) && Array.isArray(fragment)) {
+    return [...content, ...fragment];
+  }
+  throw new Error("Extend fragment shape does not match the Block content.");
+}
+
+/**
+ * ReplaceSuffix retains a logical-scalar prefix, truncating a span at the
+ * boundary while keeping its style, then appends the replacement.
+ */
+function replacedSuffixContent(
+  content: BlockContent,
+  retain: number,
+  replacement: BlockContent,
+): BlockContent {
+  if (typeof content === "string" && typeof replacement === "string") {
+    return `${Array.from(content).slice(0, retain).join("")}${replacement}`;
+  }
+  if (Array.isArray(content) && Array.isArray(replacement)) {
+    return [...spanPrefix(content, retain), ...replacement];
+  }
+  throw new Error(
+    "ReplaceSuffix replacement shape does not match the Block content.",
+  );
 }
 
 function assertNever(value: never): never {

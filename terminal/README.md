@@ -10,6 +10,9 @@ and unpublished; [protocol drafts](../docs/README.md) define the design.
   correlated errors, and prepared Operations over validated Messages.
 - `src/endpoint.ts`: decode protocol bytes, execute the Session, consult a host
   adapter, and encode response frames. Also exports `TerminalOperationAdapter`.
+- `src/content.ts`: content-type validity rules and span-aware content
+  operations for the optional `text/styled` type ([styled-text
+  draft](../docs/protocol/styled-text.md)).
 - `src/resource-limits.ts` and `src/input-budget.ts`: host-configured retained-state
   and pending-input budgets.
 - `src/index.ts`: the module entry point. `test/` holds the module checks
@@ -37,7 +40,11 @@ or when the complete built distribution is installed under that name.
 Supply the host's `completeBaselineSupported` assertion and its
 `operationAdapter`. Assert support only when the host implements the complete
 baseline, including native history and rendering behavior. The adapter may be
-omitted for state-only tests.
+omitted for state-only tests. A host that completely implements
+`text/styled` ([styled-text draft](../docs/protocol/styled-text.md)) lists it
+in `optionalContentTypes`; the Session then advertises it and enforces its
+content rules, reporting `unsupported_content_type` for styled content it was
+not configured to accept.
 
 For a protocol-only stream, call `push(bytes)` and return
 each `responseFrames` entry to the application; handle `diagnostics` locally.

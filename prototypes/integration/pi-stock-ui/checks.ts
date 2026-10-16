@@ -110,7 +110,9 @@ run.onclick = async () => {
     click(stopped, "escape");
     await until(stopped, () => text(stopped, "report").includes("Context context-1: closed"), "cancelled turn Context to close");
     const report2 = text(stopped, "report");
-    assert(report2.includes("[aborted]"), "Partial assistant output has no abort label");
+    // Plain Blocks carry the trial's "[aborted]" suffix; styled Blocks carry
+    // Pi's own abort label (the fixture's "Cancelled by user") in the error color.
+    assert(/\[aborted\]|Cancelled by user/.test(report2), "Partial assistant output has no abort label");
     assert(!report2.includes("pi-3:"), "Tool started after early cancellation");
     assert(count(text(stopped, "rendered"), RESULT_LINE) === 0, "Result line rendered despite cancellation");
     (stopped.getElementById("typetext") as HTMLInputElement).value = "zz";

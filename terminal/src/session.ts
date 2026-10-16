@@ -4,12 +4,21 @@ import type {
   BlockReplaceSuffix,
   BlockSeal,
   BlockUpdate,
+  ContentSnapshot,
   ContextClose,
   InvalidMessageIdentity,
   Message,
   OperationErrorCode,
-  PlainTextSnapshot,
+  StyledTextSpan,
 } from "@tui-protocol/protocol";
+import {
+  contentCodeUnits,
+  extendedContent,
+  fragmentMatchesContent,
+  invalidStyledSpanReason,
+  logicalScalarLength,
+  replacedSuffixContent,
+} from "./content.ts";
 import { validateSessionLimits, type SessionResourceLimits } from "./resource-limits.ts";
 
 type ControlRequest = Extract<
@@ -44,7 +53,7 @@ export type OperationPreparation =
 interface StoredBlock {
   readonly id: string;
   lifecycle: "mutable" | "sealed";
-  content: PlainTextSnapshot;
+  content: ContentSnapshot;
   contentOperationId: string;
 }
 
@@ -64,7 +73,7 @@ interface StoredControlResult {
 export interface SessionBlockSnapshot {
   readonly id: string;
   readonly lifecycle: "mutable" | "sealed";
-  readonly content: PlainTextSnapshot;
+  readonly content: ContentSnapshot;
 }
 
 export interface SessionContextSnapshot {
@@ -75,6 +84,8 @@ export interface SessionContextSnapshot {
 
 export interface TerminalProtocolSessionOptions {
   readonly completeBaselineSupported: boolean;
+  /** Optional content types this terminal completely implements and advertises. */
+  readonly optionalContentTypes?: readonly "text/styled"[];
   readonly resourceLimits?: SessionResourceLimits;
 }
 
@@ -91,6 +102,8 @@ export class TerminalProtocolSession {
   readonly #contexts = new Map<string, StoredContext>();
   readonly #controlResults = new Map<string, StoredControlResult>();
   readonly #completeBaselineSupported: boolean;
+  readonly #optionalContentTypes: readonly "text/styled"[];
+  readonly #styledContentSupported: boolean;
   #pendingOperation: object | undefined = undefined;
   #nextContextId = 1;
   #ended = false;
@@ -103,6 +116,13 @@ export class TerminalProtocolSession {
 
   constructor(options: TerminalProtocolSessionOptions) {
     this.#completeBaselineSupported = options.completeBaselineSupported;
+    this.#optionalContentTypes = options.optionalContentTypes ?? [];
+    if (new Set(this.#optionalContentTypes).size !== this.#optionalContentTypes.length) {
+      throw new ProtocolSessionError(
+        "Optional content types must not contain duplicates.",
+      );
+    }
+    this.#styledContentSupported = this.#optionalContentTypes.includes("text/styled");
     this.#limits = options.resourceLimits && validateSessionLimits(options.resourceLimits);
   }
 
@@ -250,7 +270,10 @@ export class TerminalProtocolSession {
               version: 1,
               kind: "capability.response",
               request_id: request.request_id,
-              body: { outcome: "supported", optional_content_types: [] },
+              body: {
+                outcome: "supported",
+                optional_content_types: [...this.#optionalContentTypes],
+              },
             }
           : {
               version: 1,
@@ -322,7 +345,8 @@ export class TerminalProtocolSession {
       return rejectedPreparation(snapshot, error);
     }
 
-    const oldUnits = findBlock(context, snapshot.body.block_id)?.content.data.length ?? 0;
+    const oldBlock = findBlock(context, snapshot.body.block_id);
+    const oldUnits = oldBlock === undefined ? 0 : contentCodeUnits(oldBlock.content);
     const nextUnits = projectedUnits(context, snapshot);
     if (this.#limits && (nextUnits > this.#limits.maxBlockCodeUnits ||
         this.#contentUnits - oldUnits + nextUnits > this.#limits.maxTotalContentCodeUnits ||
@@ -380,7 +404,7 @@ export class TerminalProtocolSession {
         if (context.blockIds.has(operation.body.block_id)) {
           return "block_id_reused";
         }
-        return undefined;
+        return this.#validateSnapshot(operation.body.content);
       case "block.update": {
         const block = findBlock(context, operation.body.block_id);
         if (block === undefined) {
@@ -389,7 +413,7 @@ export class TerminalProtocolSession {
         if (block.lifecycle === "sealed") {
           return "block_sealed";
         }
-        return undefined;
+        return this.#validateSnapshot(operation.body.content);
       }
       case "block.extend": {
         const block = findBlock(context, operation.body.block_id);
@@ -402,7 +426,10 @@ export class TerminalProtocolSession {
         if (block.contentOperationId !== operation.body.base_operation_id) {
           return "content_state_mismatch";
         }
-        return undefined;
+        if (!fragmentMatchesContent(block.content, operation.body.fragment)) {
+          return "invalid_content";
+        }
+        return validateFragmentSpans(operation.body.fragment);
       }
       case "block.replace_suffix": {
         const block = findBlock(context, operation.body.block_id);
@@ -415,10 +442,13 @@ export class TerminalProtocolSession {
         if (block.contentOperationId !== operation.body.base_operation_id) {
           return "content_state_mismatch";
         }
-        if (operation.body.retain >= unicodeScalarLength(block.content.data)) {
+        if (operation.body.retain >= logicalScalarLength(block.content)) {
           return "invalid_content_boundary";
         }
-        return undefined;
+        if (!fragmentMatchesContent(block.content, operation.body.replacement)) {
+          return "invalid_content";
+        }
+        return validateFragmentSpans(operation.body.replacement);
       }
       case "block.seal": {
         const block = findBlock(context, operation.body.block_id);
@@ -433,6 +463,18 @@ export class TerminalProtocolSession {
       default:
         return assertNever(operation);
     }
+  }
+
+  #validateSnapshot(content: ContentSnapshot): OperationErrorCode | undefined {
+    if (content.type === "text/plain") {
+      return undefined;
+    }
+    if (!this.#styledContentSupported) {
+      return "unsupported_content_type";
+    }
+    return invalidStyledSpanReason(content.data) === undefined
+      ? undefined
+      : "invalid_content";
   }
 
   #buildCommittedContext(
@@ -465,24 +507,18 @@ export class TerminalProtocolSession {
       case "block.extend":
         blocks = replaceBlock(context, operation.body.block_id, (block) => ({
           ...block,
-          content: {
-            type: "text/plain",
-            data: `${block.content.data}${operation.body.fragment}`,
-          },
+          content: extendedContent(block.content, operation.body.fragment),
           contentOperationId: operation.operation_id,
         }));
         break;
       case "block.replace_suffix":
         blocks = replaceBlock(context, operation.body.block_id, (block) => ({
           ...block,
-          content: {
-            type: "text/plain",
-            data: replaceSuffix(
-              block.content.data,
-              operation.body.retain,
-              operation.body.replacement,
-            ),
-          },
+          content: replacedSuffixContent(
+            block.content,
+            operation.body.retain,
+            operation.body.replacement,
+          ),
           contentOperationId: operation.operation_id,
         }));
         break;
@@ -545,15 +581,10 @@ export class TerminalProtocolSession {
 
 function projectedUnits(context: StoredContext, operation: BlockOperation): number {
   switch (operation.kind) {
-    case "block.append": case "block.update": return operation.body.content.data.length;
-    case "block.extend": return findBlock(context, operation.body.block_id)!.content.data.length + operation.body.fragment.length;
-    case "block.replace_suffix": {
-      const text = findBlock(context, operation.body.block_id)!.content.data;
-      let scalars = 0, units = 0;
-      for (const scalar of text) { if (scalars++ >= operation.body.retain) break; units += scalar.length; }
-      return units + operation.body.replacement.length;
-    }
-    case "block.seal": return findBlock(context, operation.body.block_id)!.content.data.length;
+    case "block.append": case "block.update": return contentCodeUnits(operation.body.content);
+    case "block.extend": return contentCodeUnits(extendedContent(findBlock(context, operation.body.block_id)!.content, operation.body.fragment));
+    case "block.replace_suffix": return contentCodeUnits(replacedSuffixContent(findBlock(context, operation.body.block_id)!.content, operation.body.retain, operation.body.replacement));
+    case "block.seal": return contentCodeUnits(findBlock(context, operation.body.block_id)!.content);
   }
 }
 
@@ -715,20 +746,19 @@ function snapshotContext(context: StoredContext): SessionContextSnapshot {
   };
 }
 
-function cloneContent(content: PlainTextSnapshot): PlainTextSnapshot {
-  return { type: "text/plain", data: content.data };
+function cloneContent(content: ContentSnapshot): ContentSnapshot {
+  return structuredClone(content);
 }
 
-function unicodeScalarLength(value: string): number {
-  return Array.from(value).length;
-}
-
-function replaceSuffix(
-  value: string,
-  retain: number,
-  replacement: string,
-): string {
-  return `${Array.from(value).slice(0, retain).join("")}${replacement}`;
+function validateFragmentSpans(
+  fragment: string | readonly StyledTextSpan[],
+): OperationErrorCode | undefined {
+  if (typeof fragment === "string") {
+    return undefined;
+  }
+  return invalidStyledSpanReason(fragment) === undefined
+    ? undefined
+    : "invalid_content";
 }
 
 function cloneOperation(operation: BlockOperation): BlockOperation {

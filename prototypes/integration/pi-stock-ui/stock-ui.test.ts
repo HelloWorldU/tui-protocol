@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { contentText } from "@tui-protocol/terminal";
 import { prepareStockUiTrial, type PreparedTrial } from "./application.ts";
 import { FakeHost } from "./fake-host.ts";
 import { createFixtureModel } from "./fixtures/provider.ts";
@@ -139,7 +140,7 @@ test("cancel mid-stream seals the partial assistant Block with an abort label, a
     assert.equal(firstContext.state, "closed");
     const partial = firstContext.blocks.find(block => block.id === "pi-2");
     assert.equal(partial?.lifecycle, "sealed");
-    assert(partial?.content.data.includes("[aborted]"), `missing abort label: ${partial?.content.data}`);
+    assert(partial !== undefined && contentText(partial.content).includes("[aborted]"), `missing abort label: ${partial?.content.data}`);
     assert(!firstContext.blocks.some(block => block.id === "pi-3"), "the tool ran despite the cancellation");
 
     await source.runtime.session.prompt(TRIAL_PROMPT);
@@ -172,7 +173,7 @@ test("typing into the editor during streaming reaches Pi and appears in the chro
     assert(host.chrome.includes("hello"), "editor echo missing from chrome");
     const blocks = host.contexts()[0].blocks;
     assert.equal(blocks.length, 4);
-    assert(!blocks.some(block => block.content.data.includes("hello")), "editor input leaked into a Block");
+    assert(!blocks.some(block => contentText(block.content).includes("hello")), "editor input leaked into a Block");
   } finally {
     await teardown(prepared, source);
   }

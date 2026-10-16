@@ -1,4 +1,6 @@
-import type { TuiContext } from "@tui-protocol/sdk";
+import type { StyledTextColor, StyledTextSpan, StyledTextStyle, TuiContext } from "@tui-protocol/sdk";
+import { spanDrop, spanPrefix } from "@tui-protocol/terminal";
+import type { AssistantSpanRenderer, RenderableAssistantMessage } from "./styled-renderer.ts";
 
 // Structural slice of the pinned Pi events, not an upstream SDK type or wire schema.
 // Additional Pi fields are not consumed. Unsupported content/events fail the trial.
@@ -6,6 +8,8 @@ import type { TuiContext } from "@tui-protocol/sdk";
 // Block per message, one tool Block per call, Seal on end, abort label on cancel.
 // One addition the stock UI needs: a steered follow-up joins the current run, so a
 // run may carry more than one user message; each becomes its own sealed Block.
+// When the terminal confirmed text/styled, assistant Blocks carry Pi's real
+// rendered styling through the renderer; user and tool Blocks stay text/plain.
 export interface ContentPart {
   readonly type: string;
   readonly text?: string;
@@ -38,13 +42,18 @@ export const DEFAULT_TRIAL_LIMITS: TrialLimits = Object.freeze({
   maxEvents: 256, maxBlocks: 32, maxTextUnits: 65_536,
 });
 
+type BlockContent =
+  | { readonly type: "text/plain"; text: string }
+  | { readonly type: "text/styled"; spans: readonly StyledTextSpan[] };
 interface Block {
   id: string;
-  text: string;
+  content: BlockContent;
   sentState: string;
   sealed: boolean;
 }
 interface Tool { block: Block; name: string }
+
+const ASSISTANT_LABEL: StyledTextSpan = Object.freeze({ text: "Assistant:\n" });
 
 function textParts(parts: string | readonly ContentPart[], assistant = false): string {
   if (typeof parts === "string") return parts;
@@ -59,10 +68,11 @@ function textParts(parts: string | readonly ContentPart[], assistant = false): s
   }).filter(text => text !== "").join("\n\n");
 }
 
-/** One finite, plain-text run. A returned Operation ID is sent state, not acknowledgement. */
+/** One finite run; assistant Blocks are styled when a renderer is wired. A returned Operation ID is sent state, not acknowledgement. */
 export class PiEventAdapter {
   readonly #writer: BlockWriter;
   readonly #limits: TrialLimits;
+  readonly #assistantRenderer?: AssistantSpanRenderer;
   readonly #tools = new Map<string, Tool>();
   #state: "ready" | "running" | "finished" | "failed" = "ready";
   #failure?: Error;
@@ -72,12 +82,13 @@ export class PiEventAdapter {
   #userMessages = 0;
   #assistant?: Block;
 
-  constructor(writer: BlockWriter, limits: TrialLimits = DEFAULT_TRIAL_LIMITS) {
+  constructor(writer: BlockWriter, limits: TrialLimits = DEFAULT_TRIAL_LIMITS, assistantRenderer?: AssistantSpanRenderer) {
     for (const value of [limits.maxEvents, limits.maxBlocks, limits.maxTextUnits]) {
       if (!Number.isSafeInteger(value) || value < 1) throw new Error("Trial limits must be positive safe integers");
     }
     this.#writer = writer;
     this.#limits = { ...limits };
+    this.#assistantRenderer = assistantRenderer;
   }
 
   get state() { return this.#state; }
@@ -165,11 +176,38 @@ export class PiEventAdapter {
     if (this.#userMessages === 0 || this.#activeUser !== undefined) {
       throw new Error("Expected completed user input before assistant output");
     }
+    if (type === "message_end" &&
+        !["stop", "toolUse", "length", "aborted", "error"].includes(message.stopReason ?? "")) {
+      throw new Error("Unsupported final assistant stop reason");
+    }
+    if (this.#assistantRenderer) {
+      // Styled path: Pi's renderer owns the body, including its abort/error
+      // labels, so the plain "[aborted]" suffix is not added. The "Assistant:"
+      // label span stays unstyled, keeping the Block's logical structure.
+      const renderable: RenderableAssistantMessage = {
+        content: typeof message.content === "string" ? [{ type: "text", text: message.content }] : message.content,
+        stopReason: message.stopReason,
+        errorMessage: message.errorMessage,
+      };
+      const spans: StyledTextSpan[] = [
+        ASSISTANT_LABEL,
+        ...this.#assistantRenderer.render(renderable, type !== "message_end"),
+      ];
+      if (type === "message_start") {
+        if (this.#assistant) throw new Error("Previous assistant message is still active");
+        this.#assistant = this.#append(spans);
+      } else {
+        if (!this.#assistant) throw new Error("Assistant update requires message_start");
+        this.#replace(this.#assistant, spans);
+        if (type === "message_end") {
+          this.#seal(this.#assistant);
+          this.#assistant = undefined;
+        }
+      }
+      return;
+    }
     let text = `Assistant:\n${textParts(message.content, true)}`;
     if (type === "message_end") {
-      if (!["stop", "toolUse", "length", "aborted", "error"].includes(message.stopReason ?? "")) {
-        throw new Error("Unsupported final assistant stop reason");
-      }
       if (message.stopReason === "aborted" || message.stopReason === "error" || message.stopReason === "length") {
         text += `\n[${message.stopReason}]${message.errorMessage ? ` ${message.errorMessage}` : ""}`;
       }
@@ -192,28 +230,59 @@ export class PiEventAdapter {
     if (/[\uD800-\uDFFF]/u.test(text)) throw new Error("Text contains an unpaired surrogate");
   }
 
-  #append(text: string, sealed = false): Block {
-    this.#checkText(text);
-    if (this.#blocks >= this.#limits.maxBlocks) throw new Error("Trial Block limit exceeded");
-    const id = `pi-${++this.#blocks}`;
-    const sentState = this.#writer.append(id, text, sealed ? "sealed" : "mutable");
-    return { id, text, sentState, sealed };
+  #checkContent(content: string | readonly StyledTextSpan[]): void {
+    this.#checkText(typeof content === "string" ? content : content.map(span => span.text).join(""));
   }
 
-  #replace(block: Block, text: string): void {
-    this.#checkText(text);
-    if (text === block.text) return;
+  #append(content: string | readonly StyledTextSpan[], sealed = false): Block {
+    this.#checkContent(content);
+    if (this.#blocks >= this.#limits.maxBlocks) throw new Error("Trial Block limit exceeded");
+    const id = `pi-${++this.#blocks}`;
+    const sentState = this.#writer.append(id, content, sealed ? "sealed" : "mutable");
+    return {
+      id,
+      content: typeof content === "string" ? { type: "text/plain", text: content } : { type: "text/styled", spans: content },
+      sentState,
+      sealed,
+    };
+  }
+
+  #replace(block: Block, next: string | readonly StyledTextSpan[]): void {
+    this.#checkContent(next);
     let sentState: string;
-    if (text.startsWith(block.text)) {
-      sentState = this.#writer.extend(block.id, block.sentState, text.slice(block.text.length));
+    if (typeof next === "string") {
+      if (block.content.type !== "text/plain") throw new Error("Block content type changed unexpectedly");
+      if (next === block.content.text) return;
+      if (next.startsWith(block.content.text)) {
+        sentState = this.#writer.extend(block.id, block.sentState, next.slice(block.content.text.length));
+      } else {
+        const previous = Array.from(block.content.text);
+        const following = Array.from(next);
+        let retain = 0;
+        while (retain < previous.length && retain < following.length && previous[retain] === following[retain]) retain++;
+        sentState = this.#writer.replaceSuffix(block.id, block.sentState, retain, following.slice(retain).join(""));
+      }
+      block.content = { type: "text/plain", text: next };
     } else {
-      const previous = Array.from(block.text);
-      const next = Array.from(text);
-      let retain = 0;
-      while (retain < previous.length && retain < next.length && previous[retain] === next[retain]) retain++;
-      sentState = this.#writer.replaceSuffix(block.id, block.sentState, retain, next.slice(retain).join(""));
+      if (block.content.type !== "text/styled") throw new Error("Block content type changed unexpectedly");
+      const previous = block.content.spans;
+      if (spanListEqual(previous, next)) return;
+      const previousScalars = logicalScalars(previous);
+      if (spanListEqual(spanPrefix(next, previousScalars), previous)) {
+        // The previous content is an exact prefix at span granularity (the
+        // boundary span may grow with the same style): extend with the tail.
+        sentState = this.#writer.extend(block.id, block.sentState, spanDrop(next, previousScalars));
+      } else {
+        // Style drift (a markdown re-render restyled earlier text) shortens the
+        // span-exact common prefix; the update degrades to a ReplaceSuffix whose
+        // retain counts the shared prefix's logical scalars.
+        let prefix = 0;
+        while (prefix < previous.length && prefix < next.length && spanEqual(previous[prefix]!, next[prefix]!)) prefix++;
+        const retain = logicalScalars(previous.slice(0, prefix));
+        sentState = this.#writer.replaceSuffix(block.id, block.sentState, retain, spanDrop(next, retain));
+      }
+      block.content = { type: "text/styled", spans: next };
     }
-    block.text = text;
     block.sentState = sentState;
   }
 
@@ -221,4 +290,39 @@ export class PiEventAdapter {
     this.#writer.seal(block.id);
     block.sealed = true;
   }
+}
+
+function logicalScalars(spans: readonly StyledTextSpan[]): number {
+  let scalars = 0;
+  for (const span of spans) scalars += Array.from(span.text).length;
+  return scalars;
+}
+
+function spanListEqual(a: readonly StyledTextSpan[], b: readonly StyledTextSpan[]): boolean {
+  return a.length === b.length && a.every((span, index) => spanEqual(span, b[index]!));
+}
+
+function spanEqual(a: StyledTextSpan, b: StyledTextSpan): boolean {
+  return a.text === b.text && sameStyle(a.style, b.style);
+}
+
+function sameStyle(a: StyledTextStyle | undefined, b: StyledTextStyle | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return sameColor(a.foreground, b.foreground) &&
+    sameColor(a.background, b.background) &&
+    a.bold === b.bold &&
+    a.faint === b.faint &&
+    a.italic === b.italic &&
+    a.underline === b.underline &&
+    a.strikethrough === b.strikethrough &&
+    a.inverse === b.inverse;
+}
+
+function sameColor(a: StyledTextColor | undefined, b: StyledTextColor | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined || typeof a !== "object" || typeof b !== "object") {
+    return false;
+  }
+  if ("palette" in a) return "palette" in b && a.palette === b.palette;
+  return "rgb" in b && a.rgb[0] === b.rgb[0] && a.rgb[1] === b.rgb[1] && a.rgb[2] === b.rgb[2];
 }

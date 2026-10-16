@@ -94,6 +94,7 @@ executed. Their shared interaction with Block Operations is defined by
 ## Open Design Choices
 
 - Remaining text-layout boundaries listed in [Plain Text Content](plain-text.md).
-- The initial set of optional content types and their schemas.
+- The optional content types beyond the first one; `text/styled` is defined by
+  [Styled Text Content](styled-text.md) under [RFC 0002](../rfcs/0002-styled-text-content.md).
 - Content-type naming, registration, and versioning.
 - Detailed native projections for each optional content type.

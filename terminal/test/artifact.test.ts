@@ -21,8 +21,8 @@ test("built terminal and TUI modules exchange all five Operations outside the ch
   const entries = readdirSync(artifact, { recursive: true, withFileTypes: true });
   assert(entries.every(entry => !entry.isSymbolicLink()));
   const files = entries.filter(entry => entry.isFile());
-  assert.equal(files.filter(entry => entry.name.endsWith(".js")).length, 10);
-  assert.equal(files.filter(entry => entry.name.endsWith(".d.ts")).length, 10);
+  assert.equal(files.filter(entry => entry.name.endsWith(".js")).length, 11);
+  assert.equal(files.filter(entry => entry.name.endsWith(".d.ts")).length, 11);
   assert(files.every(entry => /\.(js|d\.ts)$/.test(entry.name) || ["package.json", "LICENSE"].includes(entry.name)));
   for (const directory of [artifact, join(artifact, "node_modules", "@tui-protocol/protocol")]) {
     assert.equal(JSON.parse(readFileSync(join(directory, "package.json"), "utf8")).license, "Apache-2.0");

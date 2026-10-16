@@ -29,8 +29,13 @@ pnpm typecheck
 
 - The prototype models one implicit Protocol Context and does not implement
   Context establishment, closure, or Context IDs on Operations.
-- Content is plain text laid out by Unicode code point count, not terminal
-  display width.
+- Content is plain text or a `text/styled` span list
+  ([RFC 0002](../../docs/rfcs/0002-styled-text-content.md)), laid out by
+  Unicode code point count of the logical text (the concatenated span texts),
+  not terminal display width. Extend concatenates two span lists, and
+  ReplaceSuffix counts its retained prefix in logical scalars across span
+  boundaries, keeping a boundary-truncated span's style. Styling never enters
+  layout.
 - The model does not parse escape sequences, render images, or drive a real
   terminal emulator.
 - Complete Update of the Block containing the reading anchor remains

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough, Writable } from "node:stream";
 import test from "node:test";
 import { ProtocolStreamDecoder } from "@tui-protocol/protocol";
-import { TerminalProtocolEndpoint, type AppliedBlockOperation } from "@tui-protocol/terminal";
+import { TerminalProtocolEndpoint, contentText, type AppliedBlockOperation } from "@tui-protocol/terminal";
 import { createTrialSession } from "./session-source.ts";
 import { runMultiRound } from "./multi-round/application.ts";
 import { createMultiRoundModel } from "./multi-round/provider.ts";
@@ -38,7 +38,7 @@ function fixture(options: { cancelFirst?: boolean; cancelTool?: boolean; quitAct
         }
         if (text.includes("[ready 2/")) send({ type: "prompt", text: options.failPrompt ?? "second" });
         if (options.cancelTool && !interrupted && endpoint.contexts().some(context =>
-          context.blocks.some(block => block.content.data.includes("Reading sample...")))) {
+          context.blocks.some(block => contentText(block.content).includes("Reading sample...")))) {
           interrupted = true; send({ type: "cancel" });
         }
         if ((options.cancelFirst || options.quitActive || options.eof) && !interrupted && operations.some(op => op.kind === "block.extend")) {
@@ -72,7 +72,7 @@ test("two entered prompts reuse Pi conversation, execute the read-only tool each
     assert.equal(context.state, "closed"); assert.equal(context.blocks.length, 4);
     assert(context.blocks.every(block => block.lifecycle === "sealed"));
   }
-  assert(contexts[1].blocks[3].content.data.includes("Previous prompt: first 中文 😀"));
+  assert(contentText(contexts[1].blocks[3].content).includes("Previous prompt: first 中文 😀"));
   assert.equal(f.input.isRaw, false); assert.equal(f.input.listenerCount("data"), 0);
   assert.equal(f.output.listenerCount("error"), 0);
 });
@@ -81,8 +81,8 @@ test("cancel retains partial text and a later prompt completes in the same Pi se
   const f = fixture({ cancelFirst: true }); assert.equal(await f.run(), "limit");
   const contexts = f.endpoint.contexts(); assert.equal(contexts.length, 2);
   assert.equal(contexts[0].state, "closed"); assert.equal(contexts[0].blocks.length, 2);
-  assert(contexts[0].blocks[1].content.data.includes("[aborted]"));
-  assert(contexts[1].blocks[3].content.data.includes("Previous prompt: first 中文 😀"));
+  assert(contentText(contexts[0].blocks[1].content).includes("[aborted]"));
+  assert(contentText(contexts[1].blocks[3].content).includes("Previous prompt: first 中文 😀"));
   assert(f.text().includes("[round 1 aborted]")); assert(f.text().includes("[round 2 completed]"));
   assert.equal(f.source()!.toolCalls(), 1);
 });
@@ -98,7 +98,7 @@ test("cancelling during the sample read settles its result and the next prompt r
   assert.equal(await f.run(), "limit");
   const contexts = f.endpoint.contexts(); assert.equal(contexts.length, 2);
   assert.equal(contexts[0].state, "closed"); assert.equal(contexts[0].blocks.length, 3);
-  assert(contexts[0].blocks[2].content.data.includes("[Tool error]"));
+  assert(contentText(contexts[0].blocks[2].content).includes("[Tool error]"));
   assert(contexts[0].blocks.every(block => block.lifecycle === "sealed"));
   assert.equal(contexts[1].blocks.length, 4); assert.equal(f.source()!.toolCalls(), 2); assert.equal(f.disposed(), 1);
   assert(f.text().includes("[round 1 aborted]")); assert(f.text().includes("[round 2 completed]"));
@@ -162,7 +162,7 @@ test("cancel immediately after submitting skips model output for that turn and a
   const f = fixture({ cancelImmediately: true }); assert.equal(await f.run(), "limit");
   const contexts = f.endpoint.contexts(); assert.equal(contexts.length, 2);
   assert.equal(contexts[0].state, "closed"); assert.equal(contexts[0].blocks.length, 0);
-  assert(contexts[1].blocks[3].content.data.includes("prompt 1: second"));
+  assert(contentText(contexts[1].blocks[3].content).includes("prompt 1: second"));
   assert(f.text().includes("[round 1 aborted]"));
 });
 

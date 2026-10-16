@@ -91,7 +91,7 @@ export async function prepareStockUiTrial(options: StockUiTrialOptions): Promise
   }
 
   setRenderGate(true);
-  const bridge = new ProtocolTranscriptBridge({ client, onFailure: fail });
+  const bridge = new ProtocolTranscriptBridge({ client, onFailure: fail, width: () => terminal.columns });
   bridge.attach(source.runtime.session);
   writeLines(output, [
     "[pi-stock-ui] protocol supported; transcript is terminal-owned, chrome stays Pi-rendered.",

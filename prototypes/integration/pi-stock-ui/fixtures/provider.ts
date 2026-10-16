@@ -2,12 +2,25 @@ import { setTimeout as delay } from "node:timers/promises";
 import { createAssistantMessageEventStream, InMemoryCredentialStore, type AssistantMessage } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
+const DEFAULT_READING = ["Reading", " the local sample."] as const;
+const DEFAULT_RESULT = [
+  "Result: ", "mutable history keeps old output readable.",
+  "\nThe read_trial_sample tool returned the sample.",
+] as const;
+
+export interface TrialFixtureText {
+  /** Streamed fragments of the first assistant message, before the tool call. */
+  readonly reading?: readonly string[];
+  /** Streamed fragments of the final answer, after the tool result. */
+  readonly result?: readonly string[];
+}
+
 /**
  * Local provider fixture; never opens a model connection or reads real credentials.
  * The branch follows the transcript, not the invocation count, so a cancelled
  * first attempt re-runs the tool on the next turn instead of failing the fixture.
  */
-export async function createFixtureModel(pauseMs = 10, failRequest?: number, maxRequests = 4) {
+export async function createFixtureModel(pauseMs = 10, failRequest?: number, maxRequests = 4, fixtureText: TrialFixtureText = {}) {
   const runtime = await ModelRuntime.create({
     credentials: new InMemoryCredentialStore(), modelsPath: null,
     allowModelNetwork: false, refreshOnCreate: false,
@@ -35,10 +48,7 @@ export async function createFixtureModel(pauseMs = 10, failRequest?: number, max
             part.type === "text" && part.text.includes("mutable history keeps old output readable"));
           stream.push({ type: "start", partial: structuredClone(message) });
           stream.push({ type: "text_start", contentIndex: 0, partial: structuredClone(message) });
-          const fragments = answered ? [
-            "Result: ", "mutable history keeps old output readable.",
-            "\nThe read_trial_sample tool returned the sample.",
-          ] : ["Reading", " the local sample."];
+          const fragments = answered ? (fixtureText.result ?? DEFAULT_RESULT) : (fixtureText.reading ?? DEFAULT_READING);
           for (const fragment of fragments) {
             await delay(pauseMs, undefined, { signal: options?.signal });
             const text = message.content[0];
