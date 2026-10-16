@@ -32,11 +32,12 @@ export default defineConfig({
           socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n"); socket.destroy(); return;
         }
         const stock = url.searchParams.get("stock") === "1";
+        const demo = url.searchParams.get("demo") === "1";
         const paceParam = url.searchParams.get("pace");
         const pace = paceParam !== null && /^\d+$/.test(paceParam) ? Number(paceParam) : undefined;
-        sockets.handleUpgrade(request, socket, head, client => sockets.emit("connection", client, stock, pace));
+        sockets.handleUpgrade(request, socket, head, client => sockets.emit("connection", client, stock, demo, pace));
       });
-      sockets.on("connection", (client: WebSocket, stock: boolean, pace: number | undefined) => {
+      sockets.on("connection", (client: WebSocket, stock: boolean, demo: boolean, pace: number | undefined) => {
         active = client;
         let child: pty.IPty;
         try {
@@ -45,6 +46,7 @@ export default defineConfig({
             env: {
               ...process.env,
               ...(stock ? { PI_STOCK_UI_OFF: "1" } : {}),
+              ...(demo ? { PI_TRIAL_DEMO_TEXT: "1" } : {}),
               ...(pace !== undefined && pace > 0 && pace <= 10_000 ? { PI_TRIAL_PACE: String(pace) } : {}),
             },
             useConptyDll: true,

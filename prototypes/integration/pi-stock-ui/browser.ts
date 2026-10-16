@@ -15,6 +15,7 @@ const connect = document.querySelector<HTMLButtonElement>("#connect")!;
 const disconnect = document.querySelector<HTMLButtonElement>("#disconnect")!;
 const pageParams = new URLSearchParams(location.search);
 const stock = pageParams.get("stock") === "1";
+const demo = pageParams.get("demo") === "1";
 // Optional fixture pacing, forwarded to the PTY child (cancel checks need a long stream).
 const pace = pageParams.get("pace");
 const paceQuery = pace !== null && /^\d+$/.test(pace) ? `&pace=${pace}` : "";
@@ -94,7 +95,7 @@ connect.onclick = () => {
   setButtons(true);
   status.textContent = "Connecting…";
   const token = document.querySelector<HTMLMetaElement>('meta[name="pty-token"]')!.content;
-  socket = new WebSocket(`ws://${location.host}/pty?token=${token}${stock ? "&stock=1" : ""}${paceQuery}`);
+  socket = new WebSocket(`ws://${location.host}/pty?token=${token}${stock ? "&stock=1" : ""}${demo ? "&demo=1" : ""}${paceQuery}`);
   socket.binaryType = "arraybuffer";
   socket.onopen = () => {
     status.textContent = "Connected; receiving application output.";

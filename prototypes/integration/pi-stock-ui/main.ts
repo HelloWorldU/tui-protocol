@@ -14,7 +14,20 @@ try {
   const pace = Number(process.env.PI_TRIAL_PACE);
   const pacing = Number.isInteger(pace) && pace > 0 && pace <= 10_000 ? pace : 600;
   process.stdout.write(`[pi-stock-ui] fixture pacing ${pacing}ms\r\n`);
-  const fixture = await createFixtureModel(pacing);
+  const fixture = await createFixtureModel(pacing, undefined, 4,
+    // The manual page opts into markdown fixture text (?demo=1) so the styled
+    // path has visible styling; automated checks keep the plain default.
+    process.env.PI_TRIAL_DEMO_TEXT === "1"
+      ? {
+          result: [
+            "## Trial answer\n\n",
+            "The sample reports: **mutable history",
+            " keeps old output readable**.\n\n",
+            "- Styling comes from Pi's real renderer\n- `text/styled` carried it\n\n",
+            "`read_trial_sample` returned the sample.",
+          ],
+        }
+      : undefined);
   const source = await createTrialRuntime(fixture, 600);
   // InteractiveMode shuts down through process.exit, so temp cleanup hooks onto exit.
   process.on("exit", () => {
