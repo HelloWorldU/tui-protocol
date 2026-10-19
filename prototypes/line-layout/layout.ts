@@ -25,6 +25,8 @@ export interface LayoutRow {
   /** Logical scalar offsets within the line of the first and past-the-last displayed text unit. */
   readonly start: number;
   readonly end: number;
+  /** Logical scalar offset within the line for each text cell after the prefix; a wide character fills two. */
+  readonly columns: readonly number[];
 }
 
 interface Unit {
@@ -55,7 +57,7 @@ function layoutLine(line: LayoutLine, index: number, cols: number): LayoutRow[] 
     const unit = units[0];
     if (unit === undefined || units.length !== 1) throw new Error("A fill line carries exactly one grapheme.");
     const count = Math.max(1, Math.floor(cols / unit.cells));
-    return [{ line: index, soft: false, spans: merge(Array(count).fill(unit)), prefixCells: 0, start: 0, end: 1 }];
+    return [{ line: index, soft: false, spans: merge(Array(count).fill(unit)), prefixCells: 0, start: 0, end: 1, columns: Array(count * unit.cells).fill(0) }];
   }
   const prefix = unitsOf(line.continuation ?? []);
   const prefixCells = cellsOf(prefix);
@@ -99,7 +101,8 @@ function layoutLine(line: LayoutLine, index: number, cols: number): LayoutRow[] 
     const start = units[0]?.offset ?? (rowsUnits[rowIndex - 1]?.at(-1)?.offset ?? 0);
     const last = units.at(-1);
     const end = last === undefined ? start : last.offset + [...last.text].length;
-    return { line: index, soft, spans: merge([...shownPrefix, ...units]), prefixCells: cellsOf(shownPrefix), start, end };
+    const columns = units.flatMap(unit => Array<number>(unit.cells).fill(unit.offset));
+    return { line: index, soft, spans: merge([...shownPrefix, ...units]), prefixCells: cellsOf(shownPrefix), start, end, columns };
   });
 }
 

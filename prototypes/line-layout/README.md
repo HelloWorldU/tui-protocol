@@ -27,8 +27,10 @@ type, not a protocol schema.
 - `fill`: one grapheme repeated across the full width, in whole cells.
 
 Each row records its source line, whether it is soft, its prefix width, and
-the logical scalar offsets of its displayed text, which a host needs to map
-selection, copy, and search back to logical text.
+the logical scalar offset of every text cell. `projection.ts` uses them to
+map cells to a Block's logical text for copy (no prefixes, no soft breaks,
+dropped spaces kept) and logical search matches back to cells
+([checks](projection.test.ts)).
 
 `cellWidth` is an experimental table: two cells for East Asian wide and
 fullwidth ranges and common emoji, one otherwise.

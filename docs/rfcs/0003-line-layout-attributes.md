@@ -250,4 +250,11 @@ Decided while in Draft, 2026-10-19:
   [codec](../../protocol/test/lines-codec.test.ts),
   [Session](../../terminal/test/lines-content.test.ts), and
   [SDK](../../sdk/test/lines-content.test.ts) checks cover the rules of
-  sections 1–5 and 7. No host renders `text/lines` yet.
+  sections 1–5 and 7.
+- The [xterm lines host](../../prototypes/integration/xterm-lines-host/README.md)
+  executes `text/lines` on public xterm.js APIs: Pi's content sent through
+  the SDK and the terminal module's endpoint fills the buffer exactly as Pi
+  renders at 60 and 36 columns, keeps styles on continuation rows, copies
+  and searches the logical text without prefixes, and keeps a reader's
+  position across resizes. It redraws the whole history per change and has
+  no browser selection or mixed ordinary output yet.

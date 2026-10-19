@@ -41,6 +41,7 @@ For an introduction and grouped reading entry points, start with the
 | [Pi entered-prompt multi-round trial](../prototypes/integration/pi-session/multi-round/README.md) | Interactive application experiment | Finite supporting-host trial: local native/lifecycle checks and a separate four-prompt subscription checkpoint |
 | [Pi coding trial](../prototypes/integration/pi-session/coding/README.md) | Coding workflow experiment | Generated project: read, reproduce, edit, test, and follow up through the supporting terminal |
 | [Block model prototype](../prototypes/block-model/README.md) | Executable prototype | Experimental |
+| [xterm lines host](../prototypes/integration/xterm-lines-host/README.md) | Terminal-side integration prototype | Experimental; Pi's text/lines content in an xterm buffer matches Pi's layout at 60 and 36 columns |
 | [Line layout prototype](../prototypes/line-layout/README.md) | Executable prototype | Experimental; RFC 0003 layout engine reproduces Pi's layout at 36 and 60 columns |
 | [TypeScript TUI SDK](../sdk/README.md) | Application-facing API | Experimental; local JavaScript build, unpublished |
 | [Streaming text example](../examples/streaming-text/README.md) | SDK application example | Experimental; built JavaScript and application-owned fallback |

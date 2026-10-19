@@ -46,6 +46,7 @@ prototypes/                   Executable experiments that test assumptions.
     pty-pressure/             Browser byte credits, PTY pause/resume, and producer-waiting experiments.
     pty-transport/            Real child-process OSC transport diagnostics.
     xterm-browser-input-state/ Browser active-input behavior experiment.
+    xterm-lines-host/         RFC 0003 text/lines host on public xterm.js APIs.
     xterm-browser-metadata/   Browser content-metadata behavior experiment.
     xterm-browser-protocol-endpoint/ Browser bytes-to-native-state experiment.
     xterm-browser-search/     Browser search behavior experiment.
