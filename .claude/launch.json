@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "xterm-browser-protocol-endpoint",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["prototype:xterm-browser-protocol-endpoint", "--port", "5191", "--strictPort"],
+      "port": 5191
+    },
+    {
+      "name": "pi-stock-ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["prototype:pi-stock-ui"],
+      "url": "http://127.0.0.1:4181",
+      "port": 4181
+    }
+  ]
+}
