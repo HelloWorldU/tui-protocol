@@ -253,10 +253,38 @@ requirements.
   OS clipboard use, real IMEs, and cross-browser behavior remain untested.
 - Append with active input needs output/editor coordination beyond historical
   mutation. Seal has no active-input scenario because it enqueues no content
-  render. Styled metadata awaits an optional content representation.
+  render.
+- Styled paint checks read the DOM renderer's classes and computed colors
+  for ASCII cells in the viewport; Chrome pauses painting while the page is
+  hidden, so the page must be visible for those scenarios to finish. Glyph
+  rendering, the WebGL/canvas renderers, and styled selection highlighting
+  remain unchecked.
 - This fixture feeds bytes in-process. The linked PTY demonstration supplies
   the fixed Windows process scenario; multiplexers, remote transports, and
   other terminal hosts require separate validation.
+
+## Styled Text Content
+
+Five [styled scenarios](scenarios/styled-text.ts) negotiate the optional
+[`text/styled`](../../../docs/protocol/styled-text.md) type and send span
+lists through the same OSC path. The 2026-10-19 run passed all 78 scenarios
+(the 73 above plus these five). In the browser's DOM renderer:
+
+- a styled Append paints bold, faint, italic, underline, strikethrough,
+  palette foreground and background, RGB foreground, and inverse (as a
+  swapped palette background) on their characters, while unstyled text keeps
+  no style class and the native row holds the logical text;
+- copy of a styled Block yields its unstyled logical text including LF and
+  Tab, search matches across span boundaries, and no styling sequence is
+  searchable;
+- a selected bold prefix survives a styled Extend and a mid-span
+  ReplaceSuffix; the truncated span keeps its color, the replacement paints
+  only its own style, and Seal leaves the paint unchanged;
+- a full Update from `text/styled` to `text/plain` repaints the same rows
+  with default attributes; and
+- a 20/10/20 column round trip moves bold cells to and from the wrapped row
+  with their characters, without the neighboring color, while a styled
+  reading anchor and selection stay bound to their Block.
 
 ## Updating the Block Being Read
 

@@ -79,6 +79,37 @@ function search(doc: Document, query: string, expected: string) {
   assert(text(doc, "search-result") === expected, `Search ${query}: ${text(doc, "search-result")}`);
 }
 
+/** Classes and painted color of the DOM renderer element at `offset` into the first visible `needle`. */
+function paintAt(doc: Document, needle: string, offset = 0): { classes: string[]; color: string } | undefined {
+  for (const row of Array.from(doc.querySelectorAll(".xterm-rows > div"))) {
+    const found = (row.textContent ?? "").replaceAll(String.fromCharCode(0xa0), " ").indexOf(needle);
+    if (found < 0) continue;
+    const column = found + offset;
+    let start = 0;
+    for (const cell of Array.from(row.children) as HTMLElement[]) {
+      const length = cell.textContent?.length ?? 0;
+      if (column < start + length) {
+        return { classes: Array.from(cell.classList), color: doc.defaultView!.getComputedStyle(cell).color };
+      }
+      start += length;
+    }
+  }
+  return undefined;
+}
+async function expectPaint(doc: Document, label: string) {
+  // The DOM renderer paints only visible rows, and Chrome throttles painting in an
+  // off-screen iframe: keep the terminal on screen, then search to scroll the
+  // transcript into its viewport.
+  doc.getElementById("terminal")!.scrollIntoView();
+  search(doc, "Trial answer", "Found: Trial answer");
+  // "reports: mutable" is the bold phrase; the tool Block's "mutable" stays plain text.
+  await until(doc, () => paintAt(doc, "reports: mutable", 9)?.classes.includes("xterm-bold") === true, `${label}: bold markdown paint`);
+  const prose = paintAt(doc, "reports: mutable")!;
+  assert(!prose.classes.includes("xterm-bold"), `${label}: plain prose painted bold`);
+  const code = paintAt(doc, "text/styled");
+  assert(code !== undefined && code.color !== prose.color, `${label}: inline code not painted in its own color`);
+}
+
 run.onclick = async () => {
   run.disabled = true; results.textContent = "Running…";
   try {
@@ -110,9 +141,9 @@ run.onclick = async () => {
     click(stopped, "escape");
     await until(stopped, () => text(stopped, "report").includes("Context context-1: closed"), "cancelled turn Context to close");
     const report2 = text(stopped, "report");
-    // Plain Blocks carry the trial's "[aborted]" suffix; styled Blocks carry
-    // Pi's own abort label (the fixture's "Cancelled by user") in the error color.
-    assert(/\[aborted\]|Cancelled by user/.test(report2), "Partial assistant output has no abort label");
+    // Plain Blocks carry the trial's "[aborted]" suffix; styled Blocks carry Pi's
+    // own abort label, "Operation aborted" for an Escape through the real runtime.
+    assert(/\[aborted\]|Operation aborted/.test(report2), "Partial assistant output has no abort label");
     assert(!report2.includes("pi-3:"), "Tool started after early cancellation");
     assert(count(text(stopped, "rendered"), RESULT_LINE) === 0, "Result line rendered despite cancellation");
     (stopped.getElementById("typetext") as HTMLInputElement).value = "zz";
@@ -158,7 +189,25 @@ run.onclick = async () => {
     await until(plain, () => text(plain, "rendered").includes(RESULT_LINE), "Pi-rendered assistant text");
     assert(text(plain, "report").includes("No Contexts"), "Protocol state appeared with the trial flag off");
     assert(count(text(plain, "rendered"), RESULT_LINE) >= 1, "Stock transcript missing from native rows");
-    results.textContent += "PASS: with the trial flag off, Pi renders its own transcript through the same host and no protocol state appears.\n4 Pi stock-UI browser scenarios passed (local model fixture, no live model).";
+    results.textContent += "PASS: with the trial flag off, Pi renders its own transcript through the same host and no protocol state appears.\nChecking styled rendering…";
+
+    // Scenario 5: markdown fixture text (?demo=1); Pi's own styling reaches painted cells
+    // through text/styled, and survives a 60/36/60 round trip.
+    const styled = await fresh("demo=1"); click(styled, "connect");
+    await until(styled, () => text(styled, "rendered").includes("[pi-stock-ui] protocol supported"), "negotiation notice");
+    await typePrompt(styled, () => turnStarted(styled));
+    await until(styled, () => text(styled, "report").includes("Context context-1: closed"), "styled turn Context to close");
+    const report5 = text(styled, "report");
+    assert(report5.includes("mutable history") && !report5.includes("**"), "Block logical text keeps markdown markers or lost the bold phrase");
+    assert(!report5.includes("`text/styled`"), "Block logical text keeps code markers");
+    await expectPaint(styled, "styled turn at 60 columns");
+    click(styled, "resize");
+    await until(styled, () => text(styled, "geometry") === "36x24", "narrow geometry");
+    await expectPaint(styled, "styled turn at 36 columns");
+    click(styled, "resize");
+    await until(styled, () => text(styled, "geometry") === "60x24", "restored geometry");
+    await expectPaint(styled, "styled turn after the round trip");
+    results.textContent += "PASS: Pi's markdown emphasis and code color reach painted xterm cells through text/styled Blocks, marker-free in the logical text, before and after a 60/36/60 round trip.\n5 Pi stock-UI browser scenarios passed (local model fixture, no live model).";
   } catch (error) {
     results.textContent += `\nFAIL: ${String(error)}`; host.replaceChildren();
   } finally { run.disabled = false; }

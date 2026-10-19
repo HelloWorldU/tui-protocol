@@ -79,6 +79,13 @@ import {
 } from "./scenarios/plain-text.ts";
 import "./style.css";
 import {
+  runStyledAppendPaintsAttributesInDomScenario,
+  runStyledCopyAndSearchUseLogicalTextScenario,
+  runStyledIncrementalEditsKeepSelectionAndStylesScenario,
+  runStyledResizeMovesStylesWithCharactersScenario,
+  runStyledUpdateToPlainClearsPaintScenario,
+} from "./scenarios/styled-text.ts";
+import {
   runChineseCapacityRetainsSearchScenario,
   runChineseCapacityEvictsSearchScenario,
   runChineseCapacityRetainsReadingSelectionScenario,
@@ -198,6 +205,11 @@ async function runScenarios(): Promise<ScenarioResult[]> {
     await runChineseHistoryPreservesInputScenario(),
     await runChineseMixedSelectionScenario(),
     await runEarlierExtendPreservesChineseBlockSelectionScenario(),
+    await runStyledAppendPaintsAttributesInDomScenario(),
+    await runStyledCopyAndSearchUseLogicalTextScenario(),
+    await runStyledIncrementalEditsKeepSelectionAndStylesScenario(),
+    await runStyledUpdateToPlainClearsPaintScenario(),
+    await runStyledResizeMovesStylesWithCharactersScenario(),
   ];
 }
 

@@ -4,7 +4,9 @@ import { Terminal } from "@xterm/xterm";
 import {
   ProtocolStreamDecoder,
   encodeMessageFrames,
+  type ContentSnapshot,
   type Message,
+  type StyledTextSpan,
 } from "@tui-protocol/protocol";
 import type {
   EndpointDiagnostic,
@@ -33,6 +35,8 @@ export interface FixtureOptions {
   readonly cols?: number;
   readonly rows?: number;
   readonly scrollback?: number;
+  /** Optional content types the fixture terminal advertises; none by default. */
+  readonly optionalContentTypes?: readonly "text/styled"[];
 }
 
 export interface MixedFixture {
@@ -66,7 +70,10 @@ export function createFixture(options: FixtureOptions = {}): Fixture {
     scrollback: options.scrollback ?? 100,
   });
   fixtureTerminal.open(host);
-  const endpoint = new BrowserXtermProtocolEndpoint(fixtureTerminal);
+  const endpoint = new BrowserXtermProtocolEndpoint(
+    fixtureTerminal,
+    options.optionalContentTypes,
+  );
   const contextId = negotiateAndOpen(endpoint);
   return {
     contextId,
@@ -239,7 +246,7 @@ export function append(
   contextId: string,
   operationId: string,
   blockId: string,
-  content: string,
+  content: TextContent,
   lifecycle: "mutable" | "sealed",
 ): Message {
   return {
@@ -250,7 +257,7 @@ export function append(
     body: {
       block_id: blockId,
       lifecycle,
-      content: { type: "text/plain", data: content },
+      content: snapshot(content),
     },
   };
 }
@@ -259,7 +266,7 @@ export function update(
   contextId: string,
   operationId: string,
   blockId: string,
-  content: string,
+  content: TextContent,
 ): Message {
   return {
     version: 1,
@@ -268,9 +275,18 @@ export function update(
     context_id: contextId,
     body: {
       block_id: blockId,
-      content: { type: "text/plain", data: content },
+      content: snapshot(content),
     },
   };
+}
+
+/** A plain string selects text/plain; a span list selects text/styled. */
+export type TextContent = string | readonly StyledTextSpan[];
+
+function snapshot(content: TextContent): ContentSnapshot {
+  return typeof content === "string"
+    ? { type: "text/plain", data: content }
+    : { type: "text/styled", data: content };
 }
 
 export function extend(
@@ -278,7 +294,7 @@ export function extend(
   operationId: string,
   blockId: string,
   baseOperationId: string,
-  fragment: string,
+  fragment: TextContent,
 ): Message {
   return {
     version: 1,
@@ -299,7 +315,7 @@ export function replaceSuffix(
   blockId: string,
   baseOperationId: string,
   retain: number,
-  replacement: string,
+  replacement: TextContent,
 ): Message {
   return {
     version: 1,

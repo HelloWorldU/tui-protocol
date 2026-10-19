@@ -13,7 +13,8 @@ may change.
 - `test/client.test.ts` checks client behavior and interoperability with the
   [terminal protocol module](../terminal/README.md).
 - `test/styled-content.test.ts` checks styled content encoding and
-  negotiation gating; `test/ansi.test.ts` checks the ANSI conversion.
+  negotiation gating; `test/ansi.test.ts` checks the ANSI conversion, and
+  `test/ansi-recorded.test.ts` runs it over recorded real Pi terminal output.
 
 The SDK imports the [shared protocol implementation](../protocol/README.md)
 and implements the semantics in the [protocol drafts](../docs/README.md).
@@ -164,6 +165,19 @@ control characters are kept as ordinary text; parameters are split on `;`
 only, so colon sub-parameters such as underline variants are not
 distinguished; unknown SGR attributes and out-of-range color parameters are
 ignored.
+
+The conversion is also checked against a recorded sample of real application
+output: the raw ConPTY stream of one stock Pi 0.87.1 turn
+(`test/fixtures/pi-0.87.1-stock-turn.ansi`, recorded by the
+[Pi stock-UI trial](../prototypes/integration/pi-stock-ui/README.md#run)).
+Besides more than 500 SGR sequences it carries cursor movement, erase, mode,
+synchronized-output, and OSC 0/8/11/133 sequences. The tests check that no
+sequence residue reaches span text, that the logical text equals the
+recording with every escape sequence removed by an independent reference
+stripper, that spans are never empty or unmerged, and that Pi's markdown
+heading, bold phrase, and inline code arrive with Pi's theme styling. The
+sample is one application, one theme, and one width; it contains no OSC 8
+link targets or colon sub-parameters.
 
 ## Terminal-side integration
 

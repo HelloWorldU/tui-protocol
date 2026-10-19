@@ -17,12 +17,16 @@ export class BrowserXtermProtocolEndpoint {
   readonly #endpoint: XtermProtocolEndpoint;
   readonly #history: BrowserSearchHistory;
 
-  constructor(terminal: Terminal) {
+  constructor(
+    terminal: Terminal,
+    optionalContentTypes: readonly "text/styled"[] = [],
+  ) {
     this.#history = new BrowserSearchHistory(terminal);
     this.#endpoint = new XtermProtocolEndpoint(
       terminal as unknown as HeadlessTerminal,
       {
         completeBaselineSupported: true,
+        optionalContentTypes,
         history: this.#history,
       },
     );

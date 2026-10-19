@@ -140,4 +140,16 @@ only; the content rules of section 5 are content semantics, not schema.
   thinking, and error styles) into `text/styled` assistant Blocks while user
   and tool Blocks stay `text/plain` in the same Context, verifies the styled
   cell attributes in a headless xterm buffer, and checks that the logical
-  text projection matches the plain mapping for the prose fixture.
+  text projection matches the plain mapping for the prose fixture. Its
+  browser checks run every scenario with styled assistant Blocks through the
+  real ConPTY host and confirm Pi's bold and code styling in the painted
+  xterm cells across a 60/36/60 resize.
+- The [browser endpoint scenarios](../../prototypes/integration/xterm-browser-protocol-endpoint/README.md#styled-text-content)
+  verify every style attribute's paint in the xterm DOM renderer, copy and
+  search over the logical text across span boundaries, selection and paint
+  through styled Extend, mid-span ReplaceSuffix, Seal, and Update to
+  `text/plain`, and styles moving with their characters through reflow
+  while a reading anchor stays bound.
+- The [recorded-output ANSI tests](../../sdk/test/ansi-recorded.test.ts)
+  convert a real Pi terminal recording into spans without sequence residue
+  or text loss.

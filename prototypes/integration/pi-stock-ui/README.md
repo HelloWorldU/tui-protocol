@@ -16,7 +16,9 @@ region-aware history mode wired on the protocol path, all four browser
 checks pass through the real ConPTY/xterm host: one turn with the editor
 accepting input during streaming, cancel mid-stream plus a further turn, a
 60/36/60 resize round trip, and the stock fallback. Node-level integration
-adds negotiation-negative, lifecycle, and input-routing edge cases. The
+adds negotiation-negative, lifecycle, and input-routing edge cases. On
+2026-10-19 the same checks passed with styled assistant Blocks, plus a fifth
+that verifies Pi's styling in the painted cells. The
 2026-09-28 boundary failure that motivated host region ownership is kept
 below for the record.
 
@@ -42,6 +44,7 @@ inside one Context. See [Styled transcript content](#styled-transcript-content).
 | `styled-renderer.ts` | Renders assistant messages through Pi's real `AssistantMessageComponent` and normalizes the SGR lines into `text/styled` spans. |
 | `session-source.ts` | Isolated real Pi 0.87.1 runtime through the public composition; one read-only tool; in-memory session/settings. |
 | `fixtures/` | Deterministic local provider and the fixed sample text; optional fragment overrides for styled checks. |
+| `record-ansi.ts` | Records one stock-mode turn's raw ConPTY output as the SDK's real-output ANSI fixture. |
 | `fake-host.ts` | In-process terminal host for Node tests (chrome recorder + real endpoint + reply path), with an xterm-backed endpoint variant. |
 | `stock-ui.test.ts`, `render-gate.test.ts`, `terminal.test.ts`, `bridge.test.ts` | Focused Node checks; the stock-ui suite is also the plain-text fallback path. |
 | `styled-content.test.ts`, `styled-test-env.ts` | Styled-mode Node checks; the env module forces chalk color emission for deterministic style assertions. |
@@ -111,10 +114,25 @@ Block) rather than transient ones, and each scenario can set its own fixture
 pacing (`?pace=<ms>`; the cancel scenario uses 2400 ms so an automated
 Escape lands mid-stream).
 
-These runs predate the styled-content wiring. `browser.ts` now advertises
-`text/styled`, and the checks read the Blocks' logical-text projection (and
-accept either mode's abort label), so the scenarios apply to both content
-modes; the styled rendering itself has not been re-verified in the browser.
+2026-10-19, the same `checks.html` with `browser.ts` advertising
+`text/styled`, so assistant Blocks travel as span lists — **all five
+scenarios passed**: the four above, now on the styled path, plus
+
+5. With the markdown fixture text (`?demo=1`), Pi's own styling reaches the
+   painted xterm cells: the DOM renderer paints the `**…**` phrase with
+   `xterm-bold`, the surrounding prose without it, and the inline code in its
+   own color (Pi's dark-theme `mdCode`, `rgb(138, 190, 183)`); the Blocks'
+   logical text carries no markdown markers. The paint holds at 36 columns
+   and after returning to 60.
+
+Scenario 2 on the styled path exposed a stale assumption: a real Escape ends
+the assistant Block with Pi's default `Operation aborted` label, not the
+`Cancelled by user` text the Node fixture provider sets. The check now
+accepts `[aborted]` (plain) or `Operation aborted` (styled).
+
+The DOM renderer paints only visible rows, and Chrome pauses painting in a
+hidden page or an off-screen iframe; scenario 5 scrolls the terminal into
+view, and the page must be visible while it runs.
 
 ### Earlier record, 2026-09-28 (manual, before region ownership)
 
@@ -199,9 +217,10 @@ rendered projection as the logical text:
 
 - Thinking content renders with Pi's italic thinkingText style and no
   `[Thinking]` label; the plain mapping's label exists only in plain mode.
-- Abort, error, and truncation ends show Pi's own labels (`Cancelled by
-  user`, `Error: …`) in the error color instead of the plain
-  `[aborted] …` suffix.
+- Abort, error, and truncation ends show Pi's own labels (`Operation
+  aborted` for a real Escape, the provider's message such as the Node
+  fixture's `Cancelled by user` otherwise, `Error: …`) in the error color
+  instead of the plain `[aborted] …` suffix.
 - Markdown constructs appear in their displayed form: `**bold**` arrives as
   a bold `bold` span, so the logical text of markdown-heavy messages differs
   from the plain mapping's raw text. For the prose-only fixture the two
@@ -221,10 +240,19 @@ pnpm prototype:pi-stock-ui
 # http://127.0.0.1:4181/              protocol path (completes a fixture turn)
 # http://127.0.0.1:4181/?stock=1      stock fallback
 # http://127.0.0.1:4181/?pace=2400    slower fixture stream (long cancel window)
-# http://127.0.0.1:4181/checks.html   the four automated scenarios
+# http://127.0.0.1:4181/?demo=1       markdown fixture text (visible styling)
+# http://127.0.0.1:4181/checks.html   the five automated scenarios (keep the page visible)
 pnpm typecheck
 pnpm test
 pnpm build:pi-stock-ui
+```
+
+`record-ansi.ts` re-records the SDK's real-output ANSI fixture: one stock-mode
+turn with the markdown text through bundled ConPTY at 60x24, with the temp
+working directory replaced by `<trial-cwd>`.
+
+```sh
+node prototypes/integration/pi-stock-ui/record-ansi.ts sdk/test/fixtures/pi-0.87.1-stock-turn.ansi
 ```
 
 ## Limits
@@ -245,9 +273,9 @@ pnpm build:pi-stock-ui
   [Styled transcript content](#styled-transcript-content).
 - Rendered wrapping is baked into the logical text at the current width;
   narrower reflow afterwards splits those lines again.
-- Styled browser verification is pending: the wiring compiles and the
-  checks are mode-agnostic, but no browser run has confirmed the styled
-  rendering.
+- The styled browser check samples three paint attributes (bold, its
+  absence on prose, and the code color) on one fixture message; thinking,
+  error styling, and other themes are covered by Node buffer checks only.
 - A resize clear re-materializes Blocks, but a reading anchor, an active
   selection, or search-match positions across the clear are best-effort or
   lost; the active search term survives via save/restore.
