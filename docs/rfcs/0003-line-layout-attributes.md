@@ -91,9 +91,12 @@ control labels follow [Plain Text Content](../protocol/plain-text.md).
 `wrap` selects how a line that exceeds the display width breaks into rows:
 
 - `word` (the default): the terminal breaks at break opportunities. At
-  minimum, a break opportunity follows each run of spaces, and a line falls
-  back to breaking between cells where a single word exceeds the available
-  width. Terminals may use a fuller algorithm such as Unicode line breaking.
+  minimum, a break opportunity follows each run of spaces and lies between
+  any two adjacent wide (two-cell) characters, so CJK text breaks between
+  characters; a line falls back to breaking between cells where a single
+  word exceeds the available width. Terminals may use a fuller algorithm
+  such as Unicode line breaking, for example to keep closing punctuation off
+  the start of a row.
 - `char`: the terminal breaks between cells, as for `text/plain`. This suits
   code and preformatted text.
 
@@ -106,7 +109,9 @@ copied text, consistent with Plain Text Content.
 soft-wrapped row of the line, before the wrapped text: two spaces for a
 bullet item, three for a numbered item, `│ ` for a quote. It is
 presentation, not logical text: it is not part of the logical text, not
-matched by search, not counted by ReplaceSuffix, and not copied. The prefix
+matched by search, not counted by ReplaceSuffix, and not copied. Copy keeps
+the logical text for the same reason automatic wrapping adds no copied line
+breaks; this RFC defines no option to copy prefixes. The prefix
 of the line's first row remains ordinary span text, because it is content
 (the bullet, the number, the first marker).
 
@@ -153,6 +158,12 @@ unchanged.
 
 ## Compatibility and Fallback
 
+`text/lines` complements `text/styled` rather than replacing it. A terminal
+that implements only styling advertises `text/styled`; one that also
+implements layout advertises both. An application prefers `text/lines` when
+it is confirmed. Each type thus adds one reviewable step to what a terminal
+must implement.
+
 A terminal advertises `text/lines` only when it completely implements it,
 including word wrapping, continuation prefixes, fill lines, and the
 projections above. When it is not confirmed, the application falls back as
@@ -187,14 +198,20 @@ logical text without it.
 - **Hanging indent as a number of cells** instead of a prefix span list.
   Rejected: it cannot express repeated markers such as `│ `.
 
+## Design Decisions
+
+Decided while in Draft, 2026-10-19:
+
+- Copy excludes continuation prefixes, with no option to include them. A
+  copy option can be added later without changing the line model.
+- The minimum `word` rule breaks at spaces and between wide characters;
+  fuller line-breaking algorithms stay a terminal choice.
+- `text/lines` and `text/styled` remain separate negotiated types.
+
 ## Unresolved Questions
 
-- Whether copy should optionally include continuation prefixes, for example
-  to keep quote markers in pasted text.
-- The minimum word-breaking rule for CJK text and other scripts without
-  spaces; whether `word` should require Unicode line breaking.
-- Whether `text/lines` should replace `text/styled` as the recommended styled
-  type, or remain a separate negotiated type.
+- Break opportunities for scripts that neither use spaces nor render as wide
+  characters, such as Thai.
 - The JSON encoding of lines, attributes, and fill lines.
 - Whether code blocks need `none` (no wrap, horizontal truncation) in
   addition to `char`.
