@@ -77,9 +77,12 @@ split of [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md
    Whether copy includes a repeated marker is open.
 3. **Width-relative fills** for rules (and plausibly code backgrounds),
    instead of runs of fixed length.
-4. **Character wrapping for code**, which Pi itself uses at narrow widths
-   (`computeSomethingWithAVeryLongName(ar` / `gumentOne, …`), without
-   keeping the code indent.
+4. **No continuation prefix for code**: Pi wraps code lines by word like
+   prose, breaks a word wider than the row between cells
+   (`computeSomethingWithAVeryLongName(ar` / `gumentOne, …`), and does not
+   repeat the code indent on wrapped rows. The
+   [line layout prototype](../../prototypes/line-layout/README.md) later
+   confirmed this is the same word rule.
 
 These are this note's inferences from one sample, not adopted protocol
 behavior. They suggest that the smallest useful step past

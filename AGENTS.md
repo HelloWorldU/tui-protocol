@@ -36,6 +36,7 @@ scripts/                      Shared repository build tooling.
   docs/                       Documentation build commands, checks, and tooling tests.
 prototypes/                   Executable experiments that test assumptions.
   block-model/                Minimal Block and Operation semantics model.
+  line-layout/                RFC 0003 line layout engine: wrap, continuation, fill.
   integration/                Current protocol-layer integration experiments.
     ingress-pressure/         Controlled SDK-to-renderer backlog measurement.
     pi-session/               Pi session event mapping and finite supporting-host trial.

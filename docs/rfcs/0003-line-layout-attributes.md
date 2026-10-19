@@ -97,8 +97,9 @@ control labels follow [Plain Text Content](../protocol/plain-text.md).
   word exceeds the available width. Terminals may use a fuller algorithm
   such as Unicode line breaking, for example to keep closing punctuation off
   the start of a row.
-- `char`: the terminal breaks between cells, as for `text/plain`. This suits
-  code and preformatted text.
+- `char`: the terminal breaks between cells, as for `text/plain`, for
+  preformatted text where breaking at spaces is not wanted. Pi 0.87.1 wraps
+  code blocks with the `word` rule.
 
 Rows created by wrapping are soft: they add no logical line break and no
 copied text, consistent with Plain Text Content.
@@ -212,6 +213,8 @@ Decided while in Draft, 2026-10-19:
 
 - Break opportunities for scripts that neither use spaces nor render as wide
   characters, such as Thai.
+- Whether a fill line takes a maximum width: Pi caps its rule at 80 cells,
+  the only difference the line layout prototype found at 100 columns.
 - The JSON encoding of lines, attributes, and fill lines.
 - Whether code blocks need `none` (no wrap, horizontal truncation) in
   addition to `char`.
@@ -229,3 +232,14 @@ Decided while in Draft, 2026-10-19:
   `text/lines`: Pi's own layout reproduced at 36, 60, and 100 columns, or the
   remaining differences recorded.
 - At least one sample with CJK text and one with nested lists.
+
+## Experimental Evidence
+
+- The [line layout prototype](../../prototypes/line-layout/README.md)
+  implements the wrap, continuation, and fill rules as a pure layout engine.
+  Pi 0.87.1's wide render of the layout experiment's sample, converted to
+  `text/lines`, lays out at 36 and 60 columns exactly as Pi renders at those
+  widths, styles included; at 100 columns only the rule differs, because Pi
+  caps it at 80 cells. Cell reflow of the same render kept 13 of Pi's rows
+  at either width. Rendering, history, selection, and the wire encoding are
+  not yet implemented.
