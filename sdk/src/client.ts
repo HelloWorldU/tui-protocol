@@ -1,6 +1,6 @@
 import {
   ProtocolStreamDecoder, encodeMessageFrames,
-  type ContentSnapshot, type DecoderEvent, type Message, type StyledTextSpan,
+  type ContentSnapshot, type DecoderEvent, type LinesTextLine, type Message, type StyledTextSpan,
 } from "@tui-protocol/protocol";
 
 type Request = Extract<Message, { kind: "capability.query" | "context.open" | "context.close" }>;
@@ -8,8 +8,17 @@ type Response = Extract<Message, { kind: "capability.response" | "context.open.r
 type Operation = Extract<Message, { kind: `block.${string}` }>;
 type OperationBody = { [K in Operation["kind"]]: Pick<Extract<Operation, { kind: K }>, "kind" | "body"> }[Operation["kind"]];
 
-/** A content Operation's text: a plain string (text/plain) or styled spans (text/styled). */
-export type TextContent = string | readonly StyledTextSpan[];
+/**
+ * A content Operation's text: a plain string (text/plain), styled spans
+ * (text/styled), or lines with layout attributes (text/lines, experimental,
+ * RFC 0003). A non-empty array whose first element has `spans` is lines; an
+ * empty array is an empty span list.
+ */
+export type TextContent = string | readonly StyledTextSpan[] | readonly LinesTextLine[];
+
+function isLines(text: TextContent): text is readonly LinesTextLine[] {
+  return typeof text !== "string" && text.length > 0 && "spans" in text[0]!;
+}
 
 export interface TuiClientOptions {
   /** Accept this entire byte batch synchronously, preserving order with other writes. */
@@ -79,6 +88,11 @@ export class TuiClient {
   /** True when the latest positive capability response confirmed text/styled. */
   get supportsStyledContent(): boolean {
     return this.#optionalContentTypes.includes("text/styled");
+  }
+
+  /** True when the latest positive capability response confirmed experimental text/lines. */
+  get supportsLinesContent(): boolean {
+    return this.#optionalContentTypes.includes("text/lines");
   }
 
   async negotiate(): Promise<boolean> {
@@ -198,10 +212,21 @@ export class TuiClient {
       }
       return spans;
     };
+    const lineData = (lines: readonly LinesTextLine[]): readonly LinesTextLine[] => {
+      if (!this.supportsLinesContent) {
+        throw new Error("Lines require text/lines, which the capability response did not confirm; " +
+          "render at the current width into spans or a plain string instead.");
+      }
+      return lines;
+    };
+    const arrayFragment = (text: Exclude<TextContent, string>) =>
+      isLines(text) ? lineData(text) : styledSpans(text as readonly StyledTextSpan[]);
     const content = (text: TextContent): ContentSnapshot =>
       typeof text === "string"
         ? { type: "text/plain", data: text }
-        : { type: "text/styled", data: styledSpans(text) };
+        : isLines(text)
+          ? { type: "text/lines", data: lineData(text) }
+          : { type: "text/styled", data: styledSpans(text as readonly StyledTextSpan[]) };
     return Object.freeze({
       id,
       append: (blockId: string, text: TextContent, lifecycle: "mutable" | "sealed") => send({
@@ -214,14 +239,14 @@ export class TuiClient {
         kind: "block.extend",
         body: {
           block_id: blockId, base_operation_id: baseOperationId,
-          fragment: typeof fragment === "string" ? fragment : styledSpans(fragment),
+          fragment: typeof fragment === "string" ? fragment : arrayFragment(fragment),
         },
       }),
       replaceSuffix: (blockId: string, baseOperationId: string, retain: number, replacement: TextContent) => send({
         kind: "block.replace_suffix",
         body: {
           block_id: blockId, base_operation_id: baseOperationId, retain,
-          replacement: typeof replacement === "string" ? replacement : styledSpans(replacement),
+          replacement: typeof replacement === "string" ? replacement : arrayFragment(replacement),
         },
       }),
       seal: (blockId: string) => send({ kind: "block.seal", body: { block_id: blockId } }),

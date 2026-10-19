@@ -241,5 +241,13 @@ Decided while in Draft, 2026-10-19:
   `text/lines`, lays out at 36 and 60 columns exactly as Pi renders at those
   widths, styles included; at 100 columns only the rule differs, because Pi
   caps it at 80 cells. Cell reflow of the same render kept 13 of Pi's rows
-  at either width. Rendering, history, selection, and the wire encoding are
-  not yet implemented.
+  at either width.
+- The protocol, terminal, and SDK modules carry `text/lines` with an
+  experimental JSON encoding: `{"type":"text/lines","data":[line, …]}` with
+  `line = {"spans": [span…], "wrap"?: "word"|"char", "continuation"?: [span…],
+  "fill"?: true}`, and Extend fragments and ReplaceSuffix replacements as
+  line arrays, recognized by their first element's `spans` key. The
+  [codec](../../protocol/test/lines-codec.test.ts),
+  [Session](../../terminal/test/lines-content.test.ts), and
+  [SDK](../../sdk/test/lines-content.test.ts) checks cover the rules of
+  sections 1–5 and 7. No host renders `text/lines` yet.

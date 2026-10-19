@@ -4,10 +4,12 @@ import type {
   BlockReplaceSuffix,
   BlockSeal,
   BlockUpdate,
+  ContentFragment,
   ContentSnapshot,
   ContextClose,
   InvalidMessageIdentity,
   Message,
+  LinesTextLine,
   OperationErrorCode,
   StyledTextSpan,
 } from "@tui-protocol/protocol";
@@ -15,7 +17,10 @@ import {
   contentCodeUnits,
   extendedContent,
   fragmentMatchesContent,
+  invalidLinesJoinReason,
+  invalidLinesReason,
   invalidStyledSpanReason,
+  linesBoundaryLine,
   logicalScalarLength,
   replacedSuffixContent,
 } from "./content.ts";
@@ -82,10 +87,13 @@ export interface SessionContextSnapshot {
   readonly blocks: readonly SessionBlockSnapshot[];
 }
 
+/** Optional content types a terminal may implement; text/lines is experimental (RFC 0003). */
+export type OptionalContentType = "text/styled" | "text/lines";
+
 export interface TerminalProtocolSessionOptions {
   readonly completeBaselineSupported: boolean;
   /** Optional content types this terminal completely implements and advertises. */
-  readonly optionalContentTypes?: readonly "text/styled"[];
+  readonly optionalContentTypes?: readonly OptionalContentType[];
   readonly resourceLimits?: SessionResourceLimits;
 }
 
@@ -102,8 +110,7 @@ export class TerminalProtocolSession {
   readonly #contexts = new Map<string, StoredContext>();
   readonly #controlResults = new Map<string, StoredControlResult>();
   readonly #completeBaselineSupported: boolean;
-  readonly #optionalContentTypes: readonly "text/styled"[];
-  readonly #styledContentSupported: boolean;
+  readonly #optionalContentTypes: readonly OptionalContentType[];
   #pendingOperation: object | undefined = undefined;
   #nextContextId = 1;
   #ended = false;
@@ -122,7 +129,6 @@ export class TerminalProtocolSession {
         "Optional content types must not contain duplicates.",
       );
     }
-    this.#styledContentSupported = this.#optionalContentTypes.includes("text/styled");
     this.#limits = options.resourceLimits && validateSessionLimits(options.resourceLimits);
   }
 
@@ -429,7 +435,10 @@ export class TerminalProtocolSession {
         if (!fragmentMatchesContent(block.content, operation.body.fragment)) {
           return "invalid_content";
         }
-        return validateFragmentSpans(operation.body.fragment);
+        return validateFragment(
+          operation.body.fragment,
+          block.content.type === "text/lines" ? block.content.data.at(-1) : undefined,
+        );
       }
       case "block.replace_suffix": {
         const block = findBlock(context, operation.body.block_id);
@@ -448,7 +457,12 @@ export class TerminalProtocolSession {
         if (!fragmentMatchesContent(block.content, operation.body.replacement)) {
           return "invalid_content";
         }
-        return validateFragmentSpans(operation.body.replacement);
+        return validateFragment(
+          operation.body.replacement,
+          block.content.type === "text/lines"
+            ? linesBoundaryLine(block.content.data, operation.body.retain)
+            : undefined,
+        );
       }
       case "block.seal": {
         const block = findBlock(context, operation.body.block_id);
@@ -469,12 +483,13 @@ export class TerminalProtocolSession {
     if (content.type === "text/plain") {
       return undefined;
     }
-    if (!this.#styledContentSupported) {
+    if (!this.#optionalContentTypes.includes(content.type)) {
       return "unsupported_content_type";
     }
-    return invalidStyledSpanReason(content.data) === undefined
-      ? undefined
-      : "invalid_content";
+    const reason = content.type === "text/styled"
+      ? invalidStyledSpanReason(content.data)
+      : invalidLinesReason(content.data);
+    return reason === undefined ? undefined : "invalid_content";
   }
 
   #buildCommittedContext(
@@ -750,15 +765,19 @@ function cloneContent(content: ContentSnapshot): ContentSnapshot {
   return structuredClone(content);
 }
 
-function validateFragmentSpans(
-  fragment: string | readonly StyledTextSpan[],
+/** Content rules for a fragment whose shape already matches the Block's type. */
+function validateFragment(
+  fragment: ContentFragment,
+  continuedLine: LinesTextLine | undefined,
 ): OperationErrorCode | undefined {
-  if (typeof fragment === "string") {
+  if (typeof fragment === "string" || fragment.length === 0) {
     return undefined;
   }
-  return invalidStyledSpanReason(fragment) === undefined
-    ? undefined
-    : "invalid_content";
+  const reason = "spans" in fragment[0]!
+    ? invalidLinesReason(fragment as readonly LinesTextLine[]) ??
+      invalidLinesJoinReason(continuedLine, fragment as readonly LinesTextLine[])
+    : invalidStyledSpanReason(fragment as readonly StyledTextSpan[]);
+  return reason === undefined ? undefined : "invalid_content";
 }
 
 function cloneOperation(operation: BlockOperation): BlockOperation {

@@ -10,6 +10,7 @@ import {
   SessionResourceLimitError,
   TerminalProtocolSession,
   type OperationExecutionErrorCode,
+  type OptionalContentType,
   type SessionContextSnapshot,
 } from "./session.ts";
 import type { SessionResourceLimits } from "./resource-limits.ts";
@@ -42,7 +43,7 @@ export interface TerminalOperationAdapter {
 export interface TerminalProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
   /** Optional content types this terminal completely implements and advertises. */
-  readonly optionalContentTypes?: readonly "text/styled"[];
+  readonly optionalContentTypes?: readonly OptionalContentType[];
   readonly resourceLimits?: SessionResourceLimits;
   readonly operationAdapter?: TerminalOperationAdapter;
 }

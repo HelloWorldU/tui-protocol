@@ -143,6 +143,14 @@ spans on its own. An empty span list is valid content for `append`, `update`,
 and `replaceSuffix`; `extend` rejects it locally, matching the protocol's
 non-empty fragment rule.
 
+A non-empty array whose first element has `spans` is instead a list of
+experimental `text/lines` lines ([RFC 0003](../docs/rfcs/0003-line-layout-attributes.md)):
+styled text per line plus `wrap`, `continuation`, and `fill` layout
+attributes. `client.supportsLinesContent` reports its confirmation; lines
+passed without it throw before any bytes are written, and rendering at the
+current width into spans is the application's fallback. An empty array always
+means an empty span list.
+
 ## ANSI conversion
 
 `spansFromAnsi(text)` converts an ANSI-styled string into a span list suitable

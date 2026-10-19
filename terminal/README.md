@@ -44,7 +44,11 @@ omitted for state-only tests. A host that completely implements
 `text/styled` ([styled-text draft](../docs/protocol/styled-text.md)) lists it
 in `optionalContentTypes`; the Session then advertises it and enforces its
 content rules, reporting `unsupported_content_type` for styled content it was
-not configured to accept.
+not configured to accept. The experimental `text/lines` type from
+[RFC 0003](../docs/rfcs/0003-line-layout-attributes.md) is configured the
+same way; the Session then enforces its line rules and line-aware Extend and
+ReplaceSuffix (`test/lines-content.test.ts`). Listing it asserts the host
+also lays lines out at every width, which the current xterm host does not.
 
 For a protocol-only stream, call `push(bytes)` and return
 each `responseFrames` entry to the application; handle `diagnostics` locally.

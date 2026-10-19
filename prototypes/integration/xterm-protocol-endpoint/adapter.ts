@@ -1,6 +1,7 @@
 import type { IDisposable, Terminal } from "@xterm/headless";
 
-import type { Operation } from "../../block-model/model.ts";
+import type { ContentFragment } from "@tui-protocol/protocol";
+import type { BlockContent, Operation } from "../../block-model/model.ts";
 import type { OperationExecutionErrorCode } from "@tui-protocol/terminal";
 import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
 import type {
@@ -98,25 +99,36 @@ function toRenderingOperation(operation: AppliedBlockOperation): Operation {
         block: {
           id,
           lifecycle: operation.body.lifecycle,
-          content: operation.body.content.data,
+          content: renderable(operation.body.content.data),
         },
       };
     case "block.update":
-      return { type: "update", id, content: operation.body.content.data };
+      return { type: "update", id, content: renderable(operation.body.content.data) };
     case "block.extend":
-      return { type: "extend", id, fragment: operation.body.fragment };
+      return { type: "extend", id, fragment: renderable(operation.body.fragment) };
     case "block.replace_suffix":
       return {
         type: "replaceSuffix",
         id,
         retain: operation.body.retain,
-        replacement: operation.body.replacement,
+        replacement: renderable(operation.body.replacement),
       };
     case "block.seal":
       return { type: "seal", id };
     default:
       return assertNever(operation);
   }
+}
+
+/**
+ * This host renders text/plain and text/styled only and never advertises
+ * text/lines, so the Session rejects line content before it gets here.
+ */
+function renderable(content: ContentFragment): BlockContent {
+  if (Array.isArray(content) && content.length > 0 && "spans" in content[0]) {
+    throw new Error("This xterm host does not render text/lines content.");
+  }
+  return content as BlockContent;
 }
 
 function renderBlockId(contextId: string, blockId: string): string {

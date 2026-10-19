@@ -65,7 +65,23 @@ export interface StyledTextSnapshot {
   readonly data: readonly StyledTextSpan[];
 }
 
-export type ContentSnapshot = PlainTextSnapshot | StyledTextSnapshot;
+/** One text/lines line (experimental, RFC 0003): styled text plus layout attributes. */
+export interface LinesTextLine {
+  readonly spans: readonly StyledTextSpan[];
+  readonly wrap?: "word" | "char";
+  readonly continuation?: readonly StyledTextSpan[];
+  readonly fill?: true;
+}
+
+export interface LinesTextSnapshot {
+  readonly type: "text/lines";
+  readonly data: readonly LinesTextLine[];
+}
+
+export type ContentSnapshot = PlainTextSnapshot | StyledTextSnapshot | LinesTextSnapshot;
+
+/** An Extend fragment or ReplaceSuffix replacement: text, spans, or lines by the Block's type. */
+export type ContentFragment = string | readonly StyledTextSpan[] | readonly LinesTextLine[];
 
 export type Message =
   | CapabilityQuery
@@ -172,7 +188,7 @@ export interface BlockExtend extends BlockOperationEnvelope {
   readonly body: {
     readonly block_id: string;
     readonly base_operation_id: string;
-    readonly fragment: string | readonly StyledTextSpan[];
+    readonly fragment: ContentFragment;
   };
 }
 
@@ -182,7 +198,7 @@ export interface BlockReplaceSuffix extends BlockOperationEnvelope {
     readonly block_id: string;
     readonly base_operation_id: string;
     readonly retain: number;
-    readonly replacement: string | readonly StyledTextSpan[];
+    readonly replacement: ContentFragment;
   };
 }
 
@@ -399,7 +415,7 @@ function validateMessageInner(value: unknown): Message {
       if (typeof body.fragment === "string") {
         requireNonEmptyString(body.fragment, "Message.body.fragment");
       } else {
-        validateSpanArray(body.fragment, "Message.body.fragment", false);
+        validateFragmentArray(body.fragment, "Message.body.fragment", false);
       }
       break;
     case "block.replace_suffix":
@@ -419,7 +435,7 @@ function validateMessageInner(value: unknown): Message {
       if (typeof body.replacement === "string") {
         requireScalarString(body.replacement, "Message.body.replacement");
       } else {
-        validateSpanArray(body.replacement, "Message.body.replacement", true);
+        validateFragmentArray(body.replacement, "Message.body.replacement", true);
       }
       break;
     case "block.seal":
@@ -546,7 +562,47 @@ function validateContentSnapshot(value: unknown, context: string): void {
     validateSpanArray(snapshot.data, `${context}.data`, true);
     return;
   }
-  invalid(`${context}.type must be text/plain or text/styled in this codec.`);
+  if (type === "text/lines") {
+    validateLineArray(snapshot.data, `${context}.data`, true);
+    return;
+  }
+  invalid(`${context}.type must be text/plain, text/styled, or text/lines in this codec.`);
+}
+
+/** A non-string fragment is a line array when its first element has `spans`, else a span array. */
+function validateFragmentArray(value: unknown, context: string, allowEmpty: boolean): void {
+  if (Array.isArray(value) && isLineRecord(value[0])) {
+    validateLineArray(value, context, allowEmpty);
+  } else {
+    validateSpanArray(value, context, allowEmpty);
+  }
+}
+
+function isLineRecord(value: unknown): boolean {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && "spans" in value;
+}
+
+function validateLineArray(value: unknown, context: string, allowEmpty: boolean): void {
+  if (!Array.isArray(value)) {
+    invalid(`${context} must be an array of lines.`);
+  }
+  if (!allowEmpty && value.length === 0) {
+    invalid(`${context} must not be empty.`);
+  }
+  for (const [index, item] of value.entries()) {
+    const line = requireRecord(item, `${context}[${index}]`);
+    requireExactKeys(line, ["spans"], ["wrap", "continuation", "fill"]);
+    validateSpanArray(line.spans, `${context}[${index}].spans`, true);
+    if (line.wrap !== undefined) {
+      requireScalarString(line.wrap, `${context}[${index}].wrap`);
+    }
+    if (line.continuation !== undefined) {
+      validateSpanArray(line.continuation, `${context}[${index}].continuation`, true);
+    }
+    if (line.fill !== undefined && typeof line.fill !== "boolean") {
+      invalid(`${context}[${index}].fill must be a boolean.`);
+    }
+  }
 }
 
 function validateSpanArray(
