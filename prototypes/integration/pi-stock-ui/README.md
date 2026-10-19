@@ -44,6 +44,7 @@ inside one Context. See [Styled transcript content](#styled-transcript-content).
 | `styled-renderer.ts` | Renders assistant messages through Pi's real `AssistantMessageComponent` and normalizes the SGR lines into `text/styled` spans. |
 | `session-source.ts` | Isolated real Pi 0.87.1 runtime through the public composition; one read-only tool; in-memory session/settings. |
 | `fixtures/` | Deterministic local provider and the fixed sample text; optional fragment overrides for styled checks. |
+| `wrap-sample.ts`, `wrap-experiment.ts`, `wrap-probe.ts`, `wrap-baking.test.ts` | Wrap-baking experiment: Pi's layout at one width versus terminal reflow at others. |
 | `record-ansi.ts` | Records one stock-mode turn's raw ConPTY output as the SDK's real-output ANSI fixture. |
 | `fake-host.ts` | In-process terminal host for Node tests (chrome recorder + real endpoint + reply path), with an xterm-backed endpoint variant. |
 | `stock-ui.test.ts`, `render-gate.test.ts`, `terminal.test.ts`, `bridge.test.ts` | Focused Node checks; the stock-ui suite is also the plain-text fallback path. |
@@ -231,6 +232,28 @@ rendered projection as the logical text:
   layout and terminal-owned reflow that the experiment exists to expose;
   the browser resize scenario is where to watch it.
 
+## Wrap-baking experiment
+
+`wrap-baking.test.ts` renders a fixed markdown sample (`wrap-sample.ts`)
+through the same `AssistantMessageComponent` at 60 columns and at a wide
+1000 columns, appends each as a styled Block through the xterm endpoint, and
+compares the native rows after resizing with Pi's own layout at the display
+width (`wrap-experiment.ts`; `wrap-probe.ts` prints the table). Seven checks
+pass, 2026-10-19:
+
+- a render at the display width reproduces Pi's layout row for row;
+- shown at 36 columns, the 60-column render keeps 17 of Pi's 29 rows, with 6
+  mid-word splits and 3 list or quote continuations missing their prefix;
+  shown at 100 it keeps its 60-column breaks, 5 rows more than Pi;
+- the wide render carries only content breaks (the 60-column render adds 6),
+  so a paragraph copies as one line, but the terminal's cell-based reflow
+  splits words and drops continuation prefixes at every narrower width;
+- Pi's rule, drawn at a fixed length, spills onto extra rows when narrower.
+
+Neither width choice reproduces Pi's layout once the display width changes.
+The analysis and the layout capabilities this points to are in
+[Renderer-owned layout and reflow](../../../docs/design/renderer-layout-and-reflow.md).
+
 ## Run
 
 From the repository root (Windows, Node 24+, pnpm 11.9.0):
@@ -272,7 +295,8 @@ node prototypes/integration/pi-stock-ui/record-ansi.ts sdk/test/fixtures/pi-0.87
   constructs appear in displayed form. See the divergences list in
   [Styled transcript content](#styled-transcript-content).
 - Rendered wrapping is baked into the logical text at the current width;
-  narrower reflow afterwards splits those lines again.
+  narrower reflow afterwards splits those lines again. The
+  [wrap-baking experiment](#wrap-baking-experiment) measures the cost.
 - The styled browser check samples three paint attributes (bold, its
   absence on prose, and the code color) on one fixture message; thinking,
   error styling, and other themes are covered by Node buffer checks only.

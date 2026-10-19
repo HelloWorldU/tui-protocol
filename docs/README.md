@@ -32,7 +32,7 @@ For an introduction and grouped reading entry points, start with the
 | [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan; completed checkpoints and remaining trial work |
 | [Pi rendering architecture](design/pi-rendering-architecture.md) | Upstream architecture research and integration assessment | Source trace at 0.86.1; 0.87 developments recorded 2026-09-25; trial evidence linked separately |
 | [Pi stock-UI protocol trial](design/pi-stock-ui-trial.md) | Design note | Working draft; component-suppression patch points verified 2026-09-26 |
-| [Pi stock-UI trial prototype](../prototypes/integration/pi-stock-ui/README.md) | Application integration experiment | Path B verified 2026-10-03: all four browser checks pass through ConPTY |
+| [Pi stock-UI trial prototype](../prototypes/integration/pi-stock-ui/README.md) | Application integration experiment | Path B verified 2026-10-03; styled assistant Blocks browser-verified 2026-10-19 (five checks through ConPTY) |
 | [Terminal-host region ownership](design/host-region-ownership.md) | Design note | Implemented and browser-verified 2026-10-03 |
 | [Adoption path and cold start](design/adoption-path.md) | Strategy note | Working note; what broad adoption means and the realistic ladder |
 | [Pi session integration](../prototypes/integration/pi-session/README.md) | Application integration experiment | Local fixtures and finite OpenAI subscription trial through ConPTY/xterm; completion, search, cancellation, and recorded transport failure |
@@ -51,6 +51,7 @@ For an introduction and grouped reading entry points, start with the
 | [Stalled browser consumption](../prototypes/integration/pty-pressure/stalled.md) | Transport failure experiment | Experimental; local consumption timeout and child shutdown |
 | [Trial resource budgets](design/trial-resource-budgets.md) | Implementation policy | Experimental; retained-state and pending-input accounting |
 | [Trial content samples](design/trial-content-samples.md) | Integration evidence | Experimental; fixed text corpus, resize, and safe rejection boundaries |
+| [Renderer-owned layout and reflow](design/renderer-layout-and-reflow.md) | Integration evidence and design inference | Working note 2026-10-19; Pi's markdown layout at one width versus terminal reflow at others |
 | [Terminal protocol module](../terminal/README.md) | Terminal-facing execution | Experimental; local JavaScript build, unpublished |
 | [Terminal protocol endpoint](../prototypes/integration/protocol-endpoint/README.md) | Experiment record | Implementation and tests moved to terminal/ |
 | [PTY transport probe](../prototypes/integration/pty-transport/README.md) | Transport integration probe | Experimental; tested system/bundled ConPTY outcomes recorded |
