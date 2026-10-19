@@ -15,6 +15,7 @@ For an introduction and grouped reading entry points, start with the
 | [Building the documentation website](site.md) | Documentation tooling | Local preview and GitHub Pages |
 | [RFC 0001: Mutable Terminal History and Reading Anchors](rfcs/0001-mutable-terminal-history-and-reading-anchors.md) | Requirements RFC | Draft |
 | [RFC 0002: Styled Text Content](rfcs/0002-styled-text-content.md) | Content-type RFC | Draft |
+| [RFC 0003: Line Layout Attributes](rfcs/0003-line-layout-attributes.md) | Content-type RFC | Draft |
 | [Operation semantics](protocol/operations.md) | Protocol draft | Draft |
 | [Capability negotiation](protocol/capabilities.md) | Protocol draft | Draft |
 | [Wire format requirements](protocol/wire-requirements.md) | Protocol draft | Draft |
