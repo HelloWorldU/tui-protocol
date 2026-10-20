@@ -46,6 +46,6 @@ when those choices are not needed to validate the underlying semantics.
 
 | RFC | Title | Status |
 |---|---|---|
-| [0001](0001-mutable-terminal-history-and-reading-anchors.md) | Mutable Terminal History and Reading Anchors | Draft |
+| [0001](0001-mutable-terminal-history-and-reading-anchors.md) | Mutable Terminal History and Reading Anchors | Accepted |
 | [0002](0002-styled-text-content.md) | Styled Text Content | Accepted |
 | [0003](0003-line-layout-attributes.md) | Line Layout Attributes | Accepted |

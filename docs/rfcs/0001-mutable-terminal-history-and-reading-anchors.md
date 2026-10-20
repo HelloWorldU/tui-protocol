@@ -2,9 +2,10 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft |
+| Status | Accepted |
 | Author | HelloWorldU |
 | Created | 2026-07-31 |
+| Accepted | 2026-10-20 |
 
 ## Abstract
 
