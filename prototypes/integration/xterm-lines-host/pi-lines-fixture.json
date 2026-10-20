@@ -1,0 +1,604 @@
+{
+ "pi": "0.87.1",
+ "samples": {
+  "wrap": {
+   "lines": [
+    {
+     "spans": [
+      {
+       "text": "Wrapping sample",
+       "style": {
+        "foreground": {
+         "rgb": [
+          240,
+          198,
+          116
+         ]
+        },
+        "bold": true
+       }
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "A long prose paragraph with "
+      },
+      {
+       "text": "a bold phrase that keeps going",
+       "style": {
+        "bold": true
+       }
+      },
+      {
+       "text": " and "
+      },
+      {
+       "text": "inline code",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": " so that it wraps across several rows at narrow widths."
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "- ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "A bullet item whose text is long enough to wrap onto a continuation line at sixty columns."
+      }
+     ],
+     "continuation": [
+      {
+       "text": "  "
+      }
+     ]
+    },
+    {
+     "spans": [
+      {
+       "text": "- ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "Short item."
+      }
+     ],
+     "continuation": [
+      {
+       "text": "  "
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "1. ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "A numbered item that also runs long enough to need a continuation line when narrow."
+      }
+     ],
+     "continuation": [
+      {
+       "text": "   "
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "│ ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        }
+       }
+      },
+      {
+       "text": "A quoted paragraph that is long enough to wrap, so every quoted row needs its prefix.",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        },
+        "italic": true
+       }
+      }
+     ],
+     "continuation": [
+      {
+       "text": "│ ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "```ts",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "spans": [
+      {
+       "text": "  "
+      },
+      {
+       "text": "const",
+       "style": {
+        "foreground": {
+         "rgb": [
+          86,
+          156,
+          214
+         ]
+        }
+       }
+      },
+      {
+       "text": " longCodeLine = computeSomethingWithAVeryLongName(argumentOne, argumentTwo);"
+      }
+     ]
+    },
+    {
+     "spans": [
+      {
+       "text": "```",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "─",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        }
+       }
+      }
+     ],
+     "fill": true
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "Closing line."
+      }
+     ]
+    }
+   ],
+   "layouts": {
+    "36": [
+     "Wrapping sample",
+     "",
+     "A long prose paragraph with a bold",
+     "phrase that keeps going and inline",
+     "code so that it wraps across several",
+     "rows at narrow widths.",
+     "",
+     "- A bullet item whose text is long",
+     "  enough to wrap onto a continuation",
+     "  line at sixty columns.",
+     "- Short item.",
+     "",
+     "1. A numbered item that also runs",
+     "   long enough to need a",
+     "   continuation line when narrow.",
+     "",
+     "│ A quoted paragraph that is long",
+     "│ enough to wrap, so every quoted",
+     "│ row needs its prefix.",
+     "",
+     "```ts",
+     "  const longCodeLine =",
+     "computeSomethingWithAVeryLongName(ar",
+     "gumentOne, argumentTwo);",
+     "```",
+     "",
+     "────────────────────────────────────",
+     "",
+     "Closing line."
+    ],
+    "60": [
+     "Wrapping sample",
+     "",
+     "A long prose paragraph with a bold phrase that keeps going",
+     "and inline code so that it wraps across several rows at",
+     "narrow widths.",
+     "",
+     "- A bullet item whose text is long enough to wrap onto a",
+     "  continuation line at sixty columns.",
+     "- Short item.",
+     "",
+     "1. A numbered item that also runs long enough to need a",
+     "   continuation line when narrow.",
+     "",
+     "│ A quoted paragraph that is long enough to wrap, so every",
+     "│ quoted row needs its prefix.",
+     "",
+     "```ts",
+     "  const longCodeLine =",
+     "computeSomethingWithAVeryLongName(argumentOne, argumentTwo);",
+     "```",
+     "",
+     "────────────────────────────────────────────────────────────",
+     "",
+     "Closing line."
+    ]
+   }
+  },
+  "cjk": {
+   "lines": [
+    {
+     "spans": [
+      {
+       "text": "中文样例",
+       "style": {
+        "foreground": {
+         "rgb": [
+          240,
+          198,
+          116
+         ]
+        },
+        "bold": true
+       }
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "终端协议让应用把内容交给终端管理，终端负责排版、滚动和选择，这样窗口变窄时内容仍然整齐。"
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "Mixed English 和中文混排的段落 that wraps across rows at narrow widths 也要正确。"
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "- ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "列表项里的中文内容也需要在续行保持缩进，才能和原生排版一致。"
+      }
+     ],
+     "continuation": [
+      {
+       "text": "  "
+      }
+     ]
+    },
+    {
+     "spans": [
+      {
+       "text": "    "
+      },
+      {
+       "text": "- ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "nested item with enough words to wrap onto a continuation line here"
+      }
+     ],
+     "continuation": [
+      {
+       "text": "      "
+      }
+     ]
+    },
+    {
+     "spans": [
+      {
+       "text": "        "
+      },
+      {
+       "text": "- ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "third level nested item that also wraps around the narrow width"
+      }
+     ],
+     "continuation": [
+      {
+       "text": "          "
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "1. ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "First numbered item"
+      }
+     ],
+     "continuation": [
+      {
+       "text": "   "
+      }
+     ]
+    },
+    {
+     "spans": [
+      {
+       "text": "    "
+      },
+      {
+       "text": "1. ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          138,
+          190,
+          183
+         ]
+        }
+       }
+      },
+      {
+       "text": "nested numbered item long enough to wrap at narrow widths too"
+      }
+     ],
+     "continuation": [
+      {
+       "text": "       "
+      }
+     ]
+    },
+    {
+     "spans": []
+    },
+    {
+     "spans": [
+      {
+       "text": "│ ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        }
+       }
+      },
+      {
+       "text": "引用里的中文也要在每一行保留引用标记，宽度变化时不能丢。",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        },
+        "italic": true
+       }
+      }
+     ],
+     "continuation": [
+      {
+       "text": "│ ",
+       "style": {
+        "foreground": {
+         "rgb": [
+          128,
+          128,
+          128
+         ]
+        }
+       }
+      }
+     ]
+    }
+   ],
+   "layouts": {
+    "36": [
+     "中文样例",
+     "",
+     "终端协议让应用把内容交给终端管理，终",
+     "端负责排版、滚动和选择，这样窗口变窄",
+     "时内容仍然整齐。",
+     "",
+     "Mixed English 和中文混排的段落 that",
+     "wraps across rows at narrow widths",
+     "也要正确。",
+     "",
+     "- 列表项里的中文内容也需要在续行保持",
+     "  缩进，才能和原生排版一致。",
+     "    - nested item with enough words",
+     "      to wrap onto a continuation",
+     "      line here",
+     "        - third level nested item",
+     "          that also wraps around the",
+     "          narrow width",
+     "",
+     "1. First numbered item",
+     "    1. nested numbered item long",
+     "       enough to wrap at narrow",
+     "       widths too",
+     "",
+     "│ 引用里的中文也要在每一行保留引用标",
+     "│ 记，宽度变化时不能丢。"
+    ],
+    "60": [
+     "中文样例",
+     "",
+     "终端协议让应用把内容交给终端管理，终端负责排版、滚动和选择，",
+     "这样窗口变窄时内容仍然整齐。",
+     "",
+     "Mixed English 和中文混排的段落 that wraps across rows at",
+     "narrow widths 也要正确。",
+     "",
+     "- 列表项里的中文内容也需要在续行保持缩进，才能和原生排版一致",
+     "  。",
+     "    - nested item with enough words to wrap onto a",
+     "      continuation line here",
+     "        - third level nested item that also wraps around the",
+     "          narrow width",
+     "",
+     "1. First numbered item",
+     "    1. nested numbered item long enough to wrap at narrow",
+     "       widths too",
+     "",
+     "│ 引用里的中文也要在每一行保留引用标记，宽度变化时不能丢。"
+    ]
+   }
+  }
+ }
+}

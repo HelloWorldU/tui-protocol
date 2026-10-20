@@ -47,6 +47,7 @@ inside one Context. See [Styled transcript content](#styled-transcript-content).
 | `wrap-sample.ts`, `wrap-experiment.ts`, `wrap-probe.ts`, `wrap-baking.test.ts` | Wrap-baking experiment: Pi's layout at one width versus terminal reflow at others. |
 | `lines-from-render.ts`, `lines-probe.ts`, `lines-layout.test.ts` | RFC 0003 check: Pi's wide render as `text/lines`, laid out by the [line layout engine](../../line-layout/README.md), against Pi's own render. |
 | `lines-host.test.ts` | RFC 0003 end to end: Pi's `text/lines` through the SDK and endpoint into the [xterm lines host](../xterm-lines-host/README.md). |
+| `lines-fixture.ts`, `record-lines-fixture.ts`, `lines-fixture.test.ts` | Pi's `text/lines` content and layouts recorded for the browser lines-host checks, with a staleness check. |
 | `record-ansi.ts` | Records one stock-mode turn's raw ConPTY output as the SDK's real-output ANSI fixture. |
 | `fake-host.ts` | In-process terminal host for Node tests (chrome recorder + real endpoint + reply path), with an xterm-backed endpoint variant. |
 | `stock-ui.test.ts`, `render-gate.test.ts`, `terminal.test.ts`, `bridge.test.ts` | Focused Node checks; the stock-ui suite is also the plain-text fallback path. |

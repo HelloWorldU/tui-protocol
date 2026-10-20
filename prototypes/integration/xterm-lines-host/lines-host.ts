@@ -79,20 +79,39 @@ export class XtermLinesHost implements TerminalOperationAdapter {
     return block === undefined ? undefined : { start: block.start, lineCount: block.rows.length };
   }
 
-  /** Copy of a selection inside one Block: its logical text, without prefixes or soft breaks. */
+  /**
+   * Copy of the cells from `from` (inclusive) to `to` (exclusive): each
+   * covered Block's logical text, without prefixes or soft breaks, joined by
+   * LF between Blocks. Undefined when no managed row is covered.
+   */
   copy(from: BufferPosition, to: BufferPosition): string | undefined {
-    const block = this.#blockAt(from.row);
-    if (block === undefined || block !== this.#blockAt(to.row - (to.col === 0 ? 1 : 0))) return undefined;
-    return block.projection.copy(local(block, from), local(block, to));
+    const parts: string[] = [];
+    for (const block of this.#rendered) {
+      const end = block.start + block.rows.length;
+      if (to.row < block.start || (to.row === block.start && to.col === 0) || from.row >= end) continue;
+      const start = from.row < block.start ? { row: block.start, col: 0 } : from;
+      const stop = to.row >= end ? { row: end, col: 0 } : to;
+      parts.push(block.projection.copy(local(block, start), local(block, stop)));
+    }
+    return parts.length === 0 ? undefined : parts.join("\n");
   }
 
-  /** Buffer position of the first logical-text match at or after a Block, for selecting it. */
+  /** Buffer position of the first logical-text match, for selecting it. */
   find(term: string): BufferPosition | undefined {
+    return this.findRange(term)?.start;
+  }
+
+  /** Cells of the first logical-text match: start inclusive, end exclusive. */
+  findRange(term: string): { start: BufferPosition; end: BufferPosition } | undefined {
     for (const block of this.#rendered) {
       const offset = block.projection.find(term)[0];
       if (offset === undefined) continue;
-      const position = block.projection.positionOf(offset);
-      return { row: block.start + position.row, col: position.col };
+      const start = block.projection.positionOf(offset);
+      const end = block.projection.positionOf(offset + Array.from(term).length);
+      return {
+        start: { row: block.start + start.row, col: start.col },
+        end: { row: block.start + end.row, col: end.col },
+      };
     }
     return undefined;
   }

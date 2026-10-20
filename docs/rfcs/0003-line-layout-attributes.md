@@ -263,5 +263,7 @@ Decided while in Draft, 2026-10-19:
   the SDK and the terminal module's endpoint fills the buffer exactly as Pi
   renders at 60 and 36 columns, keeps styles on continuation rows, copies
   and searches the logical text without prefixes, and keeps a reader's
-  position across resizes. It redraws the whole history per change and has
-  no browser selection or mixed ordinary output yet.
+  position across resizes. Its browser checks verify the same in Chrome with
+  the xterm.js DOM renderer, including painted styles on continuation rows,
+  copy events over real and programmatic selections, and Chinese content. It
+  redraws the whole history per change and does not mix ordinary output.

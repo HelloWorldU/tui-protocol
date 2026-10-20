@@ -43,18 +43,44 @@ char-wrapped lines.
   nested-list sample also fills the buffer exactly as Pi renders at 60 and
   36 columns; a Chinese quote copies without its repeated marker and a
   search match split across its soft break maps to the right cells.
+- [Browser checks](checks.ts), 2026-10-20, Chrome in the Claude desktop
+  browser pane with the xterm.js DOM renderer: six scenarios pass on Pi's
+  recorded content ([fixture](pi-lines-fixture.json), kept current by
+  [a Node check](../pi-stock-ui/lines-fixture.test.ts)). Both samples fill
+  the buffer as Pi renders at 60 and 36 columns; the DOM paints `xterm-bold`
+  on the wrapped bold row and the repeated `│` in `rgb(128, 128, 128)`;
+  copy events over selections across soft-wrapped quote rows, starting in a
+  hanging indent, or over search matches split by a soft break (English and
+  Chinese) yield logical text while xterm.js's own selection text still
+  shows the repeated marker; a reader's top row stays in its Block across
+  20, 60, and 40 columns. A manual mouse drag across the three quote rows
+  of the page's demo terminal copied `A quoted paragraph that is long enough
+  to wrap, so every quoted row needs its prefix.` as one line.
 - [Host checks](lines-host.test.ts): a reader's top row stays on the same
   Block's text across 20, 60, and 40 columns; a tail-following viewport
   keeps following after Append and resize; Tab content is rejected before
   mutation.
+
+## Run
+
+```sh
+pnpm prototype:xterm-lines-host
+node prototypes/integration/pi-stock-ui/record-lines-fixture.ts
+```
+
+The first serves the browser checks (keep the page visible; the DOM renderer
+paints only visible pages). The second re-records the Pi fixture after a Pi
+or sample change.
 
 ## Limits
 
 - Full redraw per change is O(history) and resets the terminal, so the host
   owns the whole screen: no ordinary output, mixed ingress, or application
   region. It shows the semantics, not a renderer design.
-- Copy and search are host methods over buffer positions; browser selection,
-  the clipboard, and the search addon are not wired yet.
+- Browser copy is a capture-phase copy listener (`browser-wiring.ts`); the
+  checks use synthetic copy events, and the OS clipboard and keyboard copy
+  shortcuts are not exercised. Search is the host's logical search plus
+  xterm.js selection, not the search addon or its decorations.
 - No Tab or control-label projection: such content is rejected with
   `resource_exhausted`.
 - Anchors are restored to the logical offset at the top row's start; finer

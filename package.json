@@ -55,6 +55,8 @@
     "prototype:xterm-browser-protocol-endpoint": "vite prototypes/integration/xterm-browser-protocol-endpoint",
     "prototype:xterm-browser-search": "vite prototypes/integration/xterm-browser-search",
     "prototype:xterm-browser-selection": "vite prototypes/integration/xterm-browser-selection",
+    "prototype:xterm-lines-host": "vite prototypes/integration/xterm-lines-host",
+    "build:xterm-lines-host": "vite build prototypes/integration/xterm-lines-host --outDir ../../../.tmp/xterm-lines-host-dist --emptyOutDir",
     "prototype:pty-transport": "node prototypes/integration/pty-transport/probe.ts",
     "prototype:pty-demo": "vite --config prototypes/integration/pty-demo/vite.config.ts",
     "build:pty-demo": "vite build --config prototypes/integration/pty-demo/vite.config.ts --outDir ../../../.tmp/pty-demo-dist --emptyOutDir",

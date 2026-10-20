@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>xterm Lines Host Browser Checks</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+      .fixture { position: absolute; left: 0; top: 0; }
+      #manual { margin-top: 16px; }
+      pre { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>xterm Lines Host Browser Checks</h1>
+      <p id="summary">Running text/lines browser scenarios…</p>
+      <ol id="results" aria-label="Scenario results"></ol>
+      <section id="manual" aria-label="Manual selection">
+        <h2>Manual selection</h2>
+        <p>Drag across rows below, then choose Copy selection; the copied text should be the logical text, with no continuation prefixes or soft breaks.</p>
+        <div id="demo"></div>
+        <button id="copy">Copy selection</button>
+        <pre id="copied" aria-label="Copied text"></pre>
+      </section>
+    </main>
+    <script type="module" src="/checks.ts"></script>
+  </body>
+</html>
