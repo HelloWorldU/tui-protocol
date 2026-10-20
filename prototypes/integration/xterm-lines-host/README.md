@@ -39,7 +39,10 @@ char-wrapped lines.
   streaming the answer line by line through Extend ends in the same rows.
   Copy of a quote spanning three rows yields its logical text without
   repeated markers; a search match crossing a soft break maps to its first
-  cell, and a continuation marker is not searchable.
+  cell, and a continuation marker is not searchable. The Chinese and
+  nested-list sample also fills the buffer exactly as Pi renders at 60 and
+  36 columns; a Chinese quote copies without its repeated marker and a
+  search match split across its soft break maps to the right cells.
 - [Host checks](lines-host.test.ts): a reader's top row stays on the same
   Block's text across 20, 60, and 40 columns; a tail-following viewport
   keeps following after Append and resize; Tab content is rejected before

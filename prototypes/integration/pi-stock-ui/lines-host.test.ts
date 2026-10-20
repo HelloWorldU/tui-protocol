@@ -7,7 +7,7 @@ import { TerminalProtocolEndpoint } from "@tui-protocol/terminal";
 import { XtermLinesHost } from "../xterm-lines-host/lines-host.ts";
 import { linesFromRender } from "./lines-from-render.ts";
 import { logicalLines, renderAt } from "./wrap-experiment.ts";
-import { WRAP_SAMPLE } from "./wrap-sample.ts";
+import { CJK_NESTED_SAMPLE, WRAP_SAMPLE } from "./wrap-sample.ts";
 
 const { Terminal } = headless;
 
@@ -107,5 +107,25 @@ test("copy and search in the rendered rows use the logical text: no continuation
     assert.equal(all[match.row]!.slice(match.col), "continuation", "the match starts at its first cell");
     assert.equal(all[match.row + 1], "  line at sixty columns.", "and continues after the next row's prefix");
     assert.equal(host.find("│ enough"), undefined, "a continuation marker is not searchable");
+  } finally { client.dispose(); terminal.dispose(); }
+});
+
+test("Chinese and nested-list content renders in the xterm buffer as Pi lays it out, with copy and search on the logical text", async () => {
+  const { terminal, host, client, context } = await connect(60);
+  try {
+    context.append("answer", linesFromRender(renderAt(CJK_NESTED_SAMPLE, 1000)), "sealed");
+    await host.drain();
+    assert.deepEqual(rows(terminal), logicalLines(renderAt(CJK_NESTED_SAMPLE, 60)));
+    terminal.resize(36, 24);
+    await host.drain();
+    const all = rows(terminal);
+    assert.deepEqual(all, logicalLines(renderAt(CJK_NESTED_SAMPLE, 36)));
+    const quote = all.findIndex(row => row.startsWith("│ 引用"));
+    assert.equal(host.copy({ row: quote, col: 0 }, { row: quote + 1, col: 36 }), "│ 引用里的中文也要在每一行保留引用标记，宽度变化时不能丢。");
+    // "标记" is split across the quote's soft break: "…保留引用标" / "│ 记，…".
+    const match = host.find("标记");
+    assert.ok(match !== undefined);
+    assert.equal(match.row, quote);
+    assert.equal(host.copy(match, { row: quote + 1, col: 4 }), "标记", "the match copies without the second row's marker");
   } finally { client.dispose(); terminal.dispose(); }
 });

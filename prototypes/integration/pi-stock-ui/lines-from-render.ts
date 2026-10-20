@@ -8,7 +8,8 @@ import type { LayoutLine } from "../../line-layout/layout.ts";
  * renderer would emit these attributes directly; this reads them back from
  * the rendered shapes of the constructs in the wrap sample:
  *
- * - `- ` and `1. ` items continue under their text (hanging indent);
+ * - `- ` and `1. ` items, at any nesting indent, continue under their text
+ *   (hanging indent);
  * - `│ ` quote lines repeat the marker, with its style;
  * - lines between code fences keep word wrapping without a prefix, as Pi does;
  * - a line made only of `─` is a fill line.
@@ -24,8 +25,8 @@ export function linesFromRender(spans: readonly StyledTextSpan[]): LayoutLine[] 
     }
     if (inCode) return { spans: line };
     if (/^─+$/.test(text)) return { spans: [{ ...line[0]!, text: "─" }], fill: true };
-    const item = /^(- |\d+\. )/.exec(text);
-    if (item !== undefined && item !== null) return { spans: line, continuation: [{ text: " ".repeat(item[1]!.length) }] };
+    const item = /^( *)(- |\d+\. )/.exec(text);
+    if (item !== null) return { spans: line, continuation: [{ text: " ".repeat(item[0].length) }] };
     if (text.startsWith("│ ")) return { spans: line, continuation: prefixSpans(line, 2) };
     return { spans: line };
   });

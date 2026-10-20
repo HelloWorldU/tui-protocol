@@ -242,6 +242,13 @@ Decided while in Draft, 2026-10-19:
   widths, styles included; at 100 columns only the rule differs, because Pi
   caps it at 80 cells. Cell reflow of the same render kept 13 of Pi's rows
   at either width.
+- A second sample with Chinese prose, mixed Chinese and English, nested
+  bullet and numbered lists, and a Chinese quote lays out exactly as Pi
+  renders it at every width from 20 to 100 columns; cell reflow kept 13 of
+  Pi's 26 rows at 36 columns. Over the same sweep the English sample differs
+  only by the rule cap above 80 columns and, at 4 of 81 widths, by a Pi quirk:
+  Pi keeps the space at a break that falls right after a styled span, while
+  this RFC drops spaces at a break.
 - The protocol, terminal, and SDK modules carry `text/lines` with an
   experimental JSON encoding: `{"type":"text/lines","data":[line, …]}` with
   `line = {"spans": [span…], "wrap"?: "word"|"char", "continuation"?: [span…],

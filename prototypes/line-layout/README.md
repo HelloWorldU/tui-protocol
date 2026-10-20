@@ -49,10 +49,19 @@ fullwidth ranges and common emoji, one otherwise.
   Pi caps it at 80 cells, the fill line spans the width. The cell reflow of
   the same wide render keeps 13 of Pi's 29 or 24 rows
   ([layout experiment](../../docs/design/renderer-layout-and-reflow.md)).
+- Width sweep, 2026-10-20: a second sample
+  (`CJK_NESTED_SAMPLE`: Chinese prose, mixed Chinese and English, nested
+  bullet and numbered lists, a Chinese quote) equals Pi's render at every
+  width from 20 to 100. The English sample differs only by the rule cap
+  above 80 and, at 21, 39, 58, and 74 columns, by Pi keeping a space at the
+  start of a row when the break follows a styled span (likely because the
+  wrapper's whitespace test, `token.trim() === ""`, sees the style reset in
+  that token; not traced further); the engine drops break spaces as RFC 0003
+  specifies.
 
 ## Limits
 
-One renderer, one ASCII sample, and the engine alone: no xterm rendering,
-history, selection, or wire encoding yet. The reader recovers layout intent
-from rendered shapes of the sample's constructs; nested lists, tables, and
-CJK prose have not been compared against a renderer.
+One renderer and two samples. The reader recovers layout intent from the
+rendered shapes of the samples' constructs; tables, CJK punctuation rules
+beyond Pi's, and other renderers have not been compared. The cell-width table
+is a small subset of Unicode East Asian Width.
