@@ -1,4 +1,4 @@
-"""Build the repository's existing Markdown as one documentation site."""
+﻿"""Build the repository's existing Markdown as one documentation site."""
 
 from pathlib import Path
 import os
@@ -28,6 +28,7 @@ if _base_url:
     extensions.append("sphinx_sitemap")
     # The site is not multilingual; do not prefix URLs with a language code.
     sitemap_url_scheme = "{link}"
+    sitemap_excludes = ["index.html"]
 html_baseurl = f"{_base_url}/" if _base_url else ""
 html_static_path = ["_static"]
 html_css_files = ["site.css"]
