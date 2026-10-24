@@ -73,6 +73,9 @@ async function typePrompt(doc: Document, started: () => boolean, value = PROMPT)
 function turnStarted(doc: Document): boolean {
   return /Context context-\d+: open/.test(text(doc, "report"));
 }
+function check6(value: boolean, reason: string): void {
+  if (!value) throw new Error(`Line layout: ${reason}`);
+}
 function search(doc: Document, query: string, expected: string) {
   (doc.getElementById("query") as HTMLInputElement).value = query;
   click(doc, "search");
@@ -207,7 +210,31 @@ run.onclick = async () => {
     click(styled, "resize");
     await until(styled, () => text(styled, "geometry") === "60x24", "restored geometry");
     await expectPaint(styled, "styled turn after the round trip");
-    results.textContent += "PASS: Pi's markdown emphasis and code color reach painted xterm cells through text/styled Blocks, marker-free in the logical text, before and after a 60/36/60 round trip.\n5 Pi stock-UI browser scenarios passed (local model fixture, no live model).";
+    results.textContent += "PASS: Pi's markdown emphasis and code color reach painted xterm cells through the assistant Blocks, marker-free in the logical text, before and after a 60/36/60 round trip.\nChecking line layout across widths…";
+
+    // Scenario 6: the assistant answer is text/lines; after Pi's resize redraw
+    // the host lays it out at the new width (word wrap, hanging indent), not
+    // by cell reflow of the old rows.
+    const laid = await fresh("demo=1"); click(laid, "connect");
+    await until(laid, () => text(laid, "rendered").includes("[pi-stock-ui] protocol supported"), "negotiation notice");
+    await typePrompt(laid, () => turnStarted(laid));
+    await until(laid, () => text(laid, "report").includes("Context context-1: closed"), "lines turn Context to close");
+    const answerRows = () => text(laid, "rendered").split("\n").map(row => row.trimEnd());
+    await until(laid, () => answerRows().includes("- Styling comes from Pi's real renderer"), "the 60-column bullet on one row");
+    check6(answerRows().includes("The sample reports: mutable history keeps old output"), "60-column paragraph row");
+    click(laid, "resize");
+    await until(laid, () => text(laid, "geometry") === "36x24", "narrow geometry");
+    await until(laid, () => answerRows().includes("  renderer"), "the bullet's continuation row indented under its text at 36 columns");
+    const narrow = answerRows();
+    check6(narrow.includes("- Styling comes from Pi's real"), "the bullet breaks at a word boundary");
+    check6(narrow.includes("The sample reports: mutable history"), "the paragraph breaks at a word boundary");
+    check6(narrow.includes("keeps old output readable."), "the paragraph continues with whole words");
+    check6(!narrow.some(row => row === "r" || row.startsWith("enderer")), "no word was cut by cell reflow");
+    click(laid, "resize");
+    await until(laid, () => text(laid, "geometry") === "60x24", "restored geometry");
+    await until(laid, () => answerRows().includes("- Styling comes from Pi's real renderer"), "the bullet on one row again at 60 columns");
+    check6(!answerRows().includes("  renderer"), "no stale continuation row after widening");
+    results.textContent += "PASS: after Pi's resize redraw the text/lines answer is laid out at 36 columns with word breaks and a hanging indent, and at 60 columns again on widening.\n6 Pi stock-UI browser scenarios passed (local model fixture, no live model).";
   } catch (error) {
     results.textContent += `\nFAIL: ${String(error)}`; host.replaceChildren();
   } finally { run.disabled = false; }

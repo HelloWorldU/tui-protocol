@@ -268,3 +268,11 @@ Decided while in Draft, 2026-10-19:
   the xterm.js DOM renderer, including painted styles on continuation rows,
   copy events over real and programmatic selections, and Chinese content. It
   redraws the whole history per change and does not mix ordinary output.
+- The region-aware xterm host used with Pi's stock UI also implements
+  `text/lines`: it materializes lines with the layout engine and lays them
+  out again after a resize. In the
+  [Pi stock-UI trial](../../prototypes/integration/pi-stock-ui/README.md#line-layout-transcript-content)
+  the bridge sends Pi's assistant answers as `text/lines` with line-level
+  Extend and ReplaceSuffix edits; through the real ConPTY host, beside Pi's
+  own editor and footer, the answer is laid out with word breaks and hanging
+  indents at 36 columns and restored at 60 (2026-10-24).

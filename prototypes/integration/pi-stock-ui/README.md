@@ -268,6 +268,18 @@ is one logical line, and streaming used Extend; the streamed answer's rows
 equal the host layout at 60 columns and again at 36 and 90 after resizes;
 with only `text/styled` confirmed the styled path is unchanged.
 
+Browser evidence, 2026-10-24: with `browser.ts` advertising `text/lines`,
+all six `checks.html` scenarios pass through the real ConPTY host with the
+application region: the five earlier scenarios now run on the lines path,
+and a sixth checks line layout across Pi's resize redraw. At 36 columns the
+demo answer reads `The sample reports: mutable history` /
+`keeps old output readable.` and `- Styling comes from Pi's real` /
+`  renderer` — word breaks and a hanging indent, with Pi's chrome intact
+below — and at 60 columns the bullet is one row again with no stale
+continuation. In region mode the host does not relayout on resize itself:
+Pi's redraw clears the screen, and clear recovery re-materializes the Blocks
+at the new width with the line layout.
+
 ## Wrap-baking experiment
 
 `wrap-baking.test.ts` renders a fixed markdown sample (`wrap-sample.ts`)
@@ -300,7 +312,7 @@ pnpm prototype:pi-stock-ui
 # http://127.0.0.1:4181/?stock=1      stock fallback
 # http://127.0.0.1:4181/?pace=2400    slower fixture stream (long cancel window)
 # http://127.0.0.1:4181/?demo=1       markdown fixture text (visible styling)
-# http://127.0.0.1:4181/checks.html   the five automated scenarios (keep the page visible)
+# http://127.0.0.1:4181/checks.html   the six automated scenarios (keep the page visible)
 pnpm typecheck
 pnpm test
 pnpm build:pi-stock-ui
