@@ -10,9 +10,10 @@ and unpublished; [protocol drafts](../docs/README.md) define the design.
   correlated errors, and prepared Operations over validated Messages.
 - `src/endpoint.ts`: decode protocol bytes, execute the Session, consult a host
   adapter, and encode response frames. Also exports `TerminalOperationAdapter`.
-- `src/content.ts`: content-type validity rules and span-aware content
-  operations for the optional `text/styled` type ([styled-text
-  draft](../docs/protocol/styled-text.md)).
+- `src/content.ts`: content-type validity rules and span- and line-aware
+  content operations for the optional `text/styled` and `text/lines` types
+  ([styled-text draft](../docs/protocol/styled-text.md),
+  [lines-text draft](../docs/protocol/lines-text.md)).
 - `src/resource-limits.ts` and `src/input-budget.ts`: host-configured retained-state
   and pending-input budgets.
 - `src/index.ts`: the module entry point. `test/` holds the module checks

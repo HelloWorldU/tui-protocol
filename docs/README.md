@@ -27,6 +27,7 @@ For an introduction and grouped reading entry points, start with the
 | [Content representation](protocol/content-representation.md) | Protocol draft | Draft |
 | [Plain text content](protocol/plain-text.md) | Protocol draft | Draft |
 | [Styled text content](protocol/styled-text.md) | Protocol draft | Draft |
+| [Line layout text content](protocol/lines-text.md) | Protocol draft | Draft |
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
 | [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |

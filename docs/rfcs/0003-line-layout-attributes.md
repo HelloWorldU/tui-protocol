@@ -212,11 +212,14 @@ Decided while in Draft, 2026-10-19:
 
 ## Unresolved Questions
 
+The JSON encoding is defined by the
+[Line Layout Text Content](../protocol/lines-text.md) draft, which tracks these
+questions as its open design choices.
+
 - Break opportunities for scripts that neither use spaces nor render as wide
   characters, such as Thai.
 - Whether a fill line takes a maximum width: Pi caps its rule at 80 cells,
   the only difference the line layout prototype found at 100 columns.
-- The JSON encoding of lines, attributes, and fill lines.
 - Whether code blocks need `none` (no wrap, horizontal truncation) in
   addition to `char`.
 
@@ -250,11 +253,9 @@ Decided while in Draft, 2026-10-19:
   only by the rule cap above 80 columns and, at 4 of 81 widths, by a Pi quirk:
   Pi keeps the space at a break that falls right after a styled span, while
   this RFC drops spaces at a break.
-- The protocol, terminal, and SDK modules carry `text/lines` with an
-  experimental JSON encoding: `{"type":"text/lines","data":[line, …]}` with
-  `line = {"spans": [span…], "wrap"?: "word"|"char", "continuation"?: [span…],
-  "fill"?: true}`, and Extend fragments and ReplaceSuffix replacements as
-  line arrays, recognized by their first element's `spans` key. The
+- The protocol, terminal, and SDK modules carry `text/lines` with the JSON
+  encoding now defined by the
+  [Line Layout Text Content](../protocol/lines-text.md#8-json-mapping) draft. The
   [codec](../../protocol/test/lines-codec.test.ts),
   [Session](../../terminal/test/lines-content.test.ts), and
   [SDK](../../sdk/test/lines-content.test.ts) checks cover the rules of

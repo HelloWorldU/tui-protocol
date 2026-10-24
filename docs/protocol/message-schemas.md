@@ -43,7 +43,9 @@ ControlFailure {
 baseline `text/plain` representation, `data` is a logical text value. Each
 optional content type defines its own complete `ContentData` schema. The
 first optional type, `text/styled`, uses a `SpanList`; its spans, styles, and
-JSON encoding are defined by [Styled Text Content](styled-text.md).
+JSON encoding are defined by [Styled Text Content](styled-text.md). The
+`text/lines` type uses a `LineList` defined by [Line Layout Text
+Content](lines-text.md).
 
 `ControlErrorCode` is the subset of the stable protocol-defined [Error
 Codes](error-codes.md) marked as valid for a control response.
@@ -184,12 +186,13 @@ exact content state on which it depends:
 block.extend body {
   block_id: BlockId
   base_operation_id: OperationId
-  fragment: NonEmptyText | NonEmptySpanList
+  fragment: NonEmptyText | NonEmptySpanList | NonEmptyLineList
 }
 ```
 
 The fragment shape follows the target Block's current content type: text for
-`text/plain`, a span list for `text/styled` ([Styled Text Content](styled-text.md)).
+`text/plain`, a span list for `text/styled` ([Styled Text Content](styled-text.md)),
+a line list for `text/lines` ([Line Layout Text Content](lines-text.md)).
 Extend does not carry or change the Content Type, and a fragment whose shape
 does not match the Block's current content type is a semantic
 `invalid_content` failure. An empty fragment violates this body schema. A
@@ -204,14 +207,15 @@ block.replace_suffix body {
   block_id: BlockId
   base_operation_id: OperationId
   retain: ScalarCount
-  replacement: Text | SpanList
+  replacement: Text | SpanList | LineList
 }
 ```
 
 `retain` counts Unicode scalar values from the beginning of the current
 logical text. The replacement shape follows the target Block's current content
 type: text for `text/plain`, a span list for `text/styled` ([Styled Text
-Content](styled-text.md)). The body is structurally valid when `retain` is a
+Content](styled-text.md)), a line list for `text/lines` ([Line Layout Text
+Content](lines-text.md)). The body is structurally valid when `retain` is a
 `ScalarCount`; semantic evaluation additionally requires it to be less than
 the current scalar-value length. Otherwise, the Operation reports
 `invalid_content_boundary`.
@@ -263,4 +267,5 @@ Baseline `text/plain` uses the `Text` schema above. Its display and native-text
 processing are defined in [Plain Text Content](plain-text.md); the schema does
 not normalize its data or reject the controls represented by visible labels.
 The first optional content type, `text/styled`, is mapped in [Styled Text
-Content](styled-text.md).
+Content](styled-text.md), and `text/lines` in [Line Layout Text
+Content](lines-text.md).
