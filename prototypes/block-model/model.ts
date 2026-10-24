@@ -1,18 +1,34 @@
-import type { StyledTextSpan } from "@tui-protocol/protocol";
-import { spanPrefix } from "@tui-protocol/terminal";
+import type { LinesTextLine, StyledTextSpan } from "@tui-protocol/protocol";
+import {
+  extendedContent as extendedSnapshot,
+  replacedSuffixContent as replacedSnapshot,
+  spanPrefix,
+} from "@tui-protocol/terminal";
+import { layoutLines } from "../line-layout/layout.ts";
 
 export type BlockId = string;
 
 export type BlockLifecycle = "mutable" | "sealed";
 
-/** Block content: plain text, or a text/styled span list (RFC 0002). */
-export type BlockContent = string | readonly StyledTextSpan[];
+/** text/lines content (RFC 0003): lines laid out by the host at the current width. */
+export interface LinesContent {
+  readonly lines: readonly LinesTextLine[];
+}
+
+/** Block content: plain text, a text/styled span list (RFC 0002), or text/lines lines (RFC 0003). */
+export type BlockContent = string | readonly StyledTextSpan[] | LinesContent;
+
+export function isLinesContent(content: BlockContent): content is LinesContent {
+  return typeof content === "object" && !Array.isArray(content);
+}
 
 /** The logical text layout, anchors, and offsets operate on; styling never enters it. */
 export function logicalText(content: BlockContent): string {
-  return typeof content === "string"
-    ? content
-    : content.map((span) => span.text).join("");
+  if (typeof content === "string") return content;
+  if (isLinesContent(content)) {
+    return content.lines.map((line) => line.spans.map((span) => span.text).join("")).join("\n");
+  }
+  return content.map((span) => span.text).join("");
 }
 
 export function logicalScalarLength(content: BlockContent): number {
@@ -326,6 +342,7 @@ export function layoutBlocks(
 }
 
 function layoutBlock(block: Block, width: number): readonly RenderedRow[] {
+  if (isLinesContent(block.content)) return layoutLinesBlock(block.id, block.content, width);
   const rows: RenderedRow[] = [];
   const text = logicalText(block.content);
   const logicalLines = text.split("\n");
@@ -363,6 +380,22 @@ function layoutBlock(block: Block, width: number): readonly RenderedRow[] {
   }
 
   return rows;
+}
+
+/** text/lines rows from the line layout engine, with Block-level logical offsets. */
+function layoutLinesBlock(id: BlockId, content: LinesContent, width: number): readonly RenderedRow[] {
+  const bases: number[] = [];
+  let base = 0;
+  for (const line of content.lines) {
+    bases.push(base);
+    base += Array.from(line.spans.map((span) => span.text).join("")).length + 1;
+  }
+  return layoutLines(content.lines, width).map((row) => ({
+    blockId: id,
+    startOffset: bases[row.line]! + row.start,
+    endOffset: bases[row.line]! + row.end,
+    text: row.spans.map((span) => span.text).join(""),
+  }));
 }
 
 function findAnchorRow(
@@ -420,6 +453,10 @@ function extendedContent(
   if (typeof content === "string" && typeof fragment === "string") {
     return `${content}${fragment}`;
   }
+  if (isLinesContent(content) && isLinesContent(fragment)) {
+    const extended = extendedSnapshot({ type: "text/lines", data: content.lines }, fragment.lines);
+    return { lines: extended.data as readonly LinesTextLine[] };
+  }
   if (Array.isArray(content) && Array.isArray(fragment)) {
     return [...content, ...fragment];
   }
@@ -438,8 +475,15 @@ function replacedSuffixContent(
   if (typeof content === "string" && typeof replacement === "string") {
     return `${Array.from(content).slice(0, retain).join("")}${replacement}`;
   }
+  if (isLinesContent(content) && Array.isArray(replacement) && replacement.length === 0) {
+    return { lines: replacedSnapshot({ type: "text/lines", data: content.lines }, retain, []).data as readonly LinesTextLine[] };
+  }
+  if (isLinesContent(content) && isLinesContent(replacement)) {
+    const replaced = replacedSnapshot({ type: "text/lines", data: content.lines }, retain, replacement.lines);
+    return { lines: replaced.data as readonly LinesTextLine[] };
+  }
   if (Array.isArray(content) && Array.isArray(replacement)) {
-    return [...spanPrefix(content, retain), ...replacement];
+    return [...spanPrefix(content, retain), ...(replacement as readonly StyledTextSpan[])];
   }
   throw new Error(
     "ReplaceSuffix replacement shape does not match the Block content.",

@@ -145,6 +145,27 @@ These results provide experimental evidence for the reading-anchor and
 tail-following requirements in [Terminal-Native
 Behavior](../../../docs/protocol/terminal-native-behavior.md).
 
+## text/lines Content (Experimental)
+
+The endpoint can advertise the
+[RFC 0003](../../../docs/rfcs/0003-line-layout-attributes.md) `text/lines`
+type. The private history then materializes such Blocks with the
+[line layout engine](../../line-layout/README.md) as hard rows instead of
+xterm.js soft wraps, counts their rows with the same layout for capacity
+planning, and, after a resize without an application region, re-materializes
+each `text/lines` Block at the new width through the Update row-replacement
+path (sealed Blocks included; the model is not changed). Renders and these
+relayouts share one serial queue; a relayout failure surfaces at the next
+`drain()`. With an application region the host relies on clear recovery,
+since region-owning applications redraw after a resize.
+
+[Five Node checks](lines-text.test.ts), 2026-10-24: an Append matches the
+engine's layout with hard rows; after 20, 44, and 30 columns a `text/lines`
+Block equals the layout at each width while a plain Block beside it keeps
+cell reflow; bold and the faint repeated quote marker stay on their cells;
+Extend and ReplaceSuffix re-lay out the edited lines; a reader inside the
+Block stays inside it across relayouts.
+
 ## Region Ownership (Experimental)
 
 An opt-in region-aware history mode implements the first Node-level slice of

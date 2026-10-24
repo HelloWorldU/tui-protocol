@@ -14,7 +14,7 @@ import {
 export interface XtermProtocolEndpointOptions {
   readonly completeBaselineSupported: boolean;
   /** Optional content types this composition completely implements. */
-  readonly optionalContentTypes?: readonly "text/styled"[];
+  readonly optionalContentTypes?: readonly ("text/styled" | "text/lines")[];
   readonly history?: XtermBlockHistory;
   readonly resourceLimits?: SessionResourceLimits;
 }

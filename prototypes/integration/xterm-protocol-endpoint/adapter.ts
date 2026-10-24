@@ -1,6 +1,6 @@
 import type { IDisposable, Terminal } from "@xterm/headless";
 
-import type { ContentFragment } from "@tui-protocol/protocol";
+import type { ContentFragment, ContentSnapshot, LinesTextLine } from "@tui-protocol/protocol";
 import type { BlockContent, Operation } from "../../block-model/model.ts";
 import type { OperationExecutionErrorCode } from "@tui-protocol/terminal";
 import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
@@ -20,6 +20,8 @@ export interface XtermBlockHistory extends IDisposable {
   renderAccepted(operation: Operation): Promise<void>;
   range(id: string): Readonly<RenderedBlockRange> | undefined;
   retire(id: string): void;
+  /** Resolves when renders and resize relayouts have reached the buffer. */
+  settled?(): Promise<void>;
 }
 
 /**
@@ -69,6 +71,7 @@ export class XtermTerminalAdapter
 
   async drain(): Promise<void> {
     await this.#rendering;
+    await this.#history.settled?.();
     if (this.#failure !== undefined) throw this.#failure;
   }
 
@@ -99,11 +102,11 @@ function toRenderingOperation(operation: AppliedBlockOperation): Operation {
         block: {
           id,
           lifecycle: operation.body.lifecycle,
-          content: renderable(operation.body.content.data),
+          content: snapshotContent(operation.body.content),
         },
       };
     case "block.update":
-      return { type: "update", id, content: renderable(operation.body.content.data) };
+      return { type: "update", id, content: snapshotContent(operation.body.content) };
     case "block.extend":
       return { type: "extend", id, fragment: renderable(operation.body.fragment) };
     case "block.replace_suffix":
@@ -121,14 +124,20 @@ function toRenderingOperation(operation: AppliedBlockOperation): Operation {
 }
 
 /**
- * This host renders text/plain and text/styled only and never advertises
- * text/lines, so the Session rejects line content before it gets here.
+ * text/lines arrays become the history's lines content, which it lays out
+ * itself; an empty replacement array stays a plain empty array, which the
+ * history treats as removing the suffix for either array-shaped type.
  */
 function renderable(content: ContentFragment): BlockContent {
   if (Array.isArray(content) && content.length > 0 && "spans" in content[0]) {
-    throw new Error("This xterm host does not render text/lines content.");
+    return { lines: content as readonly LinesTextLine[] };
   }
   return content as BlockContent;
+}
+
+/** A full snapshot by its declared type, so an empty text/lines value stays lines. */
+function snapshotContent(snapshot: ContentSnapshot): BlockContent {
+  return snapshot.type === "text/lines" ? { lines: snapshot.data } : snapshot.data;
 }
 
 function renderBlockId(contextId: string, blockId: string): string {

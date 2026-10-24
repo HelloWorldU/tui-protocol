@@ -1,14 +1,21 @@
 import headless from "@xterm/headless";
 import type { IDisposable, Terminal } from "@xterm/headless";
-import { spanPrefix } from "@tui-protocol/terminal";
+import {
+  extendedContent as extendedSnapshot,
+  replacedSuffixContent as replacedSnapshot,
+  spanPrefix,
+} from "@tui-protocol/terminal";
 import { fixtureCellWidth, projectPlainText } from "./plain-text.ts";
 import { projectStyledSpans, spansToSgr } from "./styled-render.ts";
 
+import { layoutLines } from "../line-layout/layout.ts";
 import {
   TerminalPrototype,
+  isLinesContent,
   logicalText,
   type Block,
   type BlockContent,
+  type LinesContent,
   type BlockId,
   type Operation,
 } from "../block-model/model.ts";
@@ -149,6 +156,8 @@ export class PrivateCoreBlockHistory implements IDisposable {
   readonly #registrations: IDisposable[] = [];
   #readingAnchor: PrivateMarker | undefined;
   #acceptedRenderCount = 0;
+  #queue: Promise<void> = Promise.resolve();
+  #relayoutFailure: unknown;
 
   constructor(terminal: Terminal, options?: PrivateCoreBlockHistoryOptions) {
     this.#terminal = terminal;
@@ -169,6 +178,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
         this.#model.resize({ width: cols, height: rows });
         this.#plannedModel.resize({ width: cols, height: rows });
         this.#restoreReadingAnchor();
+        this.#relayoutLines();
       }),
       terminal.onScroll((position) => this.#captureReadingAnchor(position)),
     );
@@ -186,7 +196,46 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   /** Materializes an Operation that was already recorded by accept(). */
-  async renderAccepted(operation: Operation): Promise<void> {
+  renderAccepted(operation: Operation): Promise<void> {
+    return this.#serial(() => this.#renderAccepted(operation));
+  }
+
+  /** Resolves when queued renders and resize relayouts have reached the buffer. */
+  async settled(): Promise<void> {
+    await this.#queue;
+    if (this.#relayoutFailure !== undefined) throw this.#relayoutFailure;
+  }
+
+  /** Runs buffer mutations one at a time: Operation renders and resize relayouts. */
+  #serial(task: () => Promise<void>): Promise<void> {
+    const run = this.#queue.then(task);
+    this.#queue = run.catch(() => {});
+    return run;
+  }
+
+  /**
+   * text/lines Blocks are laid out by the host, so xterm.js's cell reflow
+   * cannot keep their layout: after a resize each one is re-materialized at
+   * the new width through the Update path, which keeps a reading position
+   * inside the Block. With an application region the host defers to clear
+   * recovery, since region-owning applications such as Pi redraw after a
+   * resize and the recovery re-materializes at the new width.
+   */
+  #relayoutLines(): void {
+    if (this.#region !== undefined) return;
+    this.#serial(async () => {
+      for (const block of this.#model.blocks()) {
+        if (isLinesContent(block.content) && this.#entryIndexes.has(block.id)) {
+          await this.#update(block.id, block.content, "preserve", true);
+        }
+      }
+    }).catch((error: unknown) => {
+      // Surfaced by settled(): the rendered history no longer matches the model.
+      this.#relayoutFailure ??= error;
+    });
+  }
+
+  async #renderAccepted(operation: Operation): Promise<void> {
     try {
       switch (operation.type) {
         case "append":
@@ -436,8 +485,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
         );
         break;
     }
-    const replacementLayout = conservativeTextLineCount(
-      logicalText(replacementContent),
+    const replacementLayout = contentLineCount(replacementContent,
       this.#terminal.cols,
       this.#terminal.options.tabStopWidth,
     );
@@ -465,12 +513,10 @@ export class PrivateCoreBlockHistory implements IDisposable {
     } else {
       let plannedLineCount = 0;
       for (const candidate of retainedBlocks) {
-        const layout = conservativeTextLineCount(
-          logicalText(
-            candidate.id === operation.id
-              ? replacementContent
-              : candidate.content,
-          ),
+        const layout = contentLineCount(
+          candidate.id === operation.id
+            ? replacementContent
+            : candidate.content,
           this.#terminal.cols,
           this.#terminal.options.tabStopWidth,
         );
@@ -531,7 +577,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const buffer = this.#bufferService.buffer;
     await write(
       this.#terminal,
-      `${appendBoundary(buffer)}${toTerminalText(block.content, this.#terminal.options.tabStopWidth)}`,
+      `${appendBoundary(buffer)}${toTerminalText(block.content, this.#terminal.cols, this.#terminal.options.tabStopWidth)}`,
     );
     const end = buffer.ybase + buffer.y;
     const start = end - lines.length;
@@ -677,8 +723,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 
   #appendWouldExceedCapacity(block: Block): boolean {
-    const layout = conservativeTextLineCount(
-      logicalText(block.content),
+    const layout = contentLineCount(block.content,
       this.#terminal.cols,
       this.#terminal.options.tabStopWidth,
     );
@@ -706,8 +751,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
         if (this.#plannedTrimmedBlockIds.has(candidate.id)) {
           continue;
         }
-        const candidateLayout = conservativeTextLineCount(
-          logicalText(candidate.content),
+        const candidateLayout = contentLineCount(candidate.content,
           this.#terminal.cols,
           this.#terminal.options.tabStopWidth,
         );
@@ -740,8 +784,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
         if (this.#plannedTrimmedBlockIds.has(candidate.id)) {
           continue;
         }
-        const candidateLayout = conservativeTextLineCount(
-          logicalText(candidate.content),
+        const candidateLayout = contentLineCount(candidate.content,
           this.#terminal.cols,
           this.#terminal.options.tabStopWidth,
         );
@@ -815,6 +858,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
     id: BlockId,
     content: BlockContent,
     targetAnchorMapping: TargetAnchorMapping = "replacementStart",
+    relayout = false,
   ): Promise<void> {
     const replacement = await this.#materialize(content);
     const entryIndex = this.#entryIndexes.get(id);
@@ -869,7 +913,8 @@ export class PrivateCoreBlockHistory implements IDisposable {
       );
     }
 
-    this.#model.apply({ type: "update", id, content });
+    // A relayout re-materializes unchanged content, including sealed Blocks.
+    if (!relayout) this.#model.apply({ type: "update", id, content });
 
     buffer.lines.splice(range.start, range.lineCount, ...replacement);
     if (editAboveRegion && delta > trimLineCount) {
@@ -1057,7 +1102,7 @@ export class PrivateCoreBlockHistory implements IDisposable {
       scrollback: 10_000,
     });
     try {
-      await write(scratch, toTerminalText(content, this.#terminal.options.tabStopWidth));
+      await write(scratch, toTerminalText(content, this.#terminal.cols, this.#terminal.options.tabStopWidth));
       const scratchBuffer = (
         scratch as unknown as PrivateHeadlessTerminal
       )._core._bufferService.buffer;
@@ -1103,7 +1148,11 @@ export class PrivateCoreBlockHistory implements IDisposable {
   }
 }
 
-function toTerminalText(content: BlockContent, tabWidth?: number): string {
+function toTerminalText(content: BlockContent, cols: number, tabWidth?: number): string {
+  if (isLinesContent(content)) {
+    // Host-owned layout: every row is a hard row of at most `cols` cells.
+    return layoutLines(content.lines, cols).map((row) => `${spansToSgr(row.spans)}\r\n`).join("");
+  }
   if (typeof content === "string") {
     const normalized = projectPlainText(content, tabWidth).text;
     const projected = normalized.replaceAll("\n", "\r\n");
@@ -1126,6 +1175,9 @@ function extendedBlockContent(
   if (typeof content === "string" && typeof fragment === "string") {
     return `${content}${fragment}`;
   }
+  if (isLinesContent(content) && isLinesContent(fragment)) {
+    return { lines: extendedSnapshot({ type: "text/lines", data: content.lines }, fragment.lines).data as LinesContent["lines"] };
+  }
   if (Array.isArray(content) && Array.isArray(fragment)) {
     return [...content, ...fragment];
   }
@@ -1133,9 +1185,11 @@ function extendedBlockContent(
 }
 
 function contentPrefix(content: BlockContent, retain: number): BlockContent {
-  return typeof content === "string"
-    ? Array.from(content).slice(0, retain).join("")
-    : spanPrefix(content, retain);
+  if (typeof content === "string") return Array.from(content).slice(0, retain).join("");
+  if (isLinesContent(content)) {
+    return { lines: replacedSnapshot({ type: "text/lines", data: content.lines }, retain, []).data as LinesContent["lines"] };
+  }
+  return spanPrefix(content, retain);
 }
 
 function replacedBlockContent(
@@ -1146,6 +1200,12 @@ function replacedBlockContent(
   const prefix = contentPrefix(content, retain);
   if (typeof prefix === "string" && typeof replacement === "string") {
     return `${prefix}${replacement}`;
+  }
+  if (isLinesContent(prefix) && isLinesContent(replacement)) {
+    return extendedBlockContent(prefix, replacement);
+  }
+  if (isLinesContent(prefix) && Array.isArray(replacement) && replacement.length === 0) {
+    return prefix;
   }
   if (Array.isArray(prefix) && Array.isArray(replacement)) {
     return [...prefix, ...replacement];
@@ -1194,6 +1254,27 @@ function endsWithLogicalNewline(content: string): boolean {
 
 function write(terminal: Terminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
+}
+
+/**
+ * Row count for capacity planning. text/lines content is counted with the
+ * host layout itself; its estimate is exact only when every character has a
+ * known fixture width, matching the plain-text rule.
+ */
+function contentLineCount(
+  content: BlockContent,
+  width: number,
+  tabWidth?: number,
+): TextLineCount | undefined {
+  if (!isLinesContent(content)) {
+    return conservativeTextLineCount(logicalText(content), width, tabWidth);
+  }
+  const text = logicalText(content).replaceAll("\n", "");
+  if (/[\t\x00-\x1f\x7f]/.test(text)) return undefined;
+  return {
+    count: layoutLines(content.lines, width).length,
+    exact: Array.from(text).every((character) => fixtureCellWidth(character) !== undefined),
+  };
 }
 
 /**
