@@ -1,5 +1,7 @@
-import type { StyledTextColor, StyledTextSpan, StyledTextStyle, TuiContext } from "@tui-protocol/sdk";
+import type { LinesTextLine, StyledTextColor, StyledTextSpan, StyledTextStyle, TuiContext } from "@tui-protocol/sdk";
 import { spanDrop, spanPrefix } from "@tui-protocol/terminal";
+import { linesEdit } from "./lines-edit.ts";
+import type { AssistantLinesRenderer } from "./lines-renderer.ts";
 import type { AssistantSpanRenderer, RenderableAssistantMessage } from "./styled-renderer.ts";
 
 // Structural slice of the pinned Pi events, not an upstream SDK type or wire schema.
@@ -10,6 +12,8 @@ import type { AssistantSpanRenderer, RenderableAssistantMessage } from "./styled
 // run may carry more than one user message; each becomes its own sealed Block.
 // When the terminal confirmed text/styled, assistant Blocks carry Pi's real
 // rendered styling through the renderer; user and tool Blocks stay text/plain.
+// When it confirmed text/lines, assistant Blocks instead carry Pi's render as
+// lines with layout attributes, which the terminal lays out at every width.
 export interface ContentPart {
   readonly type: string;
   readonly text?: string;
@@ -32,7 +36,7 @@ export type TrialEvent =
   | { readonly type: "tool_execution_update"; readonly toolCallId: string; readonly partialResult: { readonly content: readonly ContentPart[] } }
   | { readonly type: "tool_execution_end"; readonly toolCallId: string; readonly result: { readonly content: readonly ContentPart[] }; readonly isError: boolean };
 
-export type BlockWriter = Pick<TuiContext, "append" | "extend" | "replaceSuffix" | "seal">;
+export type BlockWriter = Pick<TuiContext, "append" | "update" | "extend" | "replaceSuffix" | "seal">;
 export interface TrialLimits {
   readonly maxEvents: number;
   readonly maxBlocks: number;
@@ -44,7 +48,14 @@ export const DEFAULT_TRIAL_LIMITS: TrialLimits = Object.freeze({
 
 type BlockContent =
   | { readonly type: "text/plain"; text: string }
-  | { readonly type: "text/styled"; spans: readonly StyledTextSpan[] };
+  | { readonly type: "text/styled"; spans: readonly StyledTextSpan[] }
+  | { readonly type: "text/lines"; lines: readonly LinesTextLine[] };
+
+type SentContent = string | readonly StyledTextSpan[] | { readonly lines: readonly LinesTextLine[] };
+
+function isSentLines(content: SentContent): content is { readonly lines: readonly LinesTextLine[] } {
+  return typeof content === "object" && "lines" in content;
+}
 interface Block {
   id: string;
   content: BlockContent;
@@ -54,6 +65,7 @@ interface Block {
 interface Tool { block: Block; name: string }
 
 const ASSISTANT_LABEL: StyledTextSpan = Object.freeze({ text: "Assistant:\n" });
+const ASSISTANT_LABEL_LINE: LinesTextLine = Object.freeze({ spans: [{ text: "Assistant:" }] });
 
 function textParts(parts: string | readonly ContentPart[], assistant = false): string {
   if (typeof parts === "string") return parts;
@@ -73,6 +85,7 @@ export class PiEventAdapter {
   readonly #writer: BlockWriter;
   readonly #limits: TrialLimits;
   readonly #assistantRenderer?: AssistantSpanRenderer;
+  readonly #assistantLines?: AssistantLinesRenderer;
   readonly #tools = new Map<string, Tool>();
   #state: "ready" | "running" | "finished" | "failed" = "ready";
   #failure?: Error;
@@ -82,13 +95,19 @@ export class PiEventAdapter {
   #userMessages = 0;
   #assistant?: Block;
 
-  constructor(writer: BlockWriter, limits: TrialLimits = DEFAULT_TRIAL_LIMITS, assistantRenderer?: AssistantSpanRenderer) {
+  constructor(
+    writer: BlockWriter,
+    limits: TrialLimits = DEFAULT_TRIAL_LIMITS,
+    assistantRenderer?: AssistantSpanRenderer,
+    assistantLines?: AssistantLinesRenderer,
+  ) {
     for (const value of [limits.maxEvents, limits.maxBlocks, limits.maxTextUnits]) {
       if (!Number.isSafeInteger(value) || value < 1) throw new Error("Trial limits must be positive safe integers");
     }
     this.#writer = writer;
     this.#limits = { ...limits };
     this.#assistantRenderer = assistantRenderer;
+    this.#assistantLines = assistantLines;
   }
 
   get state() { return this.#state; }
@@ -180,6 +199,28 @@ export class PiEventAdapter {
         !["stop", "toolUse", "length", "aborted", "error"].includes(message.stopReason ?? "")) {
       throw new Error("Unsupported final assistant stop reason");
     }
+    if (this.#assistantLines) {
+      // Lines path: as the styled path, but Pi renders once without width
+      // breaks and the lines carry the layout the terminal applies.
+      const renderable: RenderableAssistantMessage = {
+        content: typeof message.content === "string" ? [{ type: "text", text: message.content }] : message.content,
+        stopReason: message.stopReason,
+        errorMessage: message.errorMessage,
+      };
+      const lines = { lines: [ASSISTANT_LABEL_LINE, ...this.#assistantLines.render(renderable, type !== "message_end")] };
+      if (type === "message_start") {
+        if (this.#assistant) throw new Error("Previous assistant message is still active");
+        this.#assistant = this.#append(lines);
+      } else {
+        if (!this.#assistant) throw new Error("Assistant update requires message_start");
+        this.#replace(this.#assistant, lines);
+        if (type === "message_end") {
+          this.#seal(this.#assistant);
+          this.#assistant = undefined;
+        }
+      }
+      return;
+    }
     if (this.#assistantRenderer) {
       // Styled path: Pi's renderer owns the body, including its abort/error
       // labels, so the plain "[aborted]" suffix is not added. The "Assistant:"
@@ -230,27 +271,44 @@ export class PiEventAdapter {
     if (/[\uD800-\uDFFF]/u.test(text)) throw new Error("Text contains an unpaired surrogate");
   }
 
-  #checkContent(content: string | readonly StyledTextSpan[]): void {
-    this.#checkText(typeof content === "string" ? content : content.map(span => span.text).join(""));
+  #checkContent(content: SentContent): void {
+    if (typeof content === "string") this.#checkText(content);
+    else if (!isSentLines(content)) this.#checkText(content.map(span => span.text).join(""));
+    else this.#checkText(content.lines.map(line => line.spans.map(span => span.text).join("")).join("\n"));
   }
 
-  #append(content: string | readonly StyledTextSpan[], sealed = false): Block {
+  #append(content: SentContent, sealed = false): Block {
     this.#checkContent(content);
     if (this.#blocks >= this.#limits.maxBlocks) throw new Error("Trial Block limit exceeded");
     const id = `pi-${++this.#blocks}`;
-    const sentState = this.#writer.append(id, content, sealed ? "sealed" : "mutable");
+    const lifecycle = sealed ? "sealed" : "mutable";
+    if (isSentLines(content)) {
+      const sentState = this.#writer.append(id, content.lines, lifecycle);
+      return { id, content: { type: "text/lines", lines: content.lines }, sentState, sealed };
+    }
+    const sentState = this.#writer.append(id, content as string | readonly StyledTextSpan[], lifecycle);
     return {
       id,
-      content: typeof content === "string" ? { type: "text/plain", text: content } : { type: "text/styled", spans: content },
+      content: typeof content === "string" ? { type: "text/plain", text: content } : { type: "text/styled", spans: content as readonly StyledTextSpan[] },
       sentState,
       sealed,
     };
   }
 
-  #replace(block: Block, next: string | readonly StyledTextSpan[]): void {
+  #replace(block: Block, next: SentContent): void {
     this.#checkContent(next);
     let sentState: string;
-    if (typeof next === "string") {
+    if (isSentLines(next)) {
+      if (block.content.type !== "text/lines") throw new Error("Block content type changed unexpectedly");
+      const edit = linesEdit(block.content.lines, next.lines);
+      switch (edit.kind) {
+        case "none": return;
+        case "extend": sentState = this.#writer.extend(block.id, block.sentState, edit.fragment); break;
+        case "replaceSuffix": sentState = this.#writer.replaceSuffix(block.id, block.sentState, edit.retain, edit.replacement); break;
+        case "update": sentState = this.#writer.update(block.id, next.lines); break;
+      }
+      block.content = { type: "text/lines", lines: next.lines };
+    } else if (typeof next === "string") {
       if (block.content.type !== "text/plain") throw new Error("Block content type changed unexpectedly");
       if (next === block.content.text) return;
       if (next.startsWith(block.content.text)) {
@@ -281,7 +339,7 @@ export class PiEventAdapter {
         const retain = logicalScalars(previous.slice(0, prefix));
         sentState = this.#writer.replaceSuffix(block.id, block.sentState, retain, spanDrop(next, retain));
       }
-      block.content = { type: "text/styled", spans: next };
+      block.content = { type: "text/styled", spans: next as readonly StyledTextSpan[] };
     }
     block.sentState = sentState;
   }

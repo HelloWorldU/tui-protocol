@@ -16,7 +16,7 @@ import { createTrialRuntime, TRIAL_PROMPT, type TrialRuntimeSource } from "./ses
 const { Terminal } = headless;
 
 interface RecordedOp {
-  readonly kind: "append" | "extend" | "replaceSuffix" | "seal";
+  readonly kind: "append" | "update" | "extend" | "replaceSuffix" | "seal";
   readonly blockId: string;
   readonly content?: string | readonly StyledTextSpan[];
   readonly fragment?: string | readonly StyledTextSpan[];
@@ -30,6 +30,10 @@ class RecordingWriter {
   readonly ops: RecordedOp[] = [];
   append(blockId: string, content: string | readonly StyledTextSpan[], lifecycle: "mutable" | "sealed"): string {
     this.ops.push({ kind: "append", blockId, content, lifecycle });
+    return String(this.ops.length);
+  }
+  update(blockId: string, content: string | readonly StyledTextSpan[]): string {
+    this.ops.push({ kind: "update", blockId, content });
     return String(this.ops.length);
   }
   extend(blockId: string, _base: string, fragment: string | readonly StyledTextSpan[]): string {

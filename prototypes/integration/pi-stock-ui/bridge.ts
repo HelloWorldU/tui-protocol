@@ -1,6 +1,7 @@
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { TuiClient, TuiContext } from "@tui-protocol/sdk";
 import { PiEventAdapter, type TrialEvent } from "./event-adapter.ts";
+import { createAssistantLinesRenderer, type AssistantLinesRenderer } from "./lines-renderer.ts";
 import { createAssistantSpanRenderer, type AssistantSpanRenderer } from "./styled-renderer.ts";
 
 /**
@@ -38,6 +39,7 @@ export class ProtocolTranscriptBridge {
   readonly #onFailure: (error: Error) => void;
   readonly #width?: () => number;
   #renderer?: AssistantSpanRenderer;
+  #lines?: AssistantLinesRenderer;
   #queue: Promise<void> = Promise.resolve();
   #unsubscribe?: () => void;
   #adapter?: PiEventAdapter;
@@ -91,7 +93,7 @@ export class ProtocolTranscriptBridge {
       this.#turns++;
       this.#enqueue(async () => {
         const context = await this.#client.openContext();
-        const adapter = new PiEventAdapter(context, undefined, this.#styledRenderer());
+        const adapter = new PiEventAdapter(context, undefined, this.#styledRenderer(), this.#linesRenderer());
         adapter.accept(selected);
         this.#context = context;
         this.#adapter = adapter;
@@ -116,8 +118,19 @@ export class ProtocolTranscriptBridge {
     }
   }
 
-  /** Assistant Blocks carry Pi's real styling only when the terminal confirmed text/styled. */
+  /**
+   * Assistant Blocks carry Pi's render as text/lines when the terminal
+   * confirmed it, laid out by the terminal at every width; otherwise as
+   * text/styled baked at the current width when that was confirmed.
+   */
+  #linesRenderer(): AssistantLinesRenderer | undefined {
+    if (!this.#client.supportsLinesContent || this.#width === undefined) return undefined;
+    this.#lines ??= createAssistantLinesRenderer();
+    return this.#lines;
+  }
+
   #styledRenderer(): AssistantSpanRenderer | undefined {
+    if (this.#client.supportsLinesContent) return undefined;
     if (!this.#client.supportsStyledContent || this.#width === undefined) return undefined;
     this.#renderer ??= createAssistantSpanRenderer({ width: this.#width });
     return this.#renderer;

@@ -31,6 +31,11 @@ so markdown emphasis, thinking, and error styling reach the terminal as
 User and tool Blocks stay `text/plain`; Block content types mix freely
 inside one Context. See [Styled transcript content](#styled-transcript-content).
 
+**Status, 2026-10-24: assistant Blocks carry Pi's render as `text/lines`
+when the terminal confirms it**, so the terminal lays them out at every width
+instead of keeping a render width. See
+[Line-layout transcript content](#line-layout-transcript-content).
+
 ## Layout
 
 | File | Responsibility |
@@ -48,6 +53,7 @@ inside one Context. See [Styled transcript content](#styled-transcript-content).
 | `lines-from-render.ts`, `lines-probe.ts`, `lines-layout.test.ts` | RFC 0003 check: Pi's wide render as `text/lines`, laid out by the [line layout engine](../../line-layout/README.md), against Pi's own render. |
 | `lines-host.test.ts` | RFC 0003 end to end: Pi's `text/lines` through the SDK and endpoint into the [xterm lines host](../xterm-lines-host/README.md). |
 | `lines-fixture.ts`, `record-lines-fixture.ts`, `lines-fixture.test.ts` | Pi's `text/lines` content and layouts recorded for the browser lines-host checks, with a staleness check. |
+| `lines-renderer.ts`, `lines-edit.ts`, `lines-edit.test.ts`, `lines-trial.test.ts` | The `text/lines` assistant path: wide render to lines, the smallest line-level edit per update, and the full trial against an xterm-backed fake host. |
 | `record-ansi.ts` | Records one stock-mode turn's raw ConPTY output as the SDK's real-output ANSI fixture. |
 | `fake-host.ts` | In-process terminal host for Node tests (chrome recorder + real endpoint + reply path), with an xterm-backed endpoint variant. |
 | `stock-ui.test.ts`, `render-gate.test.ts`, `terminal.test.ts`, `bridge.test.ts` | Focused Node checks; the stock-ui suite is also the plain-text fallback path. |
@@ -235,6 +241,33 @@ rendered projection as the logical text:
   layout and terminal-owned reflow that the experiment exists to expose;
   the browser resize scenario is where to watch it.
 
+## Line-layout transcript content
+
+When the terminal confirms `text/lines`
+([RFC 0003](../../../docs/rfcs/0003-line-layout-attributes.md)), the bridge
+prefers it over `text/styled`. `lines-renderer.ts` renders each assistant
+message through the same `AssistantMessageComponent` at 1000 columns, so Pi
+inserts no width breaks, and converts the result with the experimental
+reader in `lines-from-render.ts` (hanging indents for nested bullet and
+numbered items, repeated quote markers, fill rules). The Block starts with an
+`Assistant:` label line; user and tool Blocks stay `text/plain`.
+
+Each message update goes out as the smallest edit `lines-edit.ts` finds:
+Extend when only the last line grew or lines were added; ReplaceSuffix from
+inside the first changed line when its attributes are unchanged (for example a
+completed `**bold**` restyling earlier text); ReplaceSuffix from the end of
+the previous line when a line's attributes changed (a line that only later
+turns out to be a list item); Update only when the first line's attributes
+change. Eight Node checks apply each edit with the terminal module's own
+content rules and compare the result.
+
+Node evidence, 2026-10-24 (`lines-trial.test.ts`, xterm-backed fake host
+without an application region): with `text/lines` confirmed the assistant
+Blocks are `text/lines` with hanging indents and quote markers, a paragraph
+is one logical line, and streaming used Extend; the streamed answer's rows
+equal the host layout at 60 columns and again at 36 and 90 after resizes;
+with only `text/styled` confirmed the styled path is unchanged.
+
 ## Wrap-baking experiment
 
 `wrap-baking.test.ts` renders a fixed markdown sample (`wrap-sample.ts`)
@@ -297,8 +330,11 @@ node prototypes/integration/pi-stock-ui/record-ansi.ts sdk/test/fixtures/pi-0.87
   no `[Thinking]` label, abort/error ends use Pi's own labels, and markdown
   constructs appear in displayed form. See the divergences list in
   [Styled transcript content](#styled-transcript-content).
-- Rendered wrapping is baked into the logical text at the current width;
-  narrower reflow afterwards splits those lines again. The
+- On the `text/styled` path, rendered wrapping is baked into the logical
+  text at the current width; narrower reflow afterwards splits those lines
+  again. The `text/lines` path avoids this; its layout intent is read back
+  from Pi's rendered shapes for the constructs listed above, so tables and
+  other constructs keep only word wrapping. The
   [wrap-baking experiment](#wrap-baking-experiment) measures the cost.
 - The styled browser check samples three paint attributes (bold, its
   absence on prose, and the code color) on one fixture message; thinking,

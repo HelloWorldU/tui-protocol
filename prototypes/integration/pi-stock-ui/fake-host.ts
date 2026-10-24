@@ -38,7 +38,7 @@ export class FakeHost {
   readonly messageKinds: string[] = [];
   #chrome = "";
 
-  constructor(options: { supported?: boolean; optionalContentTypes?: readonly "text/styled"[]; terminal?: HeadlessTerminal } = {}) {
+  constructor(options: { supported?: boolean; optionalContentTypes?: readonly ("text/styled" | "text/lines")[]; terminal?: HeadlessTerminal } = {}) {
     const supported = options.supported ?? true;
     this.endpoint = options.terminal
       ? new XtermProtocolEndpoint(options.terminal, {

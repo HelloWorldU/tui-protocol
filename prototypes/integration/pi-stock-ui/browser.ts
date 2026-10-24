@@ -32,7 +32,8 @@ export const history = new BrowserSearchHistory(
 );
 const endpoint = new XtermProtocolEndpoint(terminal as unknown as HeadlessTerminal, {
   completeBaselineSupported: true, // Experimental fixture assertion, not feature detection.
-  optionalContentTypes: ["text/styled"], // Assistant Blocks carry Pi's rendered styling.
+  // Assistant Blocks carry Pi's render as text/lines, laid out here at every width.
+  optionalContentTypes: ["text/styled", "text/lines"],
   history,
   resourceLimits: trialSessionLimits,
 });
