@@ -210,6 +210,12 @@ Decided while in Draft, 2026-10-19:
   fuller line-breaking algorithms stay a terminal choice.
 - `text/lines` and `text/styled` remain separate negotiated types.
 
+Decided after acceptance, 2026-10-26, resolving an unresolved question:
+
+- A fill line has no maximum width and spans the full display width. Pi
+  0.87.1 caps its rules at 80 cells, a renderer style rather than a
+  protocol need; a width limit could later be an optional attribute.
+
 ## Unresolved Questions
 
 The JSON encoding is defined by the
@@ -218,8 +224,6 @@ questions as its open design choices.
 
 - Break opportunities for scripts that neither use spaces nor render as wide
   characters, such as Thai.
-- Whether a fill line takes a maximum width: Pi caps its rule at 80 cells,
-  the only difference the line layout prototype found at 100 columns.
 - Whether code blocks need `none` (no wrap, horizontal truncation) in
   addition to `char`.
 

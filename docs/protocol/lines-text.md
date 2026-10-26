@@ -56,6 +56,10 @@ terminal repeats it across the display width in whole cells, recomputed on
 every reflow. Its logical text is that grapheme once, and copy yields it
 once. A fill line carries no `wrap` or `continuation`.
 
+A fill line has no maximum width: it always spans the full display width.
+An application that wants a shorter rule sends ordinary text instead; a
+width limit, if one is ever needed, would be a separate optional attribute.
+
 ## 5. Incremental Editing
 
 - **Extend** carries a non-empty line list. Its first line's spans append to
@@ -136,8 +140,6 @@ schema rules are content semantics.
 
 ## Open Design Choices
 
-- Whether a fill line takes a maximum width. Pi 0.87.1 caps its rules at 80
-  cells; a fill line spans the display width.
 - Break opportunities for scripts that neither use spaces nor render as wide
   characters, such as Thai.
 - Whether code needs a non-wrapping mode with horizontal truncation.

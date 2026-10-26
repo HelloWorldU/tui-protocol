@@ -170,10 +170,6 @@ Supporting work, scheduled when the demo needs it:
 - **Platforms:** only Windows bundled ConPTY is verified; macOS, Linux, SSH,
   and tmux are untested.
 
-Pending maintainer decision: whether a `text/lines` fill line takes a
-maximum width ([open design choices](../protocol/lines-text.md#open-design-choices));
-the current implementation fills the display width.
-
 ## Remaining Work and Decision Points
 
 - **Pi integration scope:** the entered-prompt trial and one generated-project
