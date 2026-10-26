@@ -95,20 +95,12 @@ test("finish ignores later input and dispose leaves the Tabby-owned terminal ali
   }
 });
 
-test("a real SDK child exchanges protocol responses through bundled ConPTY while ordinary output uses the host callback", { skip: process.platform !== "win32" }, async () => {
-  const terminal = createTerminal();
-  const failures: Error[] = [];
-  const ordinary: string[] = [];
+async function runSdkChild(
+  receiver: TabbyProtocolReceiver,
+  setActive: (child: pty.IPty | undefined) => void,
+  observe?: (data: string) => void,
+): Promise<number> {
   let child: pty.IPty | undefined;
-  const receiver = new TabbyProtocolReceiver({
-    terminal: terminal as unknown as BrowserTerminal,
-    writeOrdinary: async data => {
-      ordinary.push(Buffer.from(data).toString());
-      await new Promise<void>(resolve => terminal.write(data, resolve));
-    },
-    onResponseFrame: frame => { child?.write(Buffer.from(frame).toString()); },
-    onFailure: error => failures.push(error),
-  });
   let timer: ReturnType<typeof setTimeout> | undefined;
   let dataSubscription: { dispose(): void } | undefined;
   let exitSubscription: { dispose(): void } | undefined;
@@ -121,7 +113,11 @@ test("a real SDK child exchanges protocol responses through bundled ConPTY while
       env: process.env,
       useConptyDll: true,
     });
-    dataSubscription = child.onData(data => receiver.feed(Buffer.from(data)));
+    setActive(child);
+    dataSubscription = child.onData(data => {
+      observe?.(data);
+      receiver.feed(Buffer.from(data));
+    });
     const exited = new Promise<number>((resolve, reject) => {
       exitSubscription = child!.onExit(event => resolve(event.exitCode));
       timer = setTimeout(() => {
@@ -129,7 +125,41 @@ test("a real SDK child exchanges protocol responses through bundled ConPTY while
         reject(new Error("Timed out waiting for the SDK child."));
       }, 15000);
     });
-    const exitCode = await exited;
+    return await exited;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    setActive(undefined);
+    try { child?.kill(); } catch {}
+    dataSubscription?.dispose();
+    exitSubscription?.dispose();
+    const conoutWorker = (child as unknown as {
+      _agent?: { _conoutSocketWorker?: { dispose(): void } };
+    } | undefined)?._agent?._conoutSocketWorker;
+    // This standalone test must explicitly release node-pty's bundled-ConPTY
+    // reader after natural exit; the plugin leaves PTY lifetime to Tabby.
+    conoutWorker?.dispose();
+    if (conoutWorker !== undefined) {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    }
+  }
+}
+
+test("a real SDK child exchanges protocol responses through bundled ConPTY while ordinary output uses the host callback", { skip: process.platform !== "win32" }, async () => {
+  const terminal = createTerminal();
+  const failures: Error[] = [];
+  const ordinary: string[] = [];
+  let activeChild: pty.IPty | undefined;
+  const receiver = new TabbyProtocolReceiver({
+    terminal: terminal as unknown as BrowserTerminal,
+    writeOrdinary: async data => {
+      ordinary.push(Buffer.from(data).toString());
+      await new Promise<void>(resolve => terminal.write(data, resolve));
+    },
+    onResponseFrame: frame => { activeChild?.write(Buffer.from(frame).toString()); },
+    onFailure: error => failures.push(error),
+  });
+  try {
+    const exitCode = await runSdkChild(receiver, child => { activeChild = child; });
     await receiver.finish();
 
     const rendered = bufferText(terminal);
@@ -144,20 +174,47 @@ test("a real SDK child exchanges protocol responses through bundled ConPTY while
     assert.deepEqual(receiver.contexts().map(context => context.state), ["closed"]);
     assert.deepEqual(failures, []);
   } finally {
-    if (timer !== undefined) clearTimeout(timer);
-    try { child?.kill(); } catch {}
-    dataSubscription?.dispose();
-    exitSubscription?.dispose();
     receiver.dispose();
     terminal.dispose();
-    const conoutWorker = (child as unknown as {
-      _agent?: { _conoutSocketWorker?: { dispose(): void } };
-    } | undefined)?._agent?._conoutSocketWorker;
-    // This standalone test must explicitly release node-pty's bundled-ConPTY
-    // reader after natural exit; the plugin leaves PTY lifetime to Tabby.
-    conoutWorker?.dispose();
-    if (conoutWorker !== undefined) {
-      await new Promise(resolve => setTimeout(resolve, 1100));
-    }
+  }
+});
+
+test("two sequential SDK children on one receiver get fresh Contexts and retain both histories", { skip: process.platform !== "win32" }, async () => {
+  const terminal = createTerminal();
+  const failures: Error[] = [];
+  const raw: string[] = [];
+  const ordinary: string[] = [];
+  let activeChild: pty.IPty | undefined;
+  const receiver = new TabbyProtocolReceiver({
+    terminal: terminal as unknown as BrowserTerminal,
+    writeOrdinary: async data => {
+      ordinary.push(Buffer.from(data).toString());
+      await new Promise<void>(resolve => terminal.write(data, resolve));
+    },
+    onResponseFrame: frame => { activeChild?.write(Buffer.from(frame).toString()); },
+    onFailure: error => failures.push(error),
+  });
+  try {
+    const observe = (data: string) => raw.push(data);
+    assert.equal(await runSdkChild(receiver, child => { activeChild = child; }, observe), 0);
+    assert.deepEqual(receiver.contexts().map(context => context.id), ["context-1"]);
+    assert.equal(await runSdkChild(receiver, child => { activeChild = child; }, observe), 0);
+    await receiver.finish();
+
+    assert.equal(occurrences(raw.join(""), "SHELL_BEFORE"), 2);
+    assert.equal(occurrences(raw.join(""), "SHELL_AFTER"), 2);
+    assert.equal(occurrences(ordinary.join(""), "SHELL_BEFORE"), 2);
+    assert.equal(occurrences(ordinary.join(""), "SHELL_AFTER"), 2);
+    const contexts = receiver.contexts();
+    assert.deepEqual(contexts.map(context => context.id), ["context-1", "context-2"]);
+    assert.deepEqual(contexts.map(context => context.state), ["closed", "closed"]);
+    const rendered = bufferText(terminal);
+    assert.equal(occurrences(rendered, "ORIGINAL_BLOCK"), 0);
+    assert.equal(occurrences(rendered, "UPDATED_BLOCK"), 2);
+    assert.equal(occurrences(rendered, "second line"), 2);
+    assert.deepEqual(failures, []);
+  } finally {
+    receiver.dispose();
+    terminal.dispose();
   }
 });

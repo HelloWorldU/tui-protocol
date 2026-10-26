@@ -101,9 +101,13 @@ ordinary-text fallback, see the [streaming text example](../examples/streaming-t
 | `receive(bytes)` | Processes control responses and returns decoded events, including ordinary input, protocol errors, and diagnostics. |
 | `finish()` / `dispose(reason?)` | Retire the local client and reject pending controls. `finish()` also returns final decoder diagnostics. Neither sends remote Context-close Messages. |
 
-The Context ID is read-only. Request and Operation IDs are generated separately
-as increasing decimal strings. The client does not mirror terminal Block state:
-an Operation ID means **sent**, not accepted or rendered. The application names
+The Context ID is read-only. Request IDs have a per-client namespace followed
+by increasing decimal strings; `requestIdPrefix` can supply an explicit prefix
+for deterministic fixtures. Operation IDs are increasing decimal strings. This
+keeps independent applications' control requests distinct even when they share
+a persistent terminal byte stream, while preserving retry correlation within
+one client. The client does not mirror terminal Block state: an Operation ID
+means **sent**, not accepted or rendered. The application names
 the exact base for Extend/ReplaceSuffix and handles asynchronous rejections.
 There is no automatic retry, rollback, successful-Operation acknowledgement,
 or automatic full Update after an incremental error.

@@ -9,7 +9,7 @@ import { TerminalProtocolEndpoint } from "@tui-protocol/terminal";
 function fixture(optionalContentTypes: readonly string[]) {
   const sent: Message[] = [];
   const decoder = new ProtocolStreamDecoder();
-  const client = new TuiClient({ write(bytes) {
+  const client = new TuiClient({ requestIdPrefix: "", write(bytes) {
     for (const event of decoder.push(bytes)) {
       assert.equal(event.type, "message");
       if (event.type === "message") sent.push(event.message);

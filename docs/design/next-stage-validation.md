@@ -116,7 +116,7 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
 Ordered by current priority, following the demo-first strategy in the
 [adoption path](adoption-path.md#the-realistic-ladder-ordered) (revised
-2026-10-26). State at 2026-10-26: `pnpm typecheck`, 457 Node tests, and the
+2026-10-26). State at 2026-10-26: `pnpm typecheck`, 459 Node tests, and the
 documentation check pass on `main`.
 
 1. **A runnable demo terminal.** First, research whether the receiver side
@@ -138,11 +138,11 @@ documentation check pass on `main`.
    Progress, 2026-10-26: the plugin approach is feasible and the
    [Tabby vertical slice](../../prototypes/integration/tabby-demo/README.md)
    is complete. It loads in Tabby 1.0.238 and verifies ordinary shell output,
-   an SDK round trip, two real Pi stock-UI rounds, and resize recovery. Before
-   this becomes the runnable demo, it still needs migration onto public
-   xterm.js APIs, request-ID isolation between independent protocol
-   applications (currently one protocol application per tab), and a
-   long-session policy.
+   an SDK round trip, two real Pi stock-UI rounds, resize recovery, and two
+   sequential independent SDK applications in one tab. Request IDs are now
+   namespaced per SDK client, so later applications cannot receive an earlier
+   application's cached closed Context. Before this becomes the runnable demo,
+   it still needs migration onto public xterm.js APIs and a long-session policy.
 2. **A side-by-side demonstration.** The same Pi session in an ordinary
    terminal and in the demo terminal: layout after resize, updates to content
    already in scrollback, a stable reading position, and copy and search on

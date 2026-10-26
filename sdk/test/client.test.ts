@@ -7,7 +7,7 @@ import { TerminalProtocolEndpoint } from "@tui-protocol/terminal";
 function fixture(timeoutMs = 2000) {
   const sent: Message[] = [];
   const decoder = new ProtocolStreamDecoder();
-  const client = new TuiClient({ timeoutMs, write(bytes) {
+  const client = new TuiClient({ timeoutMs, requestIdPrefix: "", write(bytes) {
     for (const event of decoder.push(bytes)) {
       assert.equal(event.type, "message");
       if (event.type === "message") sent.push(event.message);
@@ -248,4 +248,36 @@ test("an existing Context cannot send while a new capability query is pending or
     assert.throws(() => context.append("b", "text", "sealed"), /Positive capability/);
     assert.equal(f.sent.some(message => message.kind.startsWith("block.")), false);
   } finally { f.client.dispose(); }
+});
+
+test("sequential clients on one terminal connection cannot replay an earlier closed Context", async () => {
+  const terminal = new TerminalProtocolEndpoint({ completeBaselineSupported: true });
+  const requests: Message[] = [];
+  const decoder = new ProtocolStreamDecoder();
+  const run = async () => {
+    let client!: TuiClient;
+    client = new TuiClient({ write(bytes) {
+      for (const event of decoder.push(bytes)) {
+        if (event.type === "message") requests.push(event.message);
+      }
+      const result = terminal.push(bytes);
+      for (const frame of result.responseFrames) client.receive(frame);
+    } });
+    try {
+      assert.equal(await client.negotiate(), true);
+      const context = await client.openContext();
+      await context.close();
+      return context.id;
+    } finally { client.dispose(); }
+  };
+  const first = await run();
+  const second = await run();
+  assert.notEqual(first, second);
+  assert.deepEqual(terminal.contexts().map(context => [context.id, context.state]), [
+    [first, "closed"],
+    [second, "closed"],
+  ]);
+  const opens = requests.filter(message => message.kind === "context.open");
+  assert.equal(opens.length, 2);
+  assert.notEqual(opens[0].request_id, opens[1].request_id);
 });

@@ -25,6 +25,8 @@ export interface TuiClientOptions {
   readonly write: (bytes: Uint8Array) => void;
   /** Local waiting policy, not a protocol timeout requirement. Defaults to 2000 ms. */
   readonly timeoutMs?: number;
+  /** Request ID prefix; defaults to a unique value per client. Empty preserves decimal-only IDs. */
+  readonly requestIdPrefix?: string;
 }
 
 export interface TuiContext {
@@ -64,6 +66,7 @@ export class TuiClient {
   readonly #timeoutMs: number;
   readonly #decoder = new ProtocolStreamDecoder({ emitOrdinaryData: true });
   readonly #pending = new Map<string, Pending>();
+  readonly #requestIdPrefix: string;
   #requestId = 0n;
   #operationId = 0n;
   #frameId = 0;
@@ -74,6 +77,7 @@ export class TuiClient {
 
   constructor(options: TuiClientOptions) {
     this.#write = options.write;
+    this.#requestIdPrefix = options.requestIdPrefix ?? newRequestIdPrefix();
     this.#timeoutMs = options.timeoutMs ?? 2000;
     if (!Number.isInteger(this.#timeoutMs) || this.#timeoutMs < 1 || this.#timeoutMs > 2_147_483_647) {
       throw new Error("timeoutMs must be an integer between 1 and 2147483647.");
@@ -180,7 +184,7 @@ export class TuiClient {
   }
 
   #request(kind: Request["kind"], contextId?: string): Promise<Response> {
-    const requestId = String(++this.#requestId);
+    const requestId = `${this.#requestIdPrefix}${String(++this.#requestId)}`;
     const message = { version: 1, kind, request_id: requestId,
       ...(contextId === undefined ? {} : { context_id: contextId }), body: {} } as Request;
     const expectedKind: Response["kind"] = kind === "capability.query" ? "capability.response" : `${kind}.response`;
@@ -268,4 +272,12 @@ export class TuiClient {
       },
     });
   }
+}
+
+function newRequestIdPrefix(): string {
+  try {
+    const uuid = globalThis.crypto?.randomUUID?.();
+    if (uuid !== undefined) return `${uuid}:`;
+  } catch {}
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}:`;
 }

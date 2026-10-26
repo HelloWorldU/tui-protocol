@@ -22,10 +22,11 @@ middleware path unchanged.
 This is a development spike, not the completed demo terminal. It still depends
 on private xterm.js internals through `PrivateCoreBlockHistory`. The public-API
 migration, long-session policy, and platforms other than Windows bundled
-ConPTY remain open. Each independent protocol application currently needs a
-fresh tab: control request IDs and their replay results live in the shell's
-receiver, so a later application can otherwise inherit an earlier closed
-Context. Multiple rounds within one Pi process are supported.
+ConPTY remain open. Independent protocol applications can run sequentially in
+one tab: each SDK client has a distinct request-ID namespace, so control replay
+cannot return an earlier application's closed Context. Recovery of an abandoned
+open Context remains undefined. Multiple rounds within one Pi process are
+supported.
 
 ## Build and check
 
@@ -44,8 +45,9 @@ bundled. Workspace-only dependency declarations are removed from the prepared
 package.
 
 The tests cover split UTF-8 and SDK negotiation, response routing, ordinary
-output, historical Block Update, lifecycle, and a real SDK child through
-Windows bundled ConPTY. The desktop evidence below complements those checks.
+output, historical Block Update, lifecycle, and real SDK children through
+Windows bundled ConPTY, including two sequential children on one receiver. The
+desktop evidence below complements those checks.
 
 ## Desktop evidence, 2026-10-26
 
@@ -53,6 +55,10 @@ Windows bundled ConPTY. The desktop evidence below complements those checks.
   SHA-256, loads the built plugin through the normal `TABBY_PLUGINS` path.
 - Ordinary CMD input/output works. The SDK child completes with `SDK_EXIT:0`,
   ordinary markers before and after the protocol, and a historical Block Update.
+- Two independent SDK children run sequentially in one Tabby tab. Both exit 0,
+  receive distinct `context-1` and `context-2`, and close cleanly. Both updated
+  Block histories remain present; neither child receives the other's cached
+  closed Context.
 - The real Pi stock UI completes two consecutive rounds with the deterministic
   local provider. Both Contexts and all eight Blocks are closed/sealed; a
   700/1002-pixel viewport round trip preserves them.
@@ -68,8 +74,7 @@ Windows bundled ConPTY. The desktop evidence below complements those checks.
    by Tabby's **Settings → Plugins → Open Plugins Directory**. Restart Tabby.
 2. Open one ordinary shell tab and run `echo ordinary shell`; input and output
    should remain ordinary terminal behavior.
-3. In a fresh tab for each independent protocol application, change to this
-   repository checkout and run:
+3. Change to this repository checkout in a Tabby tab and run:
 
    ```sh
    node prototypes/integration/pi-stock-ui/main.ts
@@ -79,8 +84,8 @@ Windows bundled ConPTY. The desktop evidence below complements those checks.
    model subscription. With the plugin working, the transcript is protocol-owned
    while Pi keeps its editor and footer. Without a supporting terminal, the same
    child uses Pi's stock rendering fallback. Submit further prompts in that Pi
-   process to exercise multiple rounds. After it exits, use another fresh tab
-   for the next independent protocol application.
+   process to exercise multiple rounds. After it exits, another independent
+   protocol application can run in the same tab.
 
 Do not claim that upstream Pi natively emits the protocol: the trial composition
 enables it without editing Pi's source files.
