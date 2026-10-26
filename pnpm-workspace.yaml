@@ -4,6 +4,7 @@ packages:
   - terminal
   - prototypes/integration/pi-session
   - prototypes/integration/pi-stock-ui
+  - prototypes/integration/tabby-demo
 
 allowBuilds:
   # Published runtime files are ready to use; these hooks do not build them.

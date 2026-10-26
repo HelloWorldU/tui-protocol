@@ -41,6 +41,7 @@ prototypes/                   Executable experiments that test assumptions.
     ingress-pressure/         Controlled SDK-to-renderer backlog measurement.
     pi-session/               Pi session event mapping and finite supporting-host trial.
     pi-stock-ui/              Stock Pi InteractiveMode with a protocol-owned transcript trial.
+    tabby-demo/               Experimental Tabby plugin receiver and PTY integration checks.
     protocol-endpoint/        Retained bytes-to-state experiment record; code is in terminal/.
     pty-demo/                 Fixed TUI process through ConPTY to browser history.
     pty-pressure/             Browser byte credits, PTY pause/resume, and producer-waiting experiments.

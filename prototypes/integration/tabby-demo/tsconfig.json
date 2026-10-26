@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "skipLibCheck": true,
+    "erasableSyntaxOnly": false,
+    "experimentalDecorators": true
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["node_modules"]
+}
