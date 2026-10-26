@@ -171,6 +171,24 @@ Supporting work, scheduled when the demo needs it:
   Blocks; an application that does not redraw keeps cell-reflowed rows.
 - **Long-session behavior:** snapshot reclamation, process memory bounds,
   and a slow-consumer policy, as listed below.
+- **Propose public history-line editing in xterm.js, long term.** Research on
+  2026-10-27 found related discussion but no public API covering this need: the
+  current [`IBuffer`](https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts#L1631-L1686)
+  exposes read access, not arbitrary history insertion, deletion, or
+  replacement. In [#2105](https://github.com/xtermjs/xterm.js/issues/2105#issuecomment-552096285),
+  maintainers rejected direct Buffer editing because of required post-actions
+  and the static-scrollback assumption. The open contributor issue
+  [#5999](https://github.com/xtermjs/xterm.js/issues/5999) proposes
+  encapsulating `Buffer.lines`, including a `spliceLines` method; it is not an
+  accepted public extension API. Other contributors discuss a controlled
+  [`setLine` and `_voffset` consistency](https://github.com/xtermjs/xterm.js/issues/5176#issuecomment-4503224745)
+  and [stable identity across circular-buffer trimming](https://github.com/xtermjs/xterm.js/issues/3368#issuecomment-859648015).
+  Before drafting an upstream proposal, define atomic row replacement, marker
+  and viewport preservation, selection/search invalidation, reflow, capacity
+  trimming, and redraw behavior; merely exposing `CircularList` would skip
+  those requirements. This project has not filed an upstream proposal. This
+  could remove the Tabby plugin's private adapter later, but is not a current
+  demo blocker.
 - **Platforms:** only Windows bundled ConPTY is verified; macOS, Linux, SSH,
   and tmux are untested.
 
