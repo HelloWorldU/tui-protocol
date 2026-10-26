@@ -1,7 +1,9 @@
 # From Controlled Experiments to Trial Use
 
-Working plan, updated 2026-09-22; Pi stock-UI status added 2026-10-11. This document tracks implementation evidence
-and engineering priorities. Agreed semantics are recorded in the
+Working plan, updated 2026-09-22; Pi stock-UI status added 2026-10-11;
+content-model phase and ordered next steps updated 2026-10-26. This document
+tracks implementation evidence and engineering priorities; its
+[Next Steps](#next-steps) section is the current hand-off list. Agreed semantics are recorded in the
 [protocol drafts](../README.md).
 
 ## Current Assessment
@@ -43,6 +45,18 @@ fixed test command. Local-provider and live subscription runs reproduced three
 failures, applied a quantity fix, passed all six tests, and repeated the tests
 in a second turn. Earlier failure output remained searchable and copyable.
 
+The content-model phase is complete. [RFC 0001](../rfcs/0001-mutable-terminal-history-and-reading-anchors.md),
+[RFC 0002](../rfcs/0002-styled-text-content.md) (`text/styled`), and
+[RFC 0003](../rfcs/0003-line-layout-attributes.md) (`text/lines`) are
+Accepted, with protocol drafts for [styled text](../protocol/styled-text.md)
+and [line layout text](../protocol/lines-text.md). Both types run through the
+protocol, terminal, and SDK modules. In the
+[Pi stock-UI trial](../../prototypes/integration/pi-stock-ui/README.md), Pi's
+assistant answers travel as `text/lines` and the terminal lays them out at
+every width beside Pi's own editor and footer; the
+[layout experiment](renderer-layout-and-reflow.md) records why baking layout
+at one width fails.
+
 ## Completed Work and Evidence
 
 The linked records provide scenario details, measurements, commands, and
@@ -57,6 +71,9 @@ limits for each dated checkpoint.
 | Browser consumption credits, 2026-09-16 | Opt-in PTY pause/resume and finite completion; watermark overshoot observed | [PTY pressure](../../prototypes/integration/pty-pressure/README.md) |
 | Producer waiting, 2026-09-17–18 | Synchronous writes waited during paused reading and overlapped the composed browser hold | [Isolated probe](../../prototypes/integration/pty-pressure/upstream.md), [composed run](../../prototypes/integration/pty-pressure/composed.md) |
 | Permanent consumer stall, 2026-09-19 | Stop forwarding, request child termination, observe exit, and fail the connection | [Stall experiment](../../prototypes/integration/pty-pressure/stalled.md) |
+| Styled text content, 2026-10-16–19 | `text/styled` end to end; browser paint, copy, and search checks; ANSI conversion on recorded Pi output | [Styled text draft](../protocol/styled-text.md#experimental-evidence) |
+| Renderer-baked layout, 2026-10-19 | Neither a current-width nor a wide render survives a width change under cell reflow | [Layout experiment](renderer-layout-and-reflow.md) |
+| Line layout content, 2026-10-19–24 | `text/lines` matches Pi's own layout at every width from 20 to 100 columns for a Chinese and nested-list sample; real-Pi browser checks pass at 36 and 60 columns | [Line layout draft](../protocol/lines-text.md#experimental-evidence), [Pi trial](../../prototypes/integration/pi-stock-ui/README.md#line-layout-transcript-content) |
 
 The pressure experiments observed producer waiting even with zero stdout drain
 events, and queues could exceed their high watermark. After partial rendering
@@ -95,14 +112,42 @@ browser checks, and the permanent-consumer-stall check. The latter three
 fixtures use local Windows bundled ConPTY. Normal examples select the trial
 budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
+## Next Steps
+
+Ordered by current priority. State at 2026-10-26: `main` is at commit
+966cb65 plus this update; `pnpm typecheck`, 451 Node tests, and the
+documentation check pass.
+
+1. **Research a second, independent terminal-side implementation.** The
+   [adoption path](adoption-path.md) names it as the next step against the
+   cold-start constraint. Compare candidate terminals and the work each needs
+   for negotiation, mutable history, `text/styled`, and `text/lines`, using
+   primary sources, before building anything. The
+   [xterm lines host](../../prototypes/integration/xterm-lines-host/README.md)
+   is a partial start that uses only public xterm.js APIs.
+2. **Emit layout attributes from the application renderer.** The Pi trial
+   reads layout intent back from rendered shapes
+   ([`lines-from-render.ts`](../../prototypes/integration/pi-stock-ui/lines-from-render.ts)),
+   so tables and other constructs get only word wrapping.
+3. **Relayout without an application redraw.** In region mode the host relies
+   on Pi's resize redraw and clear recovery to re-materialize `text/lines`
+   Blocks; an application that does not redraw keeps cell-reflowed rows. The
+   standalone lines host redraws its whole history per change.
+4. **Long-session behavior:** snapshot reclamation, process memory bounds,
+   and a slow-consumer policy, as listed below.
+
+Pending maintainer decision: whether a `text/lines` fill line takes a
+maximum width ([open design choices](../protocol/lines-text.md#open-design-choices));
+the current implementation fills the display width.
+
 ## Remaining Work and Decision Points
 
 - **Pi integration scope:** the entered-prompt trial and one generated-project
   coding workflow are complete, and stock-UI reuse is verified: the
   [Pi stock-UI trial](../../prototypes/integration/pi-stock-ui/README.md) runs
   Pi's stock interactive UI with a protocol-owned transcript through
-  terminal-host region ownership, with all four browser checks passing
-  (2026-10-03). Real repository access needs a selected project, explicit
+  terminal-host region ownership; its browser checks pass (four on
+  2026-10-03, six including `text/lines` layout on 2026-10-24). Real repository access needs a selected project, explicit
   permissions, and execution isolation. A full fallback frontend and an
   upstream proposal remain follow-up choices; broader adoption is scoped in
   the [adoption path](adoption-path.md).

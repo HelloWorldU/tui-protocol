@@ -83,6 +83,23 @@ project phase transitions, not a changelog. Agents may propose milestone changes
 but must not add, remove, or rewrite milestones without explicit maintainer
 approval.
 
+## Working environment notes
+
+- The current state and ordered next steps are in
+  [docs/design/next-stage-validation.md](docs/design/next-stage-validation.md#next-steps).
+- The maintainer works on Windows with Node.js 24+ and pnpm 11.9.0. PTY-based
+  prototypes, including the Pi stock-UI trial, require Windows bundled ConPTY.
+- Root checks: `pnpm typecheck`, `pnpm test`, and for documentation
+  `pnpm docs:build` followed by `pnpm docs:check` (the check reads the last
+  build, so build first).
+- Browser checks in the desktop app's browser pane need a visible page:
+  xterm.js's DOM renderer and timers pause while the page is hidden, and
+  paint assertions then wait until they time out. `.claude/launch.json`
+  names the prototype servers.
+- Prefer file-editing tools over shell heredocs for source edits; heredocs
+  have turned escapes such as `\n` into literal characters in this
+  repository.
+
 ## Human accountability
 
 Do not submit pull requests produced entirely by a code agent without human

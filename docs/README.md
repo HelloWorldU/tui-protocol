@@ -31,7 +31,7 @@ For an introduction and grouped reading entry points, start with the
 | [Protocol Context semantics](protocol/contexts.md) | Protocol draft | Draft |
 | [Terminal-native behavior](protocol/terminal-native-behavior.md) | Protocol draft | Draft |
 | [First prototype design notes](design/first-prototype.md) | Design note | Working note |
-| [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan; completed checkpoints and remaining trial work |
+| [Next-stage validation plan](design/next-stage-validation.md) | Engineering assessment and priorities | Working plan; current state and ordered next steps (updated 2026-10-26) |
 | [Pi rendering architecture](design/pi-rendering-architecture.md) | Upstream architecture research and integration assessment | Source trace at 0.86.1; 0.87 developments recorded 2026-09-25; trial evidence linked separately |
 | [Pi stock-UI protocol trial](design/pi-stock-ui-trial.md) | Design note | Working draft; component-suppression patch points verified 2026-09-26 |
 | [Pi stock-UI trial prototype](../prototypes/integration/pi-stock-ui/README.md) | Application integration experiment | Path B verified 2026-10-03; styled assistant Blocks 2026-10-19; text/lines assistant Blocks browser-verified 2026-10-24 (six checks through ConPTY) |
