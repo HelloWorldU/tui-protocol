@@ -29,6 +29,10 @@ export interface XtermMixedStreamIngressOptions {
    * re-learned app region. `ESC c` still invalidates.
    */
   readonly clearRecovery?: BlockHistoryClearRecovery;
+  /** Resolves after the ordinary bytes have been parsed, not merely queued. */
+  readonly writeOrdinary?: (data: Uint8Array) => Promise<void>;
+  /** Flushes ordinary decoding after the final event and before Endpoint EOF. */
+  readonly finishOrdinary?: () => Promise<void>;
   readonly onResponseFrame: (frame: Uint8Array) => void;
   readonly onDiagnostic: (diagnostic: EndpointDiagnostic) => void;
 }
@@ -41,6 +45,8 @@ export class XtermMixedStreamIngress implements IDisposable {
   readonly #terminal: Terminal;
   readonly #endpoint: XtermProtocolEndpoint;
   readonly #decoder = new ProtocolStreamDecoder({ emitOrdinaryData: true });
+  readonly #writeOrdinary: (data: Uint8Array) => Promise<void>;
+  readonly #finishOrdinary: (() => Promise<void>) | undefined;
   readonly #onResponseFrame: (frame: Uint8Array) => void;
   readonly #onDiagnostic: (diagnostic: EndpointDiagnostic) => void;
   readonly #region: AppRegionTracker | undefined;
@@ -59,6 +65,8 @@ export class XtermMixedStreamIngress implements IDisposable {
     this.#terminal = terminal;
     this.#budget = options.pendingInputLimits && new PendingInputBudget(options.pendingInputLimits.bytes, options.pendingInputLimits.pushes);
     this.#endpoint = endpoint;
+    this.#writeOrdinary = options.writeOrdinary ?? (data => write(terminal, data));
+    this.#finishOrdinary = options.finishOrdinary;
     this.#onResponseFrame = options.onResponseFrame;
     this.#onDiagnostic = options.onDiagnostic;
     this.#region = options.region;
@@ -176,6 +184,7 @@ export class XtermMixedStreamIngress implements IDisposable {
     this.#ended = true;
     const task = this.#processing.then(async () => {
       await this.#consume(this.#decoder.finish());
+      await this.#finishOrdinary?.();
       this.#dispatch(this.#endpoint.finish());
       await this.#endpoint.drain();
     }).catch((error: unknown) => {
@@ -204,7 +213,7 @@ export class XtermMixedStreamIngress implements IDisposable {
     for (const event of events) {
       if (event.type === "ordinary") {
         this.#noteRegionCursorRow();
-        await write(this.#terminal, event.data);
+        await this.#writeOrdinary(event.data);
         this.#noteRegionEndCursorRow();
         if (
           this.#clearRecovery?.hasPendingRematerialization() &&

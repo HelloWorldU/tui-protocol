@@ -6,11 +6,14 @@ import {
   bufferRows,
   concatenate,
   createMixedFixture as createFixture,
+  createTerminal,
   encodeInput,
   openMixedContext as openContext,
   text,
   update,
 } from "./test-support.ts";
+import { XtermProtocolEndpoint } from "./endpoint.ts";
+import { XtermMixedStreamIngress } from "./mixed-ingress.ts";
 
 test("one mixed chunk renders Block A, ordinary output, and Block B in order, and a later Update moves only the later history", async () => {
   const fixture = createFixture();
@@ -96,4 +99,25 @@ test("a second mixed-stream push cannot overtake an earlier push that is still r
   assert.deepEqual(fixture.responseFrames, []);
   assert.deepEqual(fixture.diagnostics, []);
   fixture.dispose();
+});
+
+test("ordinary finalization runs after the last ordinary event", async () => {
+  const terminal = createTerminal();
+  const endpoint = new XtermProtocolEndpoint(terminal, { completeBaselineSupported: true });
+  const events: string[] = [];
+  const ingress = new XtermMixedStreamIngress(terminal, endpoint, {
+    writeOrdinary: async data => { events.push(new TextDecoder().decode(data)); },
+    finishOrdinary: async () => { events.push("ordinary-finished"); },
+    onResponseFrame: () => {},
+    onDiagnostic: () => {},
+  });
+  try {
+    await ingress.push(text("ordinary"));
+    await ingress.finish();
+    assert.deepEqual(events, ["ordinary", "ordinary-finished"]);
+  } finally {
+    ingress.dispose();
+    endpoint.dispose();
+    terminal.dispose();
+  }
 });
