@@ -1,6 +1,6 @@
 # Adoption path and the cold-start constraint
 
-Working note, 2026-10-11. This note records what broad adoption of the
+Working note, 2026-10-11; ladder revised 2026-10-26. This note records what broad adoption of the
 protocol would mean and the realistic path toward it. It is a strategy note,
 not a protocol document.
 
@@ -29,15 +29,21 @@ through advocacy.
    the [Pi stock-UI trial](../../prototypes/integration/pi-stock-ui/README.md)
    runs Pi's stock interactive UI with a protocol-owned transcript, with all
    four browser checks passing.
-2. **A second terminal-side implementation**, independent of the current
-   host code — proving the receiver side is not captive to one codebase.
-   Candidates: another xterm.js-family host (several widely used terminals
-   share that rendering engine), or a small extension to a scriptable
-   emulator.
+2. **A runnable, demonstrable terminal.** Terminals are made by their
+   vendors, not by this project; what the project can do is make the case
+   self-evident. A standalone demo terminal that runs the real Pi beside an
+   ordinary shell, a side-by-side comparison with an ordinary terminal, and a
+   vendor kit (protocol summary, embeddable reference implementation,
+   integration guide, conformance checks) let a vendor judge the value
+   directly. Revised 2026-10-26 from "build a second terminal-side
+   implementation ourselves": a vendor's integration is the independent
+   second implementation that breaks the loop.
 3. **A second application-side integration** — another agent TUI, or Pi
    through an official seam if upstream interest materializes — proving the
-   sender side is not captive either.
-4. **Community conversations**, only then, with working, dated,
+   sender side is not captive either. Vendors will ask which applications use
+   the protocol; until then the answer is Pi, unmodified, with fallback in
+   ordinary terminals.
+4. **Vendor and community conversations**, only then, with working, dated,
    reproducible evidence rather than proposals.
 
 ## How comparable mechanisms spread

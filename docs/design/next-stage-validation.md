@@ -114,27 +114,45 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
 ## Next Steps
 
-Ordered by current priority. State at 2026-10-26: `main` is at commit
-966cb65 plus this update; `pnpm typecheck`, 451 Node tests, and the
-documentation check pass.
+Ordered by current priority, following the demo-first strategy in the
+[adoption path](adoption-path.md#the-realistic-ladder-ordered) (revised
+2026-10-26). State at 2026-10-26: `pnpm typecheck`, 451 Node tests, and the
+documentation check pass on `main`.
 
-1. **Research a second, independent terminal-side implementation.** The
-   [adoption path](adoption-path.md) names it as the next step against the
-   cold-start constraint. Compare candidate terminals and the work each needs
-   for negotiation, mutable history, `text/styled`, and `text/lines`, using
-   primary sources, before building anything. The
+1. **A standalone demo terminal.** An installable desktop program (for
+   example Electron with xterm.js, node-pty, and the terminal module) that
+   runs the real Pi and an ordinary shell in one window, with the protocol
+   host built in. It replaces the browser test pages as the thing people
+   run. Building it includes moving the host off private xterm.js internals
+   onto public APIs, as the
    [xterm lines host](../../prototypes/integration/xterm-lines-host/README.md)
-   is a partial start that uses only public xterm.js APIs.
-2. **Emit layout attributes from the application renderer.** The Pi trial
-   reads layout intent back from rendered shapes
-   ([`lines-from-render.ts`](../../prototypes/integration/pi-stock-ui/lines-from-render.ts)),
-   so tables and other constructs get only word wrapping.
-3. **Relayout without an application redraw.** In region mode the host relies
-   on Pi's resize redraw and clear recovery to re-materialize `text/lines`
-   Blocks; an application that does not redraw keeps cell-reflowed rows. The
-   standalone lines host redraws its whole history per change.
-4. **Long-session behavior:** snapshot reclamation, process memory bounds,
-   and a slow-consumer policy, as listed below.
+   already does, and enough robustness for a long demo session.
+2. **A side-by-side demonstration.** The same Pi session in an ordinary
+   terminal and in the demo terminal: layout after resize, updates to content
+   already in scrollback, a stable reading position, and copy and search on
+   logical text. A scripted walkthrough and a recording, plus Pi's unmodified
+   fallback in the ordinary terminal.
+3. **A terminal vendor kit.** What a terminal maker needs to evaluate and
+   embed the receiver side: a concise protocol summary, the terminal module as
+   an embeddable reference implementation under its Apache-2.0 license, a
+   host-adapter integration guide, and the conformance checks to run.
+4. **Vendor conversations**, only after 1–3, with dated, reproducible
+   evidence. A vendor's own integration then becomes the independent second
+   terminal-side implementation.
+
+Supporting work, scheduled when the demo needs it:
+
+- **Emit layout attributes from the application renderer.** The Pi trial
+  reads layout intent back from rendered shapes
+  ([`lines-from-render.ts`](../../prototypes/integration/pi-stock-ui/lines-from-render.ts)),
+  so tables and other constructs get only word wrapping.
+- **Relayout without an application redraw.** In region mode the host relies
+  on Pi's resize redraw and clear recovery to re-materialize `text/lines`
+  Blocks; an application that does not redraw keeps cell-reflowed rows.
+- **Long-session behavior:** snapshot reclamation, process memory bounds,
+  and a slow-consumer policy, as listed below.
+- **Platforms:** only Windows bundled ConPTY is verified; macOS, Linux, SSH,
+  and tmux are untested.
 
 Pending maintainer decision: whether a `text/lines` fill line takes a
 maximum width ([open design choices](../protocol/lines-text.md#open-design-choices));
