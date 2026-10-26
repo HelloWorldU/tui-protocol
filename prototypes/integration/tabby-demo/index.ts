@@ -10,28 +10,18 @@ import {
 } from "tabby-terminal";
 import { TabbyProtocolReceiver } from "./receiver.ts";
 import { StreamingOrdinaryWriter } from "./ordinary-writer.ts";
+import { readTabbyXtermDependency, TabbyXtermCompatibilityGate } from "./compatibility.ts";
 
 class TuiProtocolSessionMiddleware extends SessionMiddleware {
   readonly #receiver: TabbyProtocolReceiver;
 
-  constructor(
-    terminal: XTermFrontend["xterm"],
-    writeText: (text: string) => Promise<void>,
-    onFailure: (error: Error) => void,
-  ) {
+  constructor(receiver: TabbyProtocolReceiver) {
     super();
-    const ordinary = new StreamingOrdinaryWriter({
-      write: writeText,
-      settle: () => new Promise<void>(resolve => terminal.write("", resolve)),
-    });
-    this.#receiver = new TabbyProtocolReceiver({
-      terminal,
-      writeOrdinary: data => ordinary.write(data),
-      finishOrdinary: () => ordinary.finish(),
-      onResponseFrame: frame => this.outputToSession.next(Buffer.from(frame)),
-      onDiagnostic: diagnostic => console.error("tui-protocol:", diagnostic.reason),
-      onFailure,
-    });
+    this.#receiver = receiver;
+  }
+
+  respond(frame: Uint8Array): void {
+    this.outputToSession.next(Buffer.from(frame));
   }
 
   override feedFromSession(data: Buffer): void {
@@ -56,23 +46,48 @@ interface AttachedSession {
 @Injectable()
 class TuiProtocolDecorator extends TerminalDecorator {
   readonly #attached = new Map<BaseTerminalTabComponent<any>, AttachedSession>();
+  readonly #compatibility: TabbyXtermCompatibilityGate;
+  readonly #notifications: NotificationsService;
 
-  constructor(@Inject(NotificationsService) private notifications: NotificationsService) {
+  constructor(@Inject(NotificationsService) notifications: NotificationsService) {
     super();
+    this.#notifications = notifications;
+    this.#compatibility = new TabbyXtermCompatibilityGate(reason => {
+      console.error("tui-protocol compatibility check failed:", reason);
+      notifications.error(`TUI protocol is disabled: ${reason}. Ordinary terminal output remains available.`);
+    });
   }
 
   override attach(terminal: BaseTerminalTabComponent<any>): void {
     const attachSession = (session: BaseSession | null) => {
       this.#detachSession(terminal);
       if (session === null || !(terminal.frontend instanceof XTermFrontend)) return;
-      const middleware = new TuiProtocolSessionMiddleware(
-        terminal.frontend.xterm,
-        text => terminal.write(text),
-        error => {
-          console.error("tui-protocol receiver failed:", error);
-          this.notifications.error("TUI protocol stopped. Close this tab before retrying.");
+      const frontend = terminal.frontend.xterm;
+      const middleware = this.#compatibility.activate(
+        frontend,
+        readTabbyXtermDependency(),
+        () => {
+          const ordinary = new StreamingOrdinaryWriter({
+            write: text => terminal.write(text),
+            settle: () => new Promise<void>(resolve => frontend.write("", resolve)),
+          });
+          let middleware!: TuiProtocolSessionMiddleware;
+          const receiver = new TabbyProtocolReceiver({
+            terminal: frontend,
+            writeOrdinary: data => ordinary.write(data),
+            finishOrdinary: () => ordinary.finish(),
+            onResponseFrame: frame => middleware.respond(frame),
+            onDiagnostic: diagnostic => console.error("tui-protocol:", diagnostic.reason),
+            onFailure: error => {
+              console.error("tui-protocol receiver failed:", error);
+              this.#notifications.error("TUI protocol stopped. Close this tab before retrying.");
+            },
+          });
+          middleware = new TuiProtocolSessionMiddleware(receiver);
+          return middleware;
         },
       );
+      if (middleware === undefined) return;
       const restorePassthrough = terminal.enablePassthrough;
       terminal.enablePassthrough = false;
       session.middleware.unshift(middleware);

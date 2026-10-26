@@ -20,13 +20,39 @@ middleware is inserted before Tabby's OSC processor. Input uses the existing
 middleware path unchanged.
 
 This is a development spike, not the completed demo terminal. It still depends
-on private xterm.js internals through `PrivateCoreBlockHistory`. The public-API
-migration, long-session policy, and platforms other than Windows bundled
-ConPTY remain open. Independent protocol applications can run sequentially in
-one tab: each SDK client has a distinct request-ID namespace, so control replay
-cannot return an earlier application's closed Context. Recovery of an abandoned
-open Context remains undefined. Multiple rounds within one Pi process are
-supported.
+on private xterm.js internals through `PrivateCoreBlockHistory`. The
+long-session policy and platforms other than Windows bundled ConPTY remain
+open. Independent protocol applications can run sequentially in one tab: each
+SDK client has a distinct request-ID namespace, so control replay cannot return
+an earlier application's closed Context. Recovery of an abandoned open Context
+remains undefined. Multiple rounds within one Pi process are supported.
+
+## Plugin-only xterm compatibility
+
+The plugin deliberately retains ordinary output and protocol Blocks in one
+xterm history; a second xterm instance would no longer demonstrate that shared
+history. Using private internals is an acceptable limitation for this research
+plugin, not a requirement for terminal vendors: a native integration controls
+its own buffer implementation and does not need this adapter.
+
+Before activating a terminal session, `compatibility.ts` reads Tabby's own
+`tabby-terminal/package.json` declaration and checks the private surface used
+by the history adapter: `_core._bufferService`, the active buffer's numeric
+state, `lines.get`/`splice`, markers, blank-line copying, and `_onScroll.fire`.
+Only the tested `^5` declaration is accepted. [Tabby 1.0.238's manifest](https://github.com/Eugeny/tabby/blob/v1.0.238/tabby-terminal/package.json#L21-L31)
+uses that declaration, and its [official lockfile](https://github.com/Eugeny/tabby/blob/v1.0.238/tabby-terminal/yarn.lock#L48-L51)
+resolves xterm.js 5.5.0. Tabby bundles xterm.js without exposing its package
+through `require("@xterm/xterm/package.json")`, so the runtime check combines
+Tabby's declared version range with the actual private structure; it is not an
+independent read of the exact bundled xterm.js version.
+
+A version mismatch, missing or malformed field, or receiver construction
+failure prevents receiver construction and middleware insertion and leaves
+passthrough unchanged. The capability query therefore receives no response,
+allowing the application to take its normal stock-rendering path. One shared
+decorator gate reports the compatibility failure once per loaded plugin
+instance, rather than once per tab. New or forked hosts must be verified before
+their version declaration is accepted.
 
 ## Build and check
 
@@ -45,7 +71,8 @@ bundled. Workspace-only dependency declarations are removed from the prepared
 package.
 
 The tests cover split UTF-8 and SDK negotiation, response routing, ordinary
-output, historical Block Update, lifecycle, and real SDK children through
+output, historical Block Update, lifecycle, compatibility rejection before
+receiver construction, and one-time notification. Real SDK children run through
 Windows bundled ConPTY, including two sequential children on one receiver. The
 desktop evidence below complements those checks.
 
@@ -61,7 +88,15 @@ desktop evidence below complements those checks.
   closed Context.
 - The real Pi stock UI completes two consecutive rounds with the deterministic
   local provider. Both Contexts and all eight Blocks are closed/sealed; a
-  700/1002-pixel viewport round trip preserves them.
+  700/1002-pixel viewport round trip preserves them. Repeating the two-round
+  check with the compatibility guard produced two closed Contexts and eight
+  sealed Blocks, including both distinct user prompts.
+- An artifact-only fault injection changed the accepted declaration to `^999`
+  while Tabby supplied `^5`. Two terminal tabs had no protocol middleware and
+  retained passthrough. The first attachment logged one compatibility warning;
+  the second produced no further warning. Real Pi printed its unsupported-
+  protocol message, entered stock mode, and completed one round with one copy
+  of the prompt and result. The injected change was confined to `.tmp`.
 - The initial second-round failure isolated a timing requirement: Tabby's
   small-write flow-control path may resolve before xterm has parsed the data.
   Waiting for a subsequent xterm write callback before sampling the cursor

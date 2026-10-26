@@ -116,7 +116,7 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
 Ordered by current priority, following the demo-first strategy in the
 [adoption path](adoption-path.md#the-realistic-ladder-ordered) (revised
-2026-10-26). State at 2026-10-26: `pnpm typecheck`, 459 Node tests, and the
+2026-10-26). State at 2026-10-26: `pnpm typecheck`, 466 Node tests, and the
 documentation check pass on `main`.
 
 1. **A runnable demo terminal.** First, research whether the receiver side
@@ -129,11 +129,11 @@ documentation check pass on `main`.
    module) that runs the real Pi and an ordinary shell in one window, with
    the protocol host built in. Either way, an ordinary terminal cannot show
    the protocol: it ignores the capability query, so a protocol-enabled Pi
-   falls back to its stock rendering there. It replaces the browser test pages as the thing people
-   run. Building it includes moving the host off private xterm.js internals
-   onto public APIs, as the
-   [xterm lines host](../../prototypes/integration/xterm-lines-host/README.md)
-   already does, and enough robustness for a long demo session.
+   falls back to its stock rendering there. It replaces the browser test pages
+   as the thing people run. The demonstration must retain protocol Blocks and
+   ordinary output in one terminal history, with enough robustness for a long
+   demo session. A terminal vendor's native integration can control its own
+   buffer directly rather than reuse a plugin's xterm.js adapter.
 
    Progress, 2026-10-26: the plugin approach is feasible and the
    [Tabby vertical slice](../../prototypes/integration/tabby-demo/README.md)
@@ -141,8 +141,12 @@ documentation check pass on `main`.
    an SDK round trip, two real Pi stock-UI rounds, resize recovery, and two
    sequential independent SDK applications in one tab. Request IDs are now
    namespaced per SDK client, so later applications cannot receive an earlier
-   application's cached closed Context. Before this becomes the runnable demo,
-   it still needs migration onto public xterm.js APIs and a long-session policy.
+   application's cached closed Context. The single-history plugin retains its
+   private history adapter, guarded by a host-version declaration and private-
+   structure check before activation. Incompatible hosts leave the capability
+   query unanswered and notify once, allowing ordinary application fallback;
+   both this path and the compatible two-round Pi path have desktop evidence.
+   The remaining blocker for a longer demonstration is the long-session policy.
 2. **A side-by-side demonstration.** The same Pi session in an ordinary
    terminal and in the demo terminal: layout after resize, updates to content
    already in scrollback, a stable reading position, and copy and search on
