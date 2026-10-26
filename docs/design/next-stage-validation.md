@@ -119,10 +119,17 @@ Ordered by current priority, following the demo-first strategy in the
 2026-10-26). State at 2026-10-26: `pnpm typecheck`, 451 Node tests, and the
 documentation check pass on `main`.
 
-1. **A standalone demo terminal.** An installable desktop program (for
-   example Electron with xterm.js, node-pty, and the terminal module) that
-   runs the real Pi and an ordinary shell in one window, with the protocol
-   host built in. It replaces the browser test pages as the thing people
+1. **A runnable demo terminal.** First, research whether the receiver side
+   can ship as a plugin of an existing terminal built on xterm.js (for
+   example Hyper or Tabby): whether their plugin APIs expose the terminal
+   instance, its buffer, and the PTY byte stream, verified from their
+   official documentation or source. A plugin in a terminal people already
+   use is a stronger demonstration. Otherwise, build an installable desktop
+   program (for example Electron with xterm.js, node-pty, and the terminal
+   module) that runs the real Pi and an ordinary shell in one window, with
+   the protocol host built in. Either way, an ordinary terminal cannot show
+   the protocol: it ignores the capability query, so a protocol-enabled Pi
+   falls back to its stock rendering there. It replaces the browser test pages as the thing people
    run. Building it includes moving the host off private xterm.js internals
    onto public APIs, as the
    [xterm lines host](../../prototypes/integration/xterm-lines-host/README.md)
