@@ -218,3 +218,89 @@ test("two sequential SDK children on one receiver get fresh Contexts and retain 
     terminal.dispose();
   }
 });
+
+test("closed Context reclamation allows twenty rounds without retaining Session snapshots", async () => {
+  const terminal = createTerminal();
+  const failures: Error[] = [];
+  let client!: TuiClient;
+  const receiver = new TabbyProtocolReceiver({
+    terminal: terminal as unknown as BrowserTerminal,
+    region: false,
+    reclaimClosedContexts: true,
+    onResponseFrame: frame => { client.receive(frame); },
+    onFailure: error => failures.push(error),
+  });
+  client = new TuiClient({ write: bytes => receiver.feed(bytes) });
+  try {
+    assert.equal(await client.negotiate(), true);
+    for (let round = 1; round <= 20; round += 1) {
+      const context = await client.openContext();
+      context.append("answer", `round ${round}`, "sealed");
+      await context.close();
+      await receiver.drain();
+      assert.deepEqual(receiver.contexts(), []);
+      assert.equal(receiver.metrics().closedContexts, round);
+      assert.equal(receiver.metrics().lastReclaimedContextId, `context-${round}`);
+    }
+    assert.deepEqual(receiver.metrics(), {
+      reclaimClosedContexts: true,
+      closedContexts: 20,
+      closedBlocks: 20,
+      sealedBlocks: 20,
+      lastReclaimedContextId: "context-20",
+      renderedBlocks: 20,
+    });
+    await receiver.finish();
+    assert.deepEqual(failures, []);
+  } finally {
+    client.dispose();
+    receiver.dispose();
+    terminal.dispose();
+  }
+});
+
+test("reclaimed sequential children retain rendered history until native reset cleanup", { skip: process.platform !== "win32" }, async () => {
+  const terminal = createTerminal();
+  const failures: Error[] = [];
+  const ordinary: string[] = [];
+  let activeChild: pty.IPty | undefined;
+  const receiver = new TabbyProtocolReceiver({
+    terminal: terminal as unknown as BrowserTerminal,
+    reclaimClosedContexts: true,
+    writeOrdinary: async data => {
+      ordinary.push(Buffer.from(data).toString());
+      await new Promise<void>(resolve => terminal.write(data, resolve));
+    },
+    onResponseFrame: frame => { activeChild?.write(Buffer.from(frame).toString()); },
+    onFailure: error => failures.push(error),
+  });
+  try {
+    assert.equal(await runSdkChild(receiver, child => { activeChild = child; }), 0);
+    await receiver.drain();
+    assert.equal(receiver.metrics().closedContexts, 1);
+    assert.equal(receiver.metrics().renderedBlocks, 1);
+    assert.deepEqual(receiver.contexts(), []);
+    assert.equal(await runSdkChild(receiver, child => { activeChild = child; }), 0);
+    await receiver.drain();
+    assert.equal(receiver.metrics().closedContexts, 2);
+    assert.equal(receiver.metrics().lastReclaimedContextId, "context-2");
+    assert.equal(receiver.metrics().renderedBlocks, 2);
+    const rendered = bufferText(terminal);
+    assert.equal(occurrences(rendered, "UPDATED_BLOCK"), 2);
+    assert.equal(occurrences(ordinary.join(""), "SHELL_BEFORE"), 2);
+    assert.equal(occurrences(ordinary.join(""), "SHELL_AFTER"), 2);
+
+    receiver.feed(Buffer.from("\x1bc"));
+    await receiver.drain();
+    assert.equal(receiver.range("context-1", "answer"), undefined);
+    assert.equal(receiver.range("context-2", "answer"), undefined);
+    assert.equal(receiver.metrics().renderedBlocks, 0);
+    assert.equal(receiver.metrics().closedContexts, 2);
+    assert.deepEqual(receiver.contexts(), []);
+    await receiver.finish();
+    assert.deepEqual(failures, []);
+  } finally {
+    receiver.dispose();
+    terminal.dispose();
+  }
+});

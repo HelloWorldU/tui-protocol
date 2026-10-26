@@ -13,8 +13,12 @@ try {
   // Scenario-specific fixture pacing via the PTY bridge; default keeps turns quick.
   const pace = Number(process.env.PI_TRIAL_PACE);
   const pacing = Number.isInteger(pace) && pace > 0 && pace <= 10_000 ? pace : 600;
+  const requestedBudget = Number(process.env.PI_TRIAL_MAX_REQUESTS);
+  const requestBudget = Number.isInteger(requestedBudget) && requestedBudget >= 1 && requestedBudget <= 10_000
+    ? requestedBudget
+    : 4;
   process.stdout.write(`[pi-stock-ui] fixture pacing ${pacing}ms\r\n`);
-  const fixture = await createFixtureModel(pacing, undefined, 4,
+  const fixture = await createFixtureModel(pacing, undefined, requestBudget,
     // The manual page opts into markdown fixture text (?demo=1) so the styled
     // path has visible styling; automated checks keep the plain default.
     process.env.PI_TRIAL_DEMO_TEXT === "1"

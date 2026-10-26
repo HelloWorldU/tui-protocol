@@ -173,6 +173,19 @@ export class TerminalPrototype {
     return this.#blocks.map((block) => ({ ...block }));
   }
 
+  /** Removes render content without representing a protocol lifecycle change. */
+  remove(id: BlockId): boolean {
+    const index = this.#blockIndexes.get(id);
+    if (index === undefined) return false;
+    this.#blocks.splice(index, 1);
+    this.#blockIndexes.delete(id);
+    for (let next = index; next < this.#blocks.length; next += 1) {
+      this.#blockIndexes.set(this.#blocks[next].id, next);
+    }
+    if (this.#anchor?.blockId === id) this.#anchor = undefined;
+    return true;
+  }
+
   allRows(): readonly RenderedRow[] {
     return layoutBlocks(this.#blocks, this.#dimensions.width);
   }

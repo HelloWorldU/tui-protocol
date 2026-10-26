@@ -74,6 +74,7 @@ limits for each dated checkpoint.
 | Styled text content, 2026-10-16–19 | `text/styled` end to end; browser paint, copy, and search checks; ANSI conversion on recorded Pi output | [Styled text draft](../protocol/styled-text.md#experimental-evidence) |
 | Renderer-baked layout, 2026-10-19 | Neither a current-width nor a wide render survives a width change under cell reflow | [Layout experiment](renderer-layout-and-reflow.md) |
 | Line layout content, 2026-10-19–24 | `text/lines` matches Pi's own layout at every width from 20 to 100 columns for a Chinese and nested-list sample; real-Pi browser checks pass at 36 and 60 columns | [Line layout draft](../protocol/lines-text.md#experimental-evidence), [Pi trial](../../prototypes/integration/pi-stock-ui/README.md#line-layout-transcript-content) |
+| Long-session retention, 2026-10-27 | Twenty real Pi rounds in one Tabby tab; 20 Contexts and 42 sealed Blocks; zero retained Session snapshots; resize and sequential-SDK checks; measured browser/renderer memory | [Tabby long-session evidence](../../prototypes/integration/tabby-demo/README.md#long-session-and-reclamation-evidence-2026-10-27) |
 
 The pressure experiments observed producer waiting even with zero stdout drain
 events, and queues could exceed their high watermark. After partial rendering
@@ -92,9 +93,10 @@ clamping loses separate off-tail reading intent.
 2. **Resource accounting.** [Trial budgets](trial-resource-budgets.md) bound
    selected retained content, identity/replay structures, and owned pending
    input. Content overflow rejects atomically; identity/replay exhaustion stops
-   execution rather than forgetting protocol meaning. Closed and evicted
-   records remain charged. Hosts opt into these local limits; total process
-   memory and reclamation still need separate handling.
+   execution rather than forgetting protocol meaning. Without explicit
+   reclamation, closed and evicted records remain charged. Hosts opt into these
+   local limits; [closed-Context reclamation](trial-resource-budgets.md#closed-context-reclamation)
+   and long-session memory measurements are recorded separately.
 3. **Application failure handling.** [Lifecycle tests](../../examples/streaming-text/lifecycle.test.mjs)
    distinguish unsupported/silent startup negotiation from failure after
    protocol output starts. Tested runtime failures stop later sends without
@@ -116,7 +118,7 @@ budgets but still omit the pressure fixtures' consumption credits/watchdog.
 
 Ordered by current priority, following the demo-first strategy in the
 [adoption path](adoption-path.md#the-realistic-ladder-ordered) (revised
-2026-10-26). State at 2026-10-26: `pnpm typecheck`, 466 Node tests, and the
+2026-10-26). State at 2026-10-27: `pnpm typecheck`, 471 Node tests, and the
 documentation check pass on `main`.
 
 1. **A runnable demo terminal.** First, research whether the receiver side
@@ -135,18 +137,27 @@ documentation check pass on `main`.
    demo session. A terminal vendor's native integration can control its own
    buffer directly rather than reuse a plugin's xterm.js adapter.
 
-   Progress, 2026-10-26: the plugin approach is feasible and the
+   Progress, 2026-10-27: the plugin approach is feasible and the
    [Tabby vertical slice](../../prototypes/integration/tabby-demo/README.md)
    is complete. It loads in Tabby 1.0.238 and verifies ordinary shell output,
-   an SDK round trip, two real Pi stock-UI rounds, resize recovery, and two
-   sequential independent SDK applications in one tab. Request IDs are now
-   namespaced per SDK client, so later applications cannot receive an earlier
-   application's cached closed Context. The single-history plugin retains its
-   private history adapter, guarded by a host-version declaration and private-
-   structure check before activation. Incompatible hosts leave the capability
-   query unanswered and notify once, allowing ordinary application fallback;
-   both this path and the compatible two-round Pi path have desktop evidence.
-   The remaining blocker for a longer demonstration is the long-session policy.
+   an SDK round trip, real Pi stock-UI rounds, resize recovery, and sequential
+   independent SDK applications in one tab. Request IDs are namespaced per SDK
+   client, so later applications cannot receive an earlier application's cached
+   closed Context. The single-history plugin retains its private history
+   adapter, guarded by a host-version declaration and private-structure check
+   before activation. Incompatible hosts leave the capability query unanswered
+   and notify once, allowing ordinary application fallback.
+
+   Closed-Context reclamation and full-eviction projection cleanup now support
+   the planned live-demo scope. One real Pi process in one Tabby tab completed
+   20 rounds with 20 Contexts and 42 sealed Blocks, no retained Session
+   snapshots, and no protocol errors. A resize round trip and two sequential
+   SDK applications also passed. The
+   [long-session record](../../prototypes/integration/tabby-demo/README.md#long-session-and-reclamation-evidence-2026-10-27)
+   includes the measurement method and browser/renderer memory table. This is
+   sufficient for the planned demonstration, not an unlimited-session guarantee:
+   open/invalidated recovery, the 1,024-result replay cap, slow consumers, and
+   other platforms remain limitations.
 2. **A side-by-side demonstration.** The same Pi session in an ordinary
    terminal and in the demo terminal: layout after resize, updates to content
    already in scrollback, a stable reading position, and copy and search on
@@ -169,8 +180,11 @@ Supporting work, scheduled when the demo needs it:
 - **Relayout without an application redraw.** In region mode the host relies
   on Pi's resize redraw and clear recovery to re-materialize `text/lines`
   Blocks; an application that does not redraw keeps cell-reflowed rows.
-- **Long-session behavior:** snapshot reclamation, process memory bounds,
-  and a slow-consumer policy, as listed below.
+- **Long-session behavior:** closed-Context reclamation and full-eviction
+  projection cleanup are implemented, with
+  [retention semantics](trial-resource-budgets.md#closed-context-reclamation)
+  and [20-round memory evidence](../../prototypes/integration/tabby-demo/README.md#long-session-and-reclamation-evidence-2026-10-27).
+  Longer steady-state behavior and a slow-consumer policy remain open.
 - **Propose public history-line editing in xterm.js, long term.** Research on
   2026-10-27 found related discussion but no public API covering this need: the
   current [`IBuffer`](https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts#L1631-L1686)
@@ -203,9 +217,11 @@ Supporting work, scheduled when the demo needs it:
   permissions, and execution isolation. A full fallback frontend and an
   upstream proposal remain follow-up choices; broader adoption is scoped in
   the [adoption path](adoption-path.md).
-- **Capacity and retention:** partial-Block or unmanaged-row eviction, general
-  snapshot reclamation, and long-session behavior remain open. Full-Block
-  eviction follows the [existing semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity).
+- **Capacity and retention:** [closed-Context reclamation](trial-resource-budgets.md#closed-context-reclamation)
+  has 20-round evidence, and full-eviction projection cleanup has focused tests.
+  Partial-Block or unmanaged-row eviction, open/invalidated reclamation, and
+  longer steady-state behavior remain open. Full-Block eviction follows the
+  [existing semantics](../protocol/terminal-native-behavior.md#5-scrollback-capacity).
 - **Failure and pressure:** automatic rollback/recovery, whole-process memory
   bounds, fairness, and a policy for slow-but-progressing consumers remain open.
   See the [host contract](../../terminal/README.md#host-adapter-boundary).

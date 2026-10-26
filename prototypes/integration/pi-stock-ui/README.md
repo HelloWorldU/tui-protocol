@@ -318,6 +318,12 @@ pnpm test
 pnpm build:pi-stock-ui
 ```
 
+For bounded long-session runs, `main.ts` also accepts `PI_TRIAL_PACE` (default
+600 ms) and `PI_TRIAL_MAX_REQUESTS` (default 4). The
+[Tabby long-session check](../tabby-demo/README.md#long-session-and-reclamation-evidence-2026-10-27)
+sets both for one continuous local-fixture conversation. It uses no model
+network or credentials.
+
 `record-ansi.ts` re-records the SDK's real-output ANSI fixture: one stock-mode
 turn with the markdown text through bundled ConPTY at 60x24, with the temp
 working directory replaced by `<trial-cwd>`.

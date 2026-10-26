@@ -184,6 +184,29 @@ export class TerminalProtocolSession {
   }
 
   /**
+   * Releases a closed Context's retained content and Operation identity records
+   * after the host has established an independent rendering projection. The
+   * Context ID is never reused, closure remains idempotent, and cached control
+   * replay is unchanged. Reclaimed snapshots disappear from context() and
+   * contexts(); open and invalidated Contexts cannot be reclaimed.
+   */
+  reclaimClosedContext(id: string): SessionContextSnapshot | undefined {
+    this.#assertCanProcess();
+    const context = this.#contexts.get(id);
+    if (context === undefined || context.state !== "closed") {
+      return undefined;
+    }
+    const snapshot = snapshotContext(context);
+    for (const block of context.blocks) {
+      this.#contentUnits -= contentCodeUnits(block.content);
+    }
+    this.#blockCount -= context.blocks.length;
+    this.#operationCount -= context.operationIds.size;
+    this.#contexts.delete(id);
+    return snapshot;
+  }
+
+  /**
    * Host-side integrity boundary for frame-external terminal traffic that has
    * made one Context's rendered Block mapping unreliable. It is not a
    * protocol Message and produces no response.
@@ -315,11 +338,15 @@ export class TerminalProtocolSession {
 
   #closeContext(request: ContextClose): Message {
     const context = this.#contexts.get(request.context_id);
-    if (context === undefined || context.state === "invalidated") {
+    if (context === undefined && !this.#isReclaimedClosedContext(request.context_id)) {
       return controlError(request, "context_not_open");
     }
-
-    closeStoredContext(context);
+    if (context?.state === "invalidated") {
+      return controlError(request, "context_not_open");
+    }
+    if (context !== undefined) {
+      closeStoredContext(context);
+    }
 
     return {
       version: 1,
@@ -328,6 +355,14 @@ export class TerminalProtocolSession {
       context_id: request.context_id,
       body: { outcome: "closed" },
     };
+  }
+
+  #isReclaimedClosedContext(id: string): boolean {
+    if (this.#contexts.has(id)) return false;
+    const match = /^context-([1-9]\d*)$/.exec(id);
+    if (match === null) return false;
+    const sequence = Number(match[1]);
+    return Number.isSafeInteger(sequence) && sequence < this.#nextContextId;
   }
 
   #prepareOperation(operation: BlockOperation): OperationPreparation {

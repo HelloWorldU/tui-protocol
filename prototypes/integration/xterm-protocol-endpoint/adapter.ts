@@ -1,7 +1,7 @@
 import type { IDisposable, Terminal } from "@xterm/headless";
 
 import type { ContentFragment, ContentSnapshot, LinesTextLine } from "@tui-protocol/protocol";
-import type { BlockContent, Operation } from "../../block-model/model.ts";
+import type { Block, BlockContent, Operation } from "../../block-model/model.ts";
 import type { OperationExecutionErrorCode } from "@tui-protocol/terminal";
 import { PrivateCoreBlockHistory } from "../../xterm-headless/private-core-history.ts";
 import type {
@@ -14,12 +14,20 @@ export interface RenderedBlockRange {
   readonly lineCount: number;
 }
 
+export interface RenderedBlock {
+  readonly contextId: string;
+  readonly blockId: string;
+  readonly range: Readonly<RenderedBlockRange>;
+}
+
 export interface XtermBlockHistory extends IDisposable {
   wouldExceedCapacity(operation: Operation): boolean;
   accept(operation: Operation): void;
   renderAccepted(operation: Operation): Promise<void>;
   range(id: string): Readonly<RenderedBlockRange> | undefined;
   retire(id: string): void;
+  blocks?(): readonly Block[];
+  reclaimContext?(contextId: string): void;
   /** Resolves when renders and resize relayouts have reached the buffer. */
   settled?(): Promise<void>;
 }
@@ -86,6 +94,27 @@ export class XtermTerminalAdapter
     for (const blockId of blockIds) {
       this.#history.retire(renderBlockId(contextId, blockId));
     }
+  }
+
+  supportsContextReclamation(): boolean {
+    return this.#history.blocks !== undefined && this.#history.reclaimContext !== undefined;
+  }
+
+  renderedBlocks(): readonly RenderedBlock[] | undefined {
+    const blocks = this.#history.blocks?.();
+    if (blocks === undefined) return undefined;
+    const rendered: RenderedBlock[] = [];
+    for (const block of blocks) {
+      const range = this.#history.range(block.id);
+      if (range === undefined) continue;
+      const [contextId, blockId] = JSON.parse(block.id) as readonly [string, string];
+      rendered.push({ contextId, blockId, range });
+    }
+    return rendered;
+  }
+
+  reclaimContext(contextId: string): void {
+    this.#history.reclaimContext?.(contextId);
   }
 
   dispose(): void {

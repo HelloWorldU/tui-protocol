@@ -5,7 +5,8 @@ This in-memory prototype tests the semantic model from
 
 The model provides:
 
-- append-only Block order;
+- append-only Block order during normal Operations;
+- explicit render-projection removal without changing protocol identity or lifecycle;
 - full-snapshot updates to mutable Blocks;
 - tail extension of mutable Blocks;
 - Unicode-scalar suffix replacement of mutable Blocks;

@@ -109,6 +109,10 @@ export class TerminalProtocolEndpoint {
     return this.#session.contexts();
   }
 
+  reclaimClosedContext(id: string): SessionContextSnapshot | undefined {
+    return this.#session.reclaimClosedContext(id);
+  }
+
   /** Stop an untrustworthy execution session without claiming rollback or closure. */
   abort(reason: unknown): void {
     this.#failure ??= new ProtocolEndpointError(

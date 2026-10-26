@@ -7,6 +7,7 @@ import {
 import type { SessionContextSnapshot, SessionResourceLimits } from "@tui-protocol/terminal";
 import {
   XtermTerminalAdapter,
+  type RenderedBlock,
   type RenderedBlockRange,
   type XtermBlockHistory,
 } from "./adapter.ts";
@@ -67,6 +68,15 @@ export class XtermProtocolEndpoint implements IDisposable {
     return this.#endpoint.contexts();
   }
 
+  reclaimClosedContext(id: string): SessionContextSnapshot | undefined {
+    if (!this.#adapter.supportsContextReclamation()) {
+      throw new Error("Closed-Context reclamation requires renderer-owned ranges and eviction cleanup.");
+    }
+    const snapshot = this.#endpoint.reclaimClosedContext(id);
+    if (snapshot !== undefined) this.#adapter.reclaimContext(id);
+    return snapshot;
+  }
+
   invalidateContextsIntersectingRows(
     start: number,
     end: number,
@@ -75,6 +85,22 @@ export class XtermProtocolEndpoint implements IDisposable {
       throw new Error("The invalidation row range must be non-empty integers.");
     }
     const affected: string[] = [];
+    const rendered = this.#adapter.renderedBlocks();
+    if (rendered !== undefined) {
+      const impacted = new Set(rendered.filter(block =>
+        block.range.start < end && start < block.range.start + block.range.lineCount,
+      ).map(block => block.contextId));
+      const invalidated = new Set<string>();
+      for (const block of rendered) {
+        if (!impacted.has(block.contextId)) continue;
+        if (!invalidated.has(block.contextId) && this.#endpoint.invalidateContext(block.contextId)) {
+          invalidated.add(block.contextId);
+          affected.push(block.contextId);
+        }
+        this.#adapter.retireContextBlocks(block.contextId, [block.blockId]);
+      }
+      return affected;
+    }
     for (const context of this.#endpoint.contexts()) {
       const intersects = context.blocks.some((block) => {
         const range = this.#adapter.range(context.id, block.id);
@@ -114,6 +140,10 @@ export class XtermProtocolEndpoint implements IDisposable {
 
   range(contextId: string, blockId: string): RenderedBlockRange | undefined {
     return this.#adapter.range(contextId, blockId);
+  }
+
+  renderedBlocks(): readonly RenderedBlock[] | undefined {
+    return this.#adapter.renderedBlocks();
   }
 
   dispose(): void {

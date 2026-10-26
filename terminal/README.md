@@ -92,15 +92,22 @@ Session snapshots expose protocol state; the host tracks rendering completion.
 Successful Operations have no response. The host and application coordinate
 recovery; the module performs no automatic rollback or retry.
 
+After establishing an independent rendering projection and draining rendering,
+the host may call `reclaimClosedContext(id)`. It releases a closed Context's
+content and Operation identity records without reusing its Context ID, changing
+idempotent closure, or discarding cached control responses. Open and invalidated
+Contexts cannot be reclaimed. Reclaimed snapshots disappear from `context()` and
+`contexts()`. See [closed-Context reclamation](../docs/design/trial-resource-budgets.md#closed-context-reclamation).
+
 ## Verification and limits
 
 Optional `resourceLimits` configure local retained-state budgets; the exported
 `trialSessionLimits` profile is used by the terminal-host and multi-round
 examples. Content growth can return `resource_exhausted`; identity/replay
-exhaustion stops the endpoint while preserving consumed IDs. `PendingInputBudget`
-helps hosts bound owned queued bytes and items. The
+exhaustion stops the endpoint while preserving the required semantics.
+`PendingInputBudget` helps hosts bound owned queued bytes and items. The
 [resource-budget note](../docs/design/trial-resource-budgets.md) explains the
-values, accounting scope, and exhaustion behavior.
+values, accounting scope, explicit reclamation, and exhaustion behavior.
 
 Run `pnpm typecheck` and `pnpm test`. Existing Session and Endpoint scenarios
 now live under `test/`; their experiment records are retained in the original

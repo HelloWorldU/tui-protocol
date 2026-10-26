@@ -294,9 +294,19 @@ export class PrivateCoreBlockHistory implements IDisposable {
     const [entry] = this.#entries.splice(index, 1);
     entry.startMarker.dispose();
     entry.endMarker.dispose();
+    this.#model.remove(id);
+    this.#plannedModel.remove(id);
     this.#plannedTrimmedBlockIds.add(id);
     this.#damagedBlockIds.delete(id);
     this.#rebuildEntryIndexes();
+  }
+
+  /** Releases eviction records after the Session reclaims a closed Context. */
+  reclaimContext(contextId: string): void {
+    const prefix = `${JSON.stringify([contextId]).slice(0, -1)},`;
+    for (const id of this.#plannedTrimmedBlockIds) {
+      if (id.startsWith(prefix)) this.#plannedTrimmedBlockIds.delete(id);
+    }
   }
 
   noteAppEraseRows(start: number, end: number): void {
@@ -455,6 +465,9 @@ export class PrivateCoreBlockHistory implements IDisposable {
       return false;
     }
 
+    if (this.#plannedTrimmedBlockIds.has(operation.id)) {
+      return true;
+    }
     const block = this.#plannedModel
       .blocks()
       .find((candidate) => candidate.id === operation.id);
@@ -462,9 +475,6 @@ export class PrivateCoreBlockHistory implements IDisposable {
       throw new Error(
         `Block ${JSON.stringify(operation.id)} has no planned xterm.js content.`,
       );
-    }
-    if (this.#plannedTrimmedBlockIds.has(operation.id)) {
-      return true;
     }
     let replacementContent: BlockContent;
     switch (operation.type) {
@@ -1068,6 +1078,8 @@ export class PrivateCoreBlockHistory implements IDisposable {
     for (const entry of removed) {
       entry.startMarker.dispose();
       entry.endMarker.dispose();
+      this.#model.remove(entry.id);
+      this.#plannedModel.remove(entry.id);
       this.#plannedTrimmedBlockIds.add(entry.id);
       this.#damagedBlockIds.delete(entry.id);
     }

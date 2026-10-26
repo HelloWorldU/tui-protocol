@@ -11,8 +11,8 @@ by the terminal-host and multi-round examples. The limits are local to the host.
 | One Block's content | 262,144 UTF-16 code units | Reject the Operation with existing `resource_exhausted` |
 | All retained Block content | 1,048,576 UTF-16 code units | Same atomic rejection |
 | Retained Blocks | 1,024 | Reject another Append |
-| Context records | 16 | Stop the execution session |
-| Operation IDs, across Contexts | 16,384 | Stop rather than forget consumed IDs |
+| Open, invalidated, and retained closed Context records | 16 | Stop the execution session |
+| Operation IDs in those Contexts | 16,384 | Stop rather than forget consumed IDs |
 | Cached control results | 1,024 | Stop rather than evict replay results |
 | Cached control fingerprints | 262,144 UTF-16 code units | Stop rather than change replay behavior |
 | Individually checked Request, Operation, and Block ID length | 256 UTF-16 code units | Stop before retaining that identity |
@@ -28,11 +28,45 @@ explicitly choose a policy.
 
 Content rejection preserves the old content and content-state ID but consumes
 the rejected Operation ID as before. A smaller edit with a fresh Operation ID
-can succeed. Shrinking content releases content allowance. Closed, invalidated,
-and visually evicted records remain charged. Cached repeated controls still
-replay at the limit. Exhausting identity/replay storage raises a local
-`SessionResourceLimitError`. The endpoint aborts and the host must close the
-transport. Retained snapshots then remain diagnostic only.
+can succeed. Shrinking content releases content allowance. Without explicit
+reclamation, closed, invalidated, and visually evicted records remain charged.
+Cached repeated controls still replay at the limit. Exhausting identity/replay
+storage raises a local `SessionResourceLimitError`. The endpoint aborts and the
+host must close the transport. Retained snapshots then remain diagnostic only.
+
+## Closed-Context reclamation
+
+A host with an independent rendering projection can call
+`TerminalProtocolSession.reclaimClosedContext(id)` after rendering drains. It
+returns the closed snapshot for bounded accounting, then releases its content,
+Block count, and Operation identity records. Reclaimed snapshots disappear
+from `context()` and `contexts()`. Open and invalidated Contexts, unknown IDs,
+and already reclaimed IDs return `undefined` without changing state.
+
+This is a local retention policy under the existing
+[closure and capacity semantics](../protocol/contexts.md#6-closure-and-content-retention),
+not a new lifecycle or Message. Context IDs are never reused. Monotonic local ID
+allocation preserves idempotent closure for reclaimed IDs without retaining
+their snapshots, and the original control-request replay cache is unchanged.
+Cached control results and fingerprints are not reclaimed by this API, so their
+configured limits still apply. Releasing Operation identity records is safe only
+after closure has revoked mutation authority; later Operations still report
+`context_not_open`. The default without a reclamation call is unchanged.
+
+The xterm adapter supports this only when the history exposes renderer-owned
+Block ranges and eviction cleanup. Invalidation uses those ranges rather than
+Session snapshots and still retires every range of an affected Context. A fully
+evicted Block also leaves the render models; its eviction record remains until
+its closed Context is reclaimed, preventing later edits from recreating it.
+Visible closed Blocks retain their projection for reading, search, and reflow.
+
+[Reclamation tests](../../terminal/test/reclamation.test.ts) cover budget
+release, ID freshness, repeated closure, control replay, and open/invalidated
+refusal. [Private-history eviction tests](../../prototypes/xterm-headless/private-core-history.test.ts)
+cover projection removal and later edits. [Tabby's long-session record](../../prototypes/integration/tabby-demo/README.md#long-session-and-reclamation-evidence-2026-10-27)
+covers 20 real Pi rounds and memory sampling. Open/invalidated reclamation,
+partial-Block or unmanaged-row eviction, longer steady-state behavior,
+long-session latency, and policies for other hosts remain open.
 
 ## Pending input
 
@@ -54,5 +88,6 @@ failure propagation. [Mixed-ingress tests](../../prototypes/integration/xterm-pr
 check queued-byte/item overflow and allowance reuse after settlement.
 
 These deterministic checks exercise the configured limits and their failure
-paths. Endurance and process-memory measurements, general memory reclamation,
-long-session latency, and resource policy for other hosts remain future work.
+paths. General reclamation beyond the explicit closed-Context and full-eviction
+paths above, longer steady-state behavior, long-session latency, and resource
+policy for other hosts remain future work.

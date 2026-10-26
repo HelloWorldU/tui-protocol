@@ -74,6 +74,7 @@ class TuiProtocolDecorator extends TerminalDecorator {
           let middleware!: TuiProtocolSessionMiddleware;
           const receiver = new TabbyProtocolReceiver({
             terminal: frontend,
+            reclaimClosedContexts: true,
             writeOrdinary: data => ordinary.write(data),
             finishOrdinary: () => ordinary.finish(),
             onResponseFrame: frame => middleware.respond(frame),

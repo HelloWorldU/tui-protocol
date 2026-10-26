@@ -233,6 +233,35 @@ test("Chinese and Tab growth evicts exactly the complete oldest Block and keeps 
   }
 });
 
+test("full eviction releases the render projection and closed-Context cleanup preserves later edits", async () => {
+  const xterm = new Terminal({ allowProposedApi: true, cols: 8, rows: 3, scrollback: 6 });
+  const history = new PrivateCoreBlockHistory(xterm);
+  const oldId = JSON.stringify(["context-1", "old"]);
+  const targetId = JSON.stringify(["context-2", "target"]);
+  const readerId = JSON.stringify(["context-2", "reader"]);
+  const tailId = JSON.stringify(["context-2", "tail"]);
+  try {
+    await history.apply(append(oldId, "\t旧", "sealed"));
+    await history.apply(append(targetId, "B", "mutable"));
+    await history.apply(append(readerId, "中\t文", "sealed"));
+    await history.apply(append(tailId, "t1\nt2", "sealed"));
+    const operation: Operation = { type: "update", id: targetId, content: "\x1b\t新\tY" };
+    assert.equal(history.wouldExceedCapacity(operation), false);
+    await history.apply(operation);
+
+    assert.equal(history.range(oldId), undefined);
+    assert.deepEqual(history.blocks().map(block => block.id), [targetId, readerId, tailId]);
+    assert.equal(history.wouldExceedCapacity({ type: "update", id: oldId, content: "restore" }), true);
+    history.reclaimContext("context-1");
+    await history.apply({ type: "update", id: targetId, content: "ok" });
+    assert.equal(history.blocks().find(block => block.id === targetId)?.content, "ok");
+    assert.deepEqual(history.range(targetId), { start: 0, lineCount: 1 });
+  } finally {
+    history.dispose();
+    xterm.dispose();
+  }
+});
+
 function append(
   id: string,
   content: string,

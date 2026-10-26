@@ -138,9 +138,11 @@ The private experiment provides a concrete test case for this proposed core API.
   that fail those preconditions use the conservative `resource_exhausted` path;
   other exact Append arrangements remain unproven. Partial-Block trimming is
   unsupported; later content mutation of a fully trimmed Block is rejected
-  without restoring it by the [composed endpoint](../integration/xterm-protocol-endpoint/README.md#eviction-and-unrecoverable-rendering-failure). The composed
-  Session also retains the logical snapshot after this private range index
-  drops rendered rows.
+  without restoring it by the [composed endpoint](../integration/xterm-protocol-endpoint/README.md#eviction-and-unrecoverable-rendering-failure). Full
+  eviction also removes content from both render models. Eviction records
+  prevent later edits until the closed Context is reclaimed; the Session keeps
+  its logical snapshot by default, or releases it through the explicit
+  [closed-Context policy](../../docs/design/trial-resource-budgets.md#closed-context-reclamation).
 - Headless tests observe Buffer state. The separate [browser selection
   experiment](../integration/xterm-browser-selection/README.md) and [browser search
   experiment](../integration/xterm-browser-search/README.md) exercise native

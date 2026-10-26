@@ -19,6 +19,14 @@ key, capacity preparation, and the ordered rendering queue. Only Block
 Operations committed by the Session are accepted by this adapter. Tests await
 `drain()` before observing the resulting xterm.js history.
 
+With `PrivateCoreBlockHistory`, native invalidation enumerates renderer-owned
+ranges and retires every range of an affected Context, rather than depending on
+Session snapshots. Histories without that projection interface use the Session-
+based fallback. `reclaimClosedContext` is available only when the history also
+cleans eviction records: it releases the closed Session snapshot after draining
+while visible Blocks remain in the renderer. Fully evicted Blocks leave both
+render models. See the [retention policy](../../../docs/design/trial-resource-budgets.md#closed-context-reclamation).
+
 An optional experimental parser addon registers OSC `9002` with the xterm.js
 parser and forwards completed payloads to the same endpoint. Its framing and
 ordering restrictions are recorded under Experimental Boundaries below.

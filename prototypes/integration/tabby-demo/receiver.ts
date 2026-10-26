@@ -16,6 +16,7 @@ import {
 export interface TabbyProtocolReceiverOptions {
   readonly terminal: BrowserTerminal;
   readonly region?: boolean;
+  readonly reclaimClosedContexts?: boolean;
   readonly writeOrdinary?: (data: Uint8Array) => Promise<void>;
   readonly finishOrdinary?: () => Promise<void>;
   readonly onResponseFrame: (frame: Uint8Array) => void;
@@ -23,11 +24,25 @@ export interface TabbyProtocolReceiverOptions {
   readonly onFailure?: (error: Error) => void;
 }
 
+export interface TabbyProtocolReceiverMetrics {
+  readonly reclaimClosedContexts: boolean;
+  readonly closedContexts: number;
+  readonly closedBlocks: number;
+  readonly sealedBlocks: number;
+  readonly lastReclaimedContextId: string | undefined;
+  readonly renderedBlocks: number | undefined;
+}
+
 export class TabbyProtocolReceiver {
   readonly #endpoint: XtermProtocolEndpoint;
   readonly #ingress: XtermMixedStreamIngress;
   readonly #region: AppRegionTracker | undefined;
   readonly #onFailure: ((error: Error) => void) | undefined;
+  readonly #reclaimClosed: boolean;
+  #closedContexts = 0;
+  #closedBlocks = 0;
+  #sealedBlocks = 0;
+  #lastReclaimedContextId: string | undefined;
   #pending: Promise<void> = Promise.resolve();
   #failure: Error | undefined;
   #finished = false;
@@ -36,6 +51,7 @@ export class TabbyProtocolReceiver {
   constructor(options: TabbyProtocolReceiverOptions) {
     const terminal = options.terminal as unknown as HeadlessTerminal;
     this.#onFailure = options.onFailure;
+    this.#reclaimClosed = options.reclaimClosedContexts === true;
     this.#region = options.region === false
       ? undefined
       : new AppRegionTracker(terminal);
@@ -70,6 +86,7 @@ export class TabbyProtocolReceiver {
     await this.#pending;
     await this.#endpoint.drain();
     if (this.#failure !== undefined) throw this.#failure;
+    this.#reclaimClosedContexts();
   }
 
   async finish(): Promise<void> {
@@ -88,6 +105,17 @@ export class TabbyProtocolReceiver {
     return this.#endpoint.contexts();
   }
 
+  metrics(): TabbyProtocolReceiverMetrics {
+    return {
+      reclaimClosedContexts: this.#reclaimClosed,
+      closedContexts: this.#closedContexts,
+      closedBlocks: this.#closedBlocks,
+      sealedBlocks: this.#sealedBlocks,
+      lastReclaimedContextId: this.#lastReclaimedContextId,
+      renderedBlocks: this.#endpoint.renderedBlocks()?.length,
+    };
+  }
+
   range(contextId: string, blockId: string): RenderedBlockRange | undefined {
     return this.#endpoint.range(contextId, blockId);
   }
@@ -102,9 +130,24 @@ export class TabbyProtocolReceiver {
   }
 
   #track(task: Promise<void>): void {
-    this.#pending = task.catch((error: unknown) => {
+    this.#pending = task.then(() => {
+      this.#reclaimClosedContexts();
+    }).catch((error: unknown) => {
       this.#fail(error);
     });
+  }
+
+  #reclaimClosedContexts(): void {
+    if (!this.#reclaimClosed || this.#failure !== undefined) return;
+    for (const context of this.#endpoint.contexts()) {
+      if (context.state !== "closed") continue;
+      const snapshot = this.#endpoint.reclaimClosedContext(context.id);
+      if (snapshot === undefined) continue;
+      this.#closedContexts += 1;
+      this.#closedBlocks += snapshot.blocks.length;
+      this.#sealedBlocks += snapshot.blocks.filter(block => block.lifecycle === "sealed").length;
+      this.#lastReclaimedContextId = snapshot.id;
+    }
   }
 
   #fail(reason: unknown): void {

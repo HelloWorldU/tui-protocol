@@ -19,13 +19,15 @@ session chunks. Protocol responses return through `outputToSession`. The
 middleware is inserted before Tabby's OSC processor. Input uses the existing
 middleware path unchanged.
 
-This is a development spike, not the completed demo terminal. It still depends
-on private xterm.js internals through `PrivateCoreBlockHistory`. The
-long-session policy and platforms other than Windows bundled ConPTY remain
-open. Independent protocol applications can run sequentially in one tab: each
-SDK client has a distinct request-ID namespace, so control replay cannot return
-an earlier application's closed Context. Recovery of an abandoned open Context
-remains undefined. Multiple rounds within one Pi process are supported.
+This is a development spike, not a stable plugin release. It still depends on
+private xterm.js internals through `PrivateCoreBlockHistory`. The long-session
+policy below reclaims closed Context snapshots and fully evicted render
+projections. Abandoned open Contexts, slow consumers, steady-state behavior
+beyond the measured session, and platforms other than Windows bundled ConPTY
+remain open. Independent protocol applications can run sequentially in one tab:
+each SDK client has a distinct request-ID namespace, so control replay cannot
+return an earlier application's closed Context. Multiple rounds within one Pi
+process are supported.
 
 ## Plugin-only xterm compatibility
 
@@ -72,9 +74,11 @@ package.
 
 The tests cover split UTF-8 and SDK negotiation, response routing, ordinary
 output, historical Block Update, lifecycle, compatibility rejection before
-receiver construction, and one-time notification. Real SDK children run through
-Windows bundled ConPTY, including two sequential children on one receiver. The
-desktop evidence below complements those checks.
+receiver construction, and one-time notification. Reclamation checks cover 20
+sequential Contexts without retained Session snapshots, full-eviction
+projection cleanup, and native reset after reclamation. Real SDK children run
+through Windows bundled ConPTY, including two sequential children on one
+receiver. The desktop evidence below complements those checks.
 
 ## Desktop evidence, 2026-10-26
 
@@ -102,6 +106,65 @@ desktop evidence below complements those checks.
   Waiting for a subsequent xterm write callback before sampling the cursor
   removed that failure in this check. This is evidence for the tested path, not
   a claim that every terminal frontend or long session is covered.
+
+## Long-session and reclamation evidence, 2026-10-27
+
+The [retention policy](../../../docs/design/trial-resource-budgets.md#closed-context-reclamation)
+releases closed Session snapshots after rendering drains, without reclaiming
+open or invalidated Contexts or changing control replay and idempotent closure.
+The renderer keeps visible Blocks for native reading and releases fully evicted
+projection content. Its invalidation path uses renderer-owned ranges, so
+reclaimed Session snapshots are not needed for later cleanup. Receiver metrics
+are cumulative counters, not retained snapshots.
+
+Before this policy, the same real-Tabby check completed 16 rounds and 34 Blocks,
+then failed the seventeenth `context.open` with `Local session budget exhausted:
+Context records`. With the policy enabled, one Pi process in one Tabby tab
+completed all 20 rounds. All 20 Contexts and 42 Blocks closed/sealed; no Session
+Context snapshots remained after completed rounds, 42 Blocks remained rendered,
+all 20 user prompts occurred exactly once, and no protocol errors or invalidated
+Contexts were observed. A 700x900/1002x753 viewport round trip then preserved
+those counts and the first and last Block ranges.
+
+Two sequential SDK children in another tab also exited 0 with reclamation
+enabled. The counters showed distinct `context-1` and `context-2`, each with one
+sealed Block and no retained Session snapshot; both updated Blocks remained
+rendered and neither child received the other's cached closed Context.
+
+The memory samples below used CDP `Runtime.getHeapUsage` after an explicit GC,
+`process.memoryUsage()` for renderer RSS, and PowerShell `Get-Process` for the
+browser and renderer working sets (WS). The driver checked both PID roles rather
+than relying on process order. Values are from one run, not a steady-state bound.
+
+| Round | Closed Contexts | Closed Blocks | Session Contexts | JS heap (MiB) | Browser WS (MiB) | Renderer WS (MiB) |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 0 | 0 | 0 | 49.24 | 188.18 | 224.06 |
+| 5 | 5 | 12 | 0 | 50.31 | 188.61 | 225.27 |
+| 10 | 10 | 22 | 0 | 50.50 | 190.21 | 225.56 |
+| 15 | 15 | 32 | 0 | 50.59 | 191.68 | 225.96 |
+| 20 | 20 | 42 | 0 | 50.68 | 190.76 | 225.69 |
+
+JS heap increased by 1,513,508 bytes (1.44 MiB); renderer RSS increased from
+222.85 to 225.76 MiB. Retained terminal history and Pi's own conversation can
+still grow. Control replay remains capped at 1,024 results, and xterm capacity
+policy still applies. This demonstrates bounded closed-snapshot reclamation and
+measured behavior for the demo, not unlimited connection lifetime or flat
+process memory. Behavior beyond 20 rounds, abandoned Contexts, and slow
+consumers remains unverified.
+
+With the built plugin loaded in a visible Tabby started with
+`--remote-debugging-port=9222`, reproduce the 20-round check from the repository
+root:
+
+```sh
+node prototypes/integration/tabby-demo/long-session-check.ts --rounds 20 --pace 5 --output .tmp/tabby-long-after-20.json
+```
+
+The driver opens a new CMD tab, uses the deterministic local provider, checks
+all rounds and retained prompts, and writes the complete report. The validation
+above used separate Tabby configuration and Chromium `userData` directories.
+Its CDP/Angular inspection is experimental test tooling, not an additional
+production integration API.
 
 ## Try in Tabby
 
