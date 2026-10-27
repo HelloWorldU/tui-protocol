@@ -163,6 +163,15 @@ documentation check pass on `main`.
    already in scrollback, a stable reading position, and copy and search on
    logical text. A scripted walkthrough and a recording, plus Pi's unmodified
    fallback in the ordinary terminal.
+
+   Progress, 2026-10-27: the
+   [side-by-side walkthrough](../../prototypes/integration/tabby-demo/side-by-side.md)
+   runs one Pi runtime behind a stock view and a protocol view in a real
+   Tabby split, with one tool call, and its automated check passes for the
+   tool update, reading position, resize, search, and copy. A
+   presentation-quality recording is still pending; the verification
+   recording stays local because its frames include setup output and
+   machine paths.
 3. **A terminal vendor kit.** What a terminal maker needs to evaluate and
    embed the receiver side: a concise protocol summary, the terminal module as
    an embeddable reference implementation under its Apache-2.0 license, a

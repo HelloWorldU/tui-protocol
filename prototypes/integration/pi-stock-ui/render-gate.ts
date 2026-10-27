@@ -43,6 +43,17 @@ export function setRenderGate(value: boolean): void {
   active = value;
 }
 
+/** Applies the gate to one synchronous render tree and restores the prior value. */
+export function withRenderGate<T>(value: boolean, render: () => T): T {
+  const previous = active;
+  active = value;
+  try {
+    return render();
+  } finally {
+    active = previous;
+  }
+}
+
 /**
  * Wrap `render` on each transcript component class exactly once. Returns the
  * patch report; the list is also the evidence that no other class was touched.

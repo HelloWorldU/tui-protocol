@@ -19,6 +19,9 @@ session chunks. Protocol responses return through `outputToSession`. The
 middleware is inserted before Tabby's OSC processor. Input uses the existing
 middleware path unchanged.
 
+See the [stock and protocol side-by-side walkthrough](side-by-side.md); its
+verification recording stays local, and a presentation recording is pending.
+
 This is a development spike, not a stable plugin release. It still depends on
 private xterm.js internals through `PrivateCoreBlockHistory`. The long-session
 policy below reclaims closed Context snapshots and fully evicted render

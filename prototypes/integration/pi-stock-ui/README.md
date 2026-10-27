@@ -302,6 +302,16 @@ Neither width choice reproduces Pi's layout once the display width changes.
 The analysis and the layout capabilities this points to are in
 [Renderer-owned layout and reflow](../../../docs/design/renderer-layout-and-reflow.md).
 
+## Paired stock and protocol demonstration
+
+The [side-by-side walkthrough](../tabby-demo/side-by-side.md) uses one runtime
+to drive a stock view and a protocol view in real Tabby. `paired.ts` scopes the
+render gate to the synchronous `doRender` path, while `pair-main.ts` and
+`channel-client.ts` carry the two frontends' bytes and real PTY resizes. One
+prompt executes one tool; stock renders Pi's original transcript while protocol
+seals four Blocks. `paired.test.ts` proves the shared runtime and single tool
+call; `pair-transport.test.ts` checks role handshakes, directions, and resize.
+
 ## Run
 
 From the repository root (Windows, Node 24+, pnpm 11.9.0):
